@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,20 +24,45 @@ serve(async (req) => {
 
   try {
     const { messages, type = "chat", leadData } = await req.json() as RequestBody;
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY not configured");
+    // Initialize Supabase client to read settings
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Try to get custom Gemini API key from settings
+    let customGeminiKey: string | null = null;
+    try {
+      const { data: settings } = await supabase
+        .from("settings")
+        .select("gemini_api_key")
+        .limit(1)
+        .maybeSingle();
+      
+      customGeminiKey = settings?.gemini_api_key || null;
+      console.log("Custom Gemini key configured:", !!customGeminiKey);
+    } catch (err) {
+      console.log("Could not read settings, using default:", err);
+    }
+
+    // Determine which API to use
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const useCustomGemini = !!customGeminiKey;
+    const useLovableGateway = !useCustomGemini && !!LOVABLE_API_KEY;
+
+    if (!useCustomGemini && !useLovableGateway) {
+      console.error("No AI API configured (neither custom Gemini nor Lovable Gateway)");
       return new Response(
         JSON.stringify({ 
           error: "AI service not configured",
           fallback: true,
-          message: "Usando modo fallback sin IA"
+          message: "Usando modo fallback sin IA. Configura una API key de Gemini en Settings o verifica Lovable AI Gateway."
         }), 
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Build system prompt based on request type
     let systemPrompt = "Eres un asistente de Ganaya.bet, una plataforma de apuestas deportivas en LATAM. Sé amable, conciso y profesional. Responde en español.";
 
     if (type === "summarize" && leadData) {
@@ -58,14 +84,74 @@ Datos: ${JSON.stringify(leadData)}
 El mensaje debe ser amigable, profesional y mencionar Ganaya.bet. Máximo 200 caracteres.`;
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    let response: Response;
+
+    if (useCustomGemini) {
+      // Use custom Gemini API directly
+      console.log("Using custom Gemini API key");
+      
+      const geminiMessages = [
+        { role: "user", parts: [{ text: systemPrompt }] },
+        ...messages.map(m => ({
+          role: m.role === "assistant" ? "model" : "user",
+          parts: [{ text: m.content }]
+        }))
+      ];
+
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${customGeminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: geminiMessages,
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 1024,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Gemini API error:", response.status, errorText);
+        
+        if (response.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Límite de solicitudes Gemini excedido. Intentá de nuevo." }), 
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Fallback to Lovable if custom Gemini fails
+        if (useLovableGateway) {
+          console.log("Gemini failed, falling back to Lovable AI Gateway");
+        } else {
+          return new Response(
+            JSON.stringify({ error: "Error en Gemini API", fallback: true }), 
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else {
+        const data = await response.json();
+        const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+        return formatResponse(content, type, corsHeaders);
+      }
+    }
+
+    // Use Lovable AI Gateway (default fallback)
+    console.log("Using Lovable AI Gateway");
+    
+    response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           ...messages,
@@ -88,7 +174,7 @@ El mensaje debe ser amigable, profesional y mencionar Ganaya.bet. Máximo 200 ca
         );
       }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
+      console.error("Lovable AI Gateway error:", response.status, errorText);
       return new Response(
         JSON.stringify({ error: "Error en el servicio de IA", fallback: true }), 
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -98,26 +184,7 @@ El mensaje debe ser amigable, profesional y mencionar Ganaya.bet. Máximo 200 ca
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    // Try to parse JSON for structured responses
-    if (type === "summarize") {
-      try {
-        const parsed = JSON.parse(content);
-        return new Response(
-          JSON.stringify({ success: true, data: parsed }), 
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      } catch {
-        return new Response(
-          JSON.stringify({ success: true, data: { resumen: content } }), 
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ success: true, content }), 
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return formatResponse(content, type, corsHeaders);
 
   } catch (error) {
     console.error("Chat function error:", error);
@@ -130,3 +197,26 @@ El mensaje debe ser amigable, profesional y mencionar Ganaya.bet. Máximo 200 ca
     );
   }
 });
+
+function formatResponse(content: string, type: string, corsHeaders: Record<string, string>) {
+  // Try to parse JSON for structured responses
+  if (type === "summarize") {
+    try {
+      const parsed = JSON.parse(content);
+      return new Response(
+        JSON.stringify({ success: true, data: parsed }), 
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch {
+      return new Response(
+        JSON.stringify({ success: true, data: { resumen: content } }), 
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+  }
+
+  return new Response(
+    JSON.stringify({ success: true, content }), 
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
