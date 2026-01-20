@@ -14,6 +14,7 @@ import AdminLeadsAgentes from "./pages/admin/AdminLeadsAgentes";
 import AdminAgentes from "./pages/admin/AdminAgentes";
 import AdminAsignacion from "./pages/admin/AdminAsignacion";
 import AdminCMS from "./pages/admin/AdminCMS";
+import AdminCMSPromos from "./pages/admin/AdminCMSPromos";
 import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="agentes" element={<AdminAgentes />} />
             <Route path="asignacion" element={<AdminAsignacion />} />
             <Route path="cms" element={<AdminCMS />} />
+            <Route path="cms-promos" element={<AdminCMSPromos />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
