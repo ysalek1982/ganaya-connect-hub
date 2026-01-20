@@ -12,13 +12,14 @@ import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type Agente = Database['public']['Tables']['agentes']['Row'];
+type AgentStatus = Database['public']['Enums']['agent_status'];
 
 const AdminAgentes = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agente | null>(null);
-  const [form, setForm] = useState({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo' as const });
+  const [form, setForm] = useState<{ nombre: string; whatsapp: string; pais: string; ciudad: string; estado: AgentStatus }>({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo' });
 
   const { data: agentes, isLoading } = useQuery({
     queryKey: ['agentes'],
@@ -85,7 +86,7 @@ const AdminAgentes = () => {
 
   const openCreateModal = () => {
     setEditingAgent(null);
-    setForm({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo' });
+    setForm({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo' as AgentStatus });
     setShowModal(true);
   };
 
@@ -96,7 +97,7 @@ const AdminAgentes = () => {
       whatsapp: agent.whatsapp,
       pais: agent.pais,
       ciudad: agent.ciudad || '',
-      estado: agent.estado || 'activo',
+      estado: (agent.estado || 'activo') as AgentStatus,
     });
     setShowModal(true);
   };
@@ -104,7 +105,7 @@ const AdminAgentes = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingAgent(null);
-    setForm({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo' });
+    setForm({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo' as AgentStatus });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -250,7 +251,7 @@ const AdminAgentes = () => {
             </div>
             <div className="space-y-2">
               <Label>Estado</Label>
-              <Select value={form.estado} onValueChange={(v) => setForm({ ...form, estado: v as 'activo' | 'inactivo' })}>
+              <Select value={form.estado} onValueChange={(v) => setForm({ ...form, estado: v as AgentStatus })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
