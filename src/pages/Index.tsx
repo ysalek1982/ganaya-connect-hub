@@ -9,6 +9,8 @@ import { FAQSection } from '@/components/home/FAQSection';
 import { ComplianceSection } from '@/components/home/ComplianceSection';
 import { MobileStickyNav } from '@/components/home/MobileStickyNav';
 import { StadiumLights } from '@/components/home/StadiumLights';
+import { SectionDivider } from '@/components/home/SectionDivider';
+import { FloatingParticles } from '@/components/home/FloatingParticles';
 import FloatingChatButton from '@/components/chat/FloatingChatButton';
 import { useCMSSEO } from '@/hooks/useCMSPromos';
 import { useEffect } from 'react';
@@ -45,10 +47,15 @@ const Index = () => {
       <Header />
       <main className="relative z-10">
         <Hero />
+        <SectionDivider variant="primary" />
         <LobbiesSection />
+        <SectionDivider variant="gold" />
         <PromosCarouselSection />
+        <SectionDivider variant="accent" />
         <SpotlightGamesSection />
+        <SectionDivider variant="primary" />
         <BenefitsSection />
+        <SectionDivider variant="gold" />
         <FAQSection />
         <ComplianceSection />
       </main>
