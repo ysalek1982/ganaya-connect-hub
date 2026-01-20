@@ -4,6 +4,8 @@ import { Menu, X, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const WHATSAPP_NUMBER = '59176356972';
+
 const navLinks = [
   { href: '/#como-funciona', label: 'Cómo funciona' },
   { href: '/#beneficios', label: 'Beneficios' },
@@ -16,7 +18,8 @@ export const Header = () => {
   const location = useLocation();
 
   const handleWhatsApp = () => {
-    window.open('https://wa.me/595981123456?text=Hola!%20Quiero%20información%20sobre%20Ganaya.bet', '_blank');
+    const message = encodeURIComponent('Hola, quiero información sobre Ganaya.bet');
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
   };
 
   return (

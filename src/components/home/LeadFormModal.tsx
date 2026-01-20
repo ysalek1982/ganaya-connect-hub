@@ -79,8 +79,8 @@ export const LeadFormModal = ({ open, onOpenChange }: LeadFormModalProps) => {
 
   const handleWhatsApp = () => {
     const country = countries.find(c => c.code === formData.pais);
-    const msg = encodeURIComponent(`Hola! Soy ${formData.nombre} de ${country?.name || 'LATAM'}. Quiero empezar a apostar en Ganaya.bet`);
-    window.open(`https://wa.me/595981123456?text=${msg}`, '_blank');
+    const msg = encodeURIComponent(`Hola, quiero apostar en Ganaya.bet. Soy ${formData.nombre} de ${country?.name || 'LATAM'}. ¿Me ayudas con la recarga?`);
+    window.open(`https://wa.me/59176356972?text=${msg}`, '_blank');
     onOpenChange(false);
   };
 

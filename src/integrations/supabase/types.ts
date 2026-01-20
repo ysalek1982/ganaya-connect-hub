@@ -288,6 +288,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      promote_user_to_admin: {
+        Args: { user_email: string }
+        Returns: undefined
+      }
     }
     Enums: {
       agent_status: "activo" | "inactivo"
