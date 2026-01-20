@@ -79,6 +79,30 @@ export type Database = {
           },
         ]
       }
+      cms_assets: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          name: string
+          tag: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          name: string
+          tag?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          name?: string
+          tag?: string | null
+        }
+        Relationships: []
+      }
       cms_content: {
         Row: {
           key: string
@@ -94,6 +118,237 @@ export type Database = {
           key?: string
           updated_at?: string
           value?: Json
+        }
+        Relationships: []
+      }
+      cms_faq: {
+        Row: {
+          active: boolean
+          answer: string
+          id: string
+          order: number
+          question: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          answer: string
+          id?: string
+          order?: number
+          question: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          answer?: string
+          id?: string
+          order?: number
+          question?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cms_lobbies: {
+        Row: {
+          active: boolean
+          badge: string | null
+          category: string
+          cta_link: string | null
+          cta_text: string
+          description: string | null
+          id: string
+          image_url: string | null
+          order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          badge?: string | null
+          category: string
+          cta_link?: string | null
+          cta_text?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          badge?: string | null
+          category?: string
+          cta_link?: string | null
+          cta_text?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cms_mobile_ctas: {
+        Row: {
+          button_key: string
+          id: string
+          link: string
+          order: number
+          text: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          button_key: string
+          id?: string
+          link: string
+          order?: number
+          text: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          button_key?: string
+          id?: string
+          link?: string
+          order?: number
+          text?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: []
+      }
+      cms_promos_carousel: {
+        Row: {
+          active: boolean
+          cta_link: string | null
+          cta_text: string
+          id: string
+          image_url: string | null
+          order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          cta_link?: string | null
+          cta_text?: string
+          id?: string
+          image_url?: string | null
+          order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          cta_link?: string | null
+          cta_text?: string
+          id?: string
+          image_url?: string | null
+          order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cms_sections: {
+        Row: {
+          enabled: boolean
+          id: string
+          key: string
+          order: number
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: string
+          key: string
+          order?: number
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: string
+          key?: string
+          order?: number
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cms_seo: {
+        Row: {
+          id: string
+          meta_description: string | null
+          meta_title: string | null
+          og_image_url: string | null
+          page_key: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          og_image_url?: string | null
+          page_key: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          og_image_url?: string | null
+          page_key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cms_spotlight_games: {
+        Row: {
+          active: boolean
+          category: string
+          cta_link: string | null
+          cta_text: string
+          id: string
+          image_url: string | null
+          name: string
+          order: number
+          speed_tag: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category: string
+          cta_link?: string | null
+          cta_text?: string
+          id?: string
+          image_url?: string | null
+          name: string
+          order?: number
+          speed_tag?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category?: string
+          cta_link?: string | null
+          cta_text?: string
+          id?: string
+          image_url?: string | null
+          name?: string
+          order?: number
+          speed_tag?: string
+          updated_at?: string
         }
         Relationships: []
       }
