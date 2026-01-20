@@ -121,15 +121,22 @@ const AdminSettings = () => {
             </div>
           </div>
 
+          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 mb-4">
+            <p className="text-sm text-primary">
+              ✓ <strong>Lovable AI Gateway</strong> está activo como fallback automático. 
+              Si no configurás una API key propia, el sistema usará el gateway de Lovable.
+            </p>
+          </div>
+
           <div className="space-y-2">
-            <Label>API Key de Gemini</Label>
+            <Label>API Key de Gemini (opcional)</Label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Input
                   type={showApiKey ? 'text' : 'password'}
                   value={form.gemini_api_key || ''}
                   onChange={(e) => setForm({ ...form, gemini_api_key: e.target.value })}
-                  placeholder="AIza..."
+                  placeholder="AIza... (dejar vacío para usar Lovable AI Gateway)"
                 />
                 <button
                   type="button"
@@ -144,7 +151,8 @@ const AdminSettings = () => {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Sin API key, el sistema usa reglas determinísticas (fallback mode)
+              Podés obtener tu API key en <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google AI Studio</a>. 
+              Sin API key propia, el sistema usa Lovable AI Gateway automáticamente.
             </p>
           </div>
 
