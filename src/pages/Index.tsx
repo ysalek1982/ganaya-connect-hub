@@ -4,13 +4,17 @@ import { Hero } from '@/components/home/Hero';
 import { ScrollReveal } from '@/components/home/ScrollReveal';
 import { AnimatedCounter } from '@/components/home/AnimatedCounter';
 import { StadiumLights } from '@/components/home/StadiumLights';
+import FloatingChatButton from '@/components/chat/FloatingChatButton';
 import { MessageCircle, Zap, Shield, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
+const WHATSAPP_NUMBER = '59176356972';
+
 const Index = () => {
   const handleWhatsApp = () => {
-    window.open('https://wa.me/595981123456?text=Hola!%20Quiero%20apostar%20en%20Ganaya.bet', '_blank');
+    const message = encodeURIComponent('Hola, quiero apostar en Ganaya.bet. ¿Me ayudas con la recarga?');
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
   };
 
   const benefits = [
@@ -183,8 +187,11 @@ const Index = () => {
       </main>
       <Footer />
 
+      {/* Floating Chat */}
+      <FloatingChatButton />
+
       {/* Mobile sticky CTA */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent md:hidden z-40">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent md:hidden z-30">
         <Button variant="whatsapp" size="lg" className="w-full shadow-lg" onClick={handleWhatsApp}>
           <MessageCircle className="w-5 h-5" />
           WhatsApp 24/7

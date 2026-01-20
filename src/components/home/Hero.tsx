@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useCMS } from '@/hooks/useCMS';
 import { LeadFormModal } from '@/components/home/LeadFormModal';
 
+const WHATSAPP_NUMBER = '59176356972';
+
 export const Hero = () => {
   const [showModal, setShowModal] = useState(false);
   const { data: heroContent } = useCMS('home_hero');
@@ -14,7 +16,8 @@ export const Hero = () => {
   const subtitle = content?.subtitle || "Apuestas deportivas y casino en vivo. Atención por WhatsApp y retiros guiados a tu banco.";
 
   const handleWhatsApp = () => {
-    window.open('https://wa.me/595981123456?text=Hola!%20Quiero%20empezar%20a%20apostar%20en%20Ganaya.bet', '_blank');
+    const message = encodeURIComponent('Hola, quiero empezar a apostar en Ganaya.bet');
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
   };
 
   return (

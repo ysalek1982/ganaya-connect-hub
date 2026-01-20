@@ -9,6 +9,8 @@ import { countries } from '@/lib/countries';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
+const WHATSAPP_NUMBER = '59176356972';
+
 interface Message {
   id: string;
   role: 'bot' | 'user';
@@ -339,7 +341,14 @@ const AIChatDrawer = ({ open, onOpenChange, mode = 'auto' }: AIChatDrawerProps) 
             {isComplete && (
               <div className="p-4 border-t border-border space-y-2">
                 <Button variant="whatsapp" className="w-full" asChild>
-                  <a href={`https://wa.me/${answers.whatsapp?.replace(/\D/g, '') || ''}`} target="_blank">
+                  <a 
+                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                      chatMode === 'agente' 
+                        ? `Hola, quiero postular para ser agente. Soy ${answers.nombre || ''} de ${answers.pais || 'LATAM'}/${answers.ciudad || ''}. ¿Cuáles son los pasos?`
+                        : `Hola, quiero apostar en Ganaya.bet. Soy ${answers.nombre || ''} de ${answers.pais || 'LATAM'}. ¿Me ayudas con la recarga?`
+                    )}`} 
+                    target="_blank"
+                  >
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Abrir WhatsApp
                   </a>
