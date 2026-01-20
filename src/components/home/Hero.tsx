@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Users, ArrowRight } from 'lucide-react';
+import { MessageCircle, Users, ArrowRight, TrendingUp, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCMS } from '@/hooks/useCMS';
 import { LeadFormModal } from '@/components/home/LeadFormModal';
+import { AnimatedCounter } from '@/components/home/AnimatedCounter';
 
 const WHATSAPP_NUMBER = '59176356972';
 
@@ -26,12 +27,37 @@ export const Hero = () => {
         {/* Background Effects */}
         <div className="absolute inset-0 gradient-hero" />
         
-        {/* Stadium Light Effect */}
-        <div className="absolute inset-0 stadium-glow" />
+        {/* Enhanced Stadium Light Overlay */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[80vh]">
+            <motion.div
+              animate={{ opacity: [0.4, 0.7, 0.4] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="w-full h-full"
+              style={{
+                background: `
+                  radial-gradient(ellipse 80% 50% at 50% 0%, 
+                    hsl(156 100% 50% / 0.2) 0%, 
+                    hsl(156 100% 50% / 0.05) 40%, 
+                    transparent 70%
+                  )
+                `,
+              }}
+            />
+          </div>
+        </div>
         
         {/* Gradient orbs */}
-        <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/20 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent/20 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '1s' }} />
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.3, 0.2] }}
+          transition={{ duration: 5, repeat: Infinity }}
+          className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/20 rounded-full blur-[120px]" 
+        />
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.3, 0.2] }}
+          transition={{ duration: 5, repeat: Infinity, delay: 2 }}
+          className="absolute bottom-1/4 -right-32 w-96 h-96 bg-accent/20 rounded-full blur-[120px]" 
+        />
 
         <div className="container mx-auto px-4 py-20 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
@@ -68,6 +94,42 @@ export const Hero = () => {
             >
               {subtitle}
             </motion.p>
+
+            {/* Animated Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="grid grid-cols-3 gap-4 max-w-lg mx-auto mb-10"
+            >
+              <div className="text-center p-3 rounded-xl bg-card/50 backdrop-blur border border-border/50">
+                <div className="flex items-center justify-center gap-1 text-primary mb-1">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div className="text-2xl md:text-3xl font-bold text-foreground">
+                  <AnimatedCounter value={5000} suffix="+" label="" />
+                </div>
+                <div className="text-xs text-muted-foreground">Usuarios activos</div>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-card/50 backdrop-blur border border-border/50">
+                <div className="flex items-center justify-center gap-1 text-gold mb-1">
+                  <Trophy className="w-4 h-4" />
+                </div>
+                <div className="text-2xl md:text-3xl font-bold text-foreground">
+                  <AnimatedCounter value={98} suffix="%" label="" />
+                </div>
+                <div className="text-xs text-muted-foreground">Satisfacción</div>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-card/50 backdrop-blur border border-border/50">
+                <div className="flex items-center justify-center gap-1 text-accent mb-1">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div className="text-2xl md:text-3xl font-bold text-foreground">
+                  <AnimatedCounter value={24} suffix="/7" label="" />
+                </div>
+                <div className="text-xs text-muted-foreground">Soporte</div>
+              </div>
+            </motion.div>
 
             {/* CTAs */}
             <motion.div
