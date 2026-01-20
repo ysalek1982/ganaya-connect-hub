@@ -5,12 +5,27 @@ import { ScrollReveal } from './ScrollReveal';
 import { StadiumLights } from './StadiumLights';
 import { useCMSLobbies, useCMSSections } from '@/hooks/useCMSPromos';
 
+// Import local fallback images
+import lobbyDeportes from '@/assets/lobby-deportes.jpg';
+import lobbyCasino from '@/assets/lobby-casino.jpg';
+import lobbyLiveCasino from '@/assets/lobby-live-casino.jpg';
+import lobbyTvGames from '@/assets/lobby-tv-games.jpg';
+import lobbyRapidos from '@/assets/lobby-rapidos.jpg';
+
 const categoryIcons: Record<string, typeof Gamepad2> = {
   deportes: Trophy,
   casino: Dice5,
   'live-casino': Gamepad2,
   'tv-games': Tv,
   rapidos: Zap,
+};
+
+const categoryImages: Record<string, string> = {
+  deportes: lobbyDeportes,
+  casino: lobbyCasino,
+  'live-casino': lobbyLiveCasino,
+  'tv-games': lobbyTvGames,
+  rapidos: lobbyRapidos,
 };
 
 const categoryStyles: Record<string, { 
@@ -162,15 +177,13 @@ export const LobbiesSection = () => {
                     backgroundSize: '40px 40px',
                   }} />
                   
-                  {/* Image if available */}
-                  {lobby.image_url && (
-                    <img
-                      src={lobby.image_url}
-                      alt={lobby.title}
-                      className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-110 transition-all duration-700"
-                      loading="lazy"
-                    />
-                  )}
+                  {/* Image - use local fallback if no CMS image */}
+                  <img
+                    src={lobby.image_url || categoryImages[lobby.category] || categoryImages.deportes}
+                    alt={lobby.title}
+                    className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-110 transition-all duration-700"
+                    loading="lazy"
+                  />
                   
                   {/* Bottom overlay for readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/50 to-transparent" />

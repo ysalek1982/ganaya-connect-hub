@@ -11,6 +11,17 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 
+// Import fallback promo images
+import promoBienvenida from '@/assets/promo-bienvenida.jpg';
+import promoCashback from '@/assets/promo-cashback.jpg';
+import promoTorneo from '@/assets/promo-torneo.jpg';
+
+const promoImages: Record<string, string> = {
+  'Bono de Bienvenida 100%': promoBienvenida,
+  'Cashback Semanal 10%': promoCashback,
+  'Torneo de Slots $10,000': promoTorneo,
+};
+
 export const PromosCarouselSection = () => {
   const { data: sections } = useCMSSections();
   const { data: promos, isLoading } = useCMSPromoCarousel();
@@ -80,15 +91,13 @@ export const PromosCarouselSection = () => {
                     <Sparkles className="absolute top-4 right-4 w-6 h-6 text-gold/40 group-hover:text-gold/80 transition-colors" />
                     <Sparkles className="absolute top-8 right-10 w-4 h-4 text-gold/30 group-hover:text-gold/60 transition-colors" />
                     
-                    {/* Image */}
-                    {promo.image_url && (
-                      <img
-                        src={promo.image_url}
-                        alt={promo.title}
-                        className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 group-hover:scale-110 transition-all duration-700"
-                        loading="lazy"
-                      />
-                    )}
+                    {/* Image - use local fallback */}
+                    <img
+                      src={promo.image_url || promoImages[promo.title] || promoBienvenida}
+                      alt={promo.title}
+                      className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-110 transition-all duration-700"
+                      loading="lazy"
+                    />
                     
                     {/* Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />

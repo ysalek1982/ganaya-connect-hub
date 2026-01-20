@@ -5,6 +5,21 @@ import { ScrollReveal } from './ScrollReveal';
 import { StadiumLights } from './StadiumLights';
 import { useCMSSpotlightGames, useCMSSections } from '@/hooks/useCMSPromos';
 
+// Import fallback game images
+import gameAviator from '@/assets/game-aviator.jpg';
+import gameSweetBonanza from '@/assets/game-sweet-bonanza.jpg';
+import gameLightningRoulette from '@/assets/game-lightning-roulette.jpg';
+import gameMegaBall from '@/assets/game-mega-ball.jpg';
+import gameGatesOlympus from '@/assets/game-gates-olympus.jpg';
+
+const gameImages: Record<string, string> = {
+  'Aviator': gameAviator,
+  'Sweet Bonanza': gameSweetBonanza,
+  'Lightning Roulette': gameLightningRoulette,
+  'Mega Ball': gameMegaBall,
+  'Gates of Olympus': gameGatesOlympus,
+};
+
 const speedConfig: Record<string, { icon: typeof Zap; color: string; bg: string; glow: string }> = {
   'Rápido': {
     icon: Zap,
@@ -102,16 +117,13 @@ export const SpotlightGamesSection = () => {
                   {/* Background */}
                   <div className="absolute inset-0 bg-gradient-to-br from-card via-card to-card/80" />
                   
-                  {game.image_url ? (
-                    <img
-                      src={game.image_url}
-                      alt={game.name}
-                      className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/10 to-gold/10" />
-                  )}
+                  {/* Image - use local fallback */}
+                  <img
+                    src={game.image_url || gameImages[game.name] || gameAviator}
+                    alt={game.name}
+                    className="absolute inset-0 w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-500"
+                    loading="lazy"
+                  />
                   
                   {/* Overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
