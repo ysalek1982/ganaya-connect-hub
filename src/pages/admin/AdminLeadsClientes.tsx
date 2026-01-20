@@ -11,12 +11,13 @@ import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'];
+type LeadStatus = Database['public']['Enums']['lead_status'];
 
 const AdminLeadsClientes = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [filterPais, setFilterPais] = useState<string>('all');
-  const [filterEstado, setFilterEstado] = useState<string>('all');
+  const [filterEstado, setFilterEstado] = useState<LeadStatus | 'all'>('all');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
   const { data: leads, isLoading } = useQuery({
@@ -119,7 +120,7 @@ const AdminLeadsClientes = () => {
             <SelectItem value="USA">USA</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterEstado} onValueChange={setFilterEstado}>
+        <Select value={filterEstado} onValueChange={(v) => setFilterEstado(v as LeadStatus | 'all')}>
           <SelectTrigger className="w-full md:w-40">
             <SelectValue placeholder="Estado" />
           </SelectTrigger>

@@ -11,11 +11,12 @@ import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
 type Lead = Database['public']['Tables']['leads']['Row'];
+type ScoreLabel = Database['public']['Enums']['score_label'];
 
 const AdminLeadsAgentes = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const [filterEtiqueta, setFilterEtiqueta] = useState<string>('all');
+  const [filterEtiqueta, setFilterEtiqueta] = useState<ScoreLabel | 'all'>('all');
   const [sortByScore, setSortByScore] = useState(true);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
@@ -131,7 +132,7 @@ const AdminLeadsAgentes = () => {
             className="pl-10"
           />
         </div>
-        <Select value={filterEtiqueta} onValueChange={setFilterEtiqueta}>
+        <Select value={filterEtiqueta} onValueChange={(v) => setFilterEtiqueta(v as ScoreLabel | 'all')}>
           <SelectTrigger className="w-full md:w-56">
             <SelectValue placeholder="Etiqueta" />
           </SelectTrigger>
