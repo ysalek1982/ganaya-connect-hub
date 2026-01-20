@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Users, ArrowRight, TrendingUp, Trophy, Zap } from 'lucide-react';
+import { MessageCircle, Users, ArrowRight, TrendingUp, Trophy, Zap, Star, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCMS } from '@/hooks/useCMS';
 import { LeadFormModal } from '@/components/home/LeadFormModal';
 import { AnimatedCounter } from '@/components/home/AnimatedCounter';
+import { FloatingParticles } from '@/components/home/FloatingParticles';
+import { GlowingGrid } from '@/components/home/GlowingGrid';
+import heroBg from '@/assets/hero-bg.jpg';
 
 const WHATSAPP_NUMBER = '59176356972';
 
@@ -24,9 +27,24 @@ export const Hero = () => {
   return (
     <>
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-        {/* Background Effects */}
-        <div className="absolute inset-0 gradient-hero" />
+        {/* Hero Background Image */}
+        <div className="absolute inset-0">
+          <img 
+            src={heroBg} 
+            alt="Stadium background" 
+            className="w-full h-full object-cover opacity-40"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
+        </div>
         
+        {/* Floating Particles */}
+        <FloatingParticles count={40} />
+        
+        {/* Glowing Grid */}
+        <GlowingGrid />
+        
+        {/* Background Effects */}
+        <div className="absolute inset-0 gradient-hero opacity-60" />
         {/* Enhanced Stadium Light Overlay */}
         <div className="absolute inset-0">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[80vh]">
