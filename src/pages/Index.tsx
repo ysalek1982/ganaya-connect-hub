@@ -8,6 +8,7 @@ import { BenefitsSection } from '@/components/home/BenefitsSection';
 import { FAQSection } from '@/components/home/FAQSection';
 import { ComplianceSection } from '@/components/home/ComplianceSection';
 import { MobileStickyNav } from '@/components/home/MobileStickyNav';
+import { StadiumLights } from '@/components/home/StadiumLights';
 import FloatingChatButton from '@/components/chat/FloatingChatButton';
 import { useCMSSEO } from '@/hooks/useCMSPromos';
 import { useEffect } from 'react';
@@ -35,9 +36,14 @@ const Index = () => {
   }, [seo]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative">
+      {/* Global Stadium Lights Effect */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <StadiumLights />
+      </div>
+      
       <Header />
-      <main>
+      <main className="relative z-10">
         <Hero />
         <LobbiesSection />
         <PromosCarouselSection />

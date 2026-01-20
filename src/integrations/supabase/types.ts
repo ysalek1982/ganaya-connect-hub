@@ -229,6 +229,7 @@ export type Database = {
           image_url: string | null
           order: number
           subtitle: string | null
+          target_country: string | null
           title: string
           updated_at: string
         }
@@ -240,6 +241,7 @@ export type Database = {
           image_url?: string | null
           order?: number
           subtitle?: string | null
+          target_country?: string | null
           title: string
           updated_at?: string
         }
@@ -251,6 +253,7 @@ export type Database = {
           image_url?: string | null
           order?: number
           subtitle?: string | null
+          target_country?: string | null
           title?: string
           updated_at?: string
         }
