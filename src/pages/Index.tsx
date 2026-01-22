@@ -38,9 +38,9 @@ const Index = () => {
   }, [seo]);
 
   return (
-    <div className="min-h-screen bg-background relative">
-      {/* Global Stadium Lights Effect */}
-      <div className="fixed inset-0 pointer-events-none z-0">
+    <div className="min-h-screen bg-background relative overflow-x-hidden">
+      {/* Subtle global ambient effect */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-50">
         <StadiumLights />
       </div>
       

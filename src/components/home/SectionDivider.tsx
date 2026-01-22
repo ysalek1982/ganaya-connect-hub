@@ -14,67 +14,47 @@ export const SectionDivider = ({ variant = 'primary' }: SectionDividerProps) => 
   const color = colorMap[variant];
   
   return (
-    <div className="relative h-24 overflow-hidden">
+    <div className="relative h-16 md:h-20 overflow-hidden">
       {/* Main gradient line */}
       <motion.div
         className="absolute top-1/2 left-0 right-0 h-px"
         style={{
           background: `linear-gradient(90deg, 
             transparent 0%, 
-            ${color}33 20%, 
-            ${color} 50%, 
-            ${color}33 80%, 
+            ${color}22 15%, 
+            ${color}66 50%, 
+            ${color}22 85%, 
             transparent 100%
           )`,
         }}
         initial={{ scaleX: 0, opacity: 0 }}
         whileInView={{ scaleX: 1, opacity: 1 }}
-        transition={{ duration: 1, ease: 'easeOut' }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+        viewport={{ once: true }}
       />
       
-      {/* Center glow */}
+      {/* Center glow - more subtle */}
       <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full blur-[50px]"
-        style={{ backgroundColor: `${color}20` }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full blur-[40px]"
+        style={{ backgroundColor: `${color}15` }}
         initial={{ scale: 0, opacity: 0 }}
         whileInView={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.8, delay: 0.3 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        viewport={{ once: true }}
       />
       
       {/* Diamond shape in center */}
       <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rotate-45"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rotate-45"
         style={{ 
           backgroundColor: color,
-          boxShadow: `0 0 20px ${color}, 0 0 40px ${color}50`,
+          boxShadow: `0 0 12px ${color}, 0 0 24px ${color}40`,
         }}
         initial={{ scale: 0, rotate: 0 }}
         whileInView={{ scale: 1, rotate: 45 }}
-        transition={{ duration: 0.5, delay: 0.5 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+        viewport={{ once: true }}
       />
-      
-      {/* Animated particles */}
-      {[...Array(6)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute top-1/2 w-1 h-1 rounded-full"
-          style={{ 
-            backgroundColor: color,
-            left: `${15 + i * 14}%`,
-          }}
-          initial={{ opacity: 0, y: 0 }}
-          whileInView={{ 
-            opacity: [0, 1, 0],
-            y: [-10, 0, 10],
-          }}
-          transition={{ 
-            duration: 2,
-            delay: i * 0.1,
-            repeat: Infinity,
-            repeatDelay: 3,
-          }}
-        />
-      ))}
     </div>
   );
 };

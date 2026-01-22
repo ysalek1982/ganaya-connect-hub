@@ -1,8 +1,7 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Flame, Zap, Radio, Star, Sparkles } from 'lucide-react';
+import { ArrowRight, Flame, Zap, Radio, Star, Sparkles, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollReveal } from './ScrollReveal';
-import { StadiumLights } from './StadiumLights';
 import { useCMSSpotlightGames, useCMSSections } from '@/hooks/useCMSPromos';
 
 // Import fallback game images
@@ -75,11 +74,12 @@ export const SpotlightGamesSection = () => {
   if (!games?.length) return null;
 
   return (
-    <section id="spotlight" className="py-20 md:py-28 relative overflow-hidden">
-      <StadiumLights />
-      
-      {/* Background decorations */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px]" />
+    <section id="spotlight" className="py-20 md:py-28 relative overflow-hidden bg-gradient-to-b from-background via-card/20 to-background">
+      {/* Enhanced background decorations */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-accent/15 rounded-full blur-[150px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-primary/10 rounded-full blur-[120px]" />
+      </div>
       
       <div className="container mx-auto px-4 relative z-10">
         <ScrollReveal>
