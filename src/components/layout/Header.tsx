@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const WHATSAPP_NUMBER = '59176356972';
+const GANAYA_URL = 'https://ganaya.bet/es/sport';
 
 const navLinks = [
-  { href: '/#como-funciona', label: 'Cómo funciona' },
-  { href: '/#beneficios', label: 'Beneficios' },
-  { href: '/#faq', label: 'Soporte' },
+  { href: '/#lobbies', label: 'Juegos' },
+  { href: '/#promos', label: 'Promociones' },
+  { href: '/#por-que', label: 'Beneficios' },
+  { href: '/#faq', label: 'Ayuda' },
   { href: '/agente', label: 'Ser agente' },
 ];
 
@@ -64,12 +66,20 @@ export const Header = () => {
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
               <Button 
+                variant="hero" 
+                size="default" 
+                onClick={() => window.open(GANAYA_URL, '_blank')}
+                className="shadow-lg shadow-primary/20"
+              >
+                Apostar Ahora
+              </Button>
+              <Button 
                 variant="whatsapp" 
-                size="lg" 
+                size="default" 
                 onClick={handleWhatsApp}
                 className="shadow-lg shadow-[#25D366]/20"
               >
-                <MessageCircle className="w-5 h-5" />
+                <MessageCircle className="w-4 h-4" />
                 WhatsApp 24/7
               </Button>
             </div>
