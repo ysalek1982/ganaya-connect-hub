@@ -10,6 +10,9 @@ import gameSweetBonanza from '@/assets/game-sweet-bonanza.jpg';
 import gameLightningRoulette from '@/assets/game-lightning-roulette.jpg';
 import gameMegaBall from '@/assets/game-mega-ball.jpg';
 import gameGatesOlympus from '@/assets/game-gates-olympus.jpg';
+import gameSpaceman from '@/assets/game-spaceman.jpg';
+import gameWildWest from '@/assets/game-wild-west.jpg';
+import gamePlinko from '@/assets/game-plinko.jpg';
 
 const gameImages: Record<string, string> = {
   'Aviator': gameAviator,
@@ -17,6 +20,13 @@ const gameImages: Record<string, string> = {
   'Lightning Roulette': gameLightningRoulette,
   'Mega Ball': gameMegaBall,
   'Gates of Olympus': gameGatesOlympus,
+  'Crazy Time': gameLightningRoulette,
+  'Spaceman': gameSpaceman,
+  'Wild West Gold': gameWildWest,
+  'Blackjack VIP': gameLightningRoulette,
+  'Gonzo Treasure Hunt': gameMegaBall,
+  'Plinko': gamePlinko,
+  'Book of Dead': gameGatesOlympus,
 };
 
 const speedConfig: Record<string, { icon: typeof Zap; color: string; bg: string; glow: string }> = {
