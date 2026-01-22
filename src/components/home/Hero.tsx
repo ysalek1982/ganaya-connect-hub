@@ -9,6 +9,8 @@ import { FloatingParticles } from '@/components/home/FloatingParticles';
 import heroBg from '@/assets/hero-bg.jpg';
 
 const WHATSAPP_NUMBER = '59176356972';
+const GANAYA_SPORT_URL = 'https://ganaya.bet/es/sport';
+const GANAYA_REGISTER_URL = 'https://ganaya.bet/es/sport';
 
 export const Hero = () => {
   const [showModal, setShowModal] = useState(false);

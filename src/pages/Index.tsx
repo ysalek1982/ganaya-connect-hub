@@ -12,6 +12,8 @@ import { StadiumLights } from '@/components/home/StadiumLights';
 import { SectionDivider } from '@/components/home/SectionDivider';
 import { TestimonialsSection } from '@/components/home/TestimonialsSection';
 import { PartnersSection } from '@/components/home/PartnersSection';
+import { LiveStatsBar } from '@/components/home/LiveStatsBar';
+import { HowItWorksSection } from '@/components/home/HowItWorksSection';
 import FloatingChatButton from '@/components/chat/FloatingChatButton';
 import { useCMSSEO } from '@/hooks/useCMSPromos';
 import { useEffect } from 'react';
@@ -48,6 +50,7 @@ const Index = () => {
       <Header />
       <main className="relative z-10">
         <Hero />
+        <LiveStatsBar />
         <SectionDivider variant="primary" />
         <LobbiesSection />
         <SectionDivider variant="gold" />
@@ -55,8 +58,10 @@ const Index = () => {
         <SectionDivider variant="accent" />
         <SpotlightGamesSection />
         <SectionDivider variant="primary" />
-        <BenefitsSection />
+        <HowItWorksSection />
         <SectionDivider variant="gold" />
+        <BenefitsSection />
+        <SectionDivider variant="accent" />
         <TestimonialsSection />
         <PartnersSection />
         <FAQSection />

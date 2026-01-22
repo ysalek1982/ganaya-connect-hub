@@ -130,7 +130,7 @@ export const BenefitsSection = () => {
                 <h3 className="font-display font-bold text-lg mb-1">¿Listo para empezar?</h3>
                 <p className="text-muted-foreground text-sm">Únete a miles de jugadores ganando</p>
               </div>
-              <Button variant="hero" size="lg" onClick={() => window.open('https://wa.me/59176356972?text=Quiero empezar a jugar', '_blank')}>
+              <Button variant="hero" size="lg" onClick={() => window.open('https://ganaya.bet/es/sport', '_blank')}>
                 Empezar Ahora
                 <ArrowRight className="w-4 h-4" />
               </Button>
