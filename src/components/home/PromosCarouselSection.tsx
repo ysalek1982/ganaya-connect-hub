@@ -15,11 +15,14 @@ import {
 import promoBienvenida from '@/assets/promo-bienvenida.jpg';
 import promoCashback from '@/assets/promo-cashback.jpg';
 import promoTorneo from '@/assets/promo-torneo.jpg';
+import promoGiros from '@/assets/promo-giros.jpg';
 
 const promoImages: Record<string, string> = {
   'Bono de Bienvenida 100%': promoBienvenida,
   'Cashback Semanal 10%': promoCashback,
+  'Cashback Semanal hasta 7%': promoCashback,
   'Torneo de Slots $10,000': promoTorneo,
+  'Giros Gratis Diarios': promoGiros,
 };
 
 export const PromosCarouselSection = () => {

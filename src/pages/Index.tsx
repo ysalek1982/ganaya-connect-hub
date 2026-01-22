@@ -10,7 +10,8 @@ import { ComplianceSection } from '@/components/home/ComplianceSection';
 import { MobileStickyNav } from '@/components/home/MobileStickyNav';
 import { StadiumLights } from '@/components/home/StadiumLights';
 import { SectionDivider } from '@/components/home/SectionDivider';
-import { FloatingParticles } from '@/components/home/FloatingParticles';
+import { TestimonialsSection } from '@/components/home/TestimonialsSection';
+import { PartnersSection } from '@/components/home/PartnersSection';
 import FloatingChatButton from '@/components/chat/FloatingChatButton';
 import { useCMSSEO } from '@/hooks/useCMSPromos';
 import { useEffect } from 'react';
@@ -56,6 +57,8 @@ const Index = () => {
         <SectionDivider variant="primary" />
         <BenefitsSection />
         <SectionDivider variant="gold" />
+        <TestimonialsSection />
+        <PartnersSection />
         <FAQSection />
         <ComplianceSection />
       </main>
