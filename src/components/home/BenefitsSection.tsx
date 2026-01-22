@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
-import { Trophy, Sparkles, Video, Timer, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Trophy, Sparkles, Video, Timer, CheckCircle2, ArrowRight, HeadphonesIcon, Wallet } from 'lucide-react';
 import { ScrollReveal } from './ScrollReveal';
-import { StadiumLights } from './StadiumLights';
 import { useCMSSections } from '@/hooks/useCMSPromos';
 import { Button } from '@/components/ui/button';
 
@@ -16,31 +15,31 @@ const benefits = [
     glowColor: 'hover:shadow-[0_0_40px_-10px_hsl(var(--primary)/0.5)]',
   },
   {
-    icon: Sparkles,
-    title: 'Variedad sin aburrimiento',
-    description: 'Slots, TV Games y juegos rápidos para todos los gustos.',
+    icon: HeadphonesIcon,
+    title: 'Soporte personalizado',
+    description: 'Agentes locales vía WhatsApp 24/7. Siempre alguien para ayudarte.',
+    color: 'text-[#25D366]',
+    bgColor: 'bg-[#25D366]/20',
+    borderColor: 'border-[#25D366]/30 hover:border-[#25D366]/60',
+    glowColor: 'hover:shadow-[0_0_40px_-10px_rgba(37,211,102,0.5)]',
+  },
+  {
+    icon: Wallet,
+    title: 'Cashback hasta 7%',
+    description: 'Recupera parte de tus pérdidas cada semana automáticamente.',
     color: 'text-gold',
     bgColor: 'bg-gold/20',
     borderColor: 'border-gold/30 hover:border-gold/60',
     glowColor: 'hover:shadow-[0_0_40px_-10px_hsl(var(--gold)/0.5)]',
   },
   {
-    icon: Video,
-    title: 'Experiencia casino real',
-    description: 'Live Casino con dealers reales las 24 horas.',
+    icon: Timer,
+    title: 'Retiros rápidos',
+    description: 'Pago local a tu banco, USDT o Binance en minutos.',
     color: 'text-accent',
     bgColor: 'bg-accent/20',
     borderColor: 'border-accent/30 hover:border-accent/60',
     glowColor: 'hover:shadow-[0_0_40px_-10px_hsl(var(--accent)/0.5)]',
-  },
-  {
-    icon: Timer,
-    title: 'Apuesta a tu ritmo',
-    description: 'Desde sesiones rápidas de 1 minuto hasta juegos en vivo.',
-    color: 'text-[#25D366]',
-    bgColor: 'bg-[#25D366]/20',
-    borderColor: 'border-[#25D366]/30 hover:border-[#25D366]/60',
-    glowColor: 'hover:shadow-[0_0_40px_-10px_rgba(37,211,102,0.5)]',
   },
 ];
 
@@ -51,12 +50,12 @@ export const BenefitsSection = () => {
   if (section && !section.enabled) return null;
 
   return (
-    <section id="por-que" className="py-20 md:py-28 bg-card/50 relative overflow-hidden">
-      <StadiumLights />
-      
-      {/* Background decorations */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[150px]" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[150px]" />
+    <section id="por-que" className="py-20 md:py-28 bg-gradient-to-b from-card/30 via-background to-card/30 relative overflow-hidden">
+      {/* Enhanced background decorations */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[150px]" />
+        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-gold/10 rounded-full blur-[120px]" />
+      </div>
       
       <div className="container mx-auto px-4 relative z-10">
         <ScrollReveal>

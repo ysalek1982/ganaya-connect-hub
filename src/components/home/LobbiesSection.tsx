@@ -112,12 +112,13 @@ export const LobbiesSection = () => {
   }
 
   return (
-    <section id="lobbies" className="py-20 md:py-28 relative overflow-hidden">
-      <StadiumLights />
-      
-      {/* Background decorative elements */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-[150px] -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full blur-[150px] translate-x-1/2 translate-y-1/2" />
+    <section id="lobbies" className="py-20 md:py-28 relative overflow-hidden bg-gradient-to-b from-background via-card/30 to-background">
+      {/* Ambient lighting effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/15 rounded-full blur-[150px]" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/10 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-gold/5 rounded-full blur-[100px]" />
+      </div>
       
       <div className="container mx-auto px-4 relative z-10">
         <ScrollReveal>

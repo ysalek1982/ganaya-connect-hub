@@ -42,11 +42,12 @@ export const PromosCarouselSection = () => {
   if (isLoading || !promos?.length) return null;
 
   return (
-    <section id="promos" className="py-20 md:py-28 bg-card/50 relative overflow-hidden">
-      {/* Background decorations */}
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-1/4 left-0 w-72 h-72 bg-gold/20 rounded-full blur-[100px]" />
-        <div className="absolute bottom-1/4 right-0 w-72 h-72 bg-accent/20 rounded-full blur-[100px]" />
+    <section id="promos" className="py-20 md:py-28 bg-gradient-to-b from-card/40 via-background to-card/40 relative overflow-hidden">
+      {/* Enhanced background decorations */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-gold/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-accent/15 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[250px] bg-primary/10 rounded-full blur-[100px]" />
       </div>
       
       <div className="container mx-auto px-4 relative z-10">
