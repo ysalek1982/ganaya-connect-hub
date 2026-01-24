@@ -298,9 +298,15 @@ serve(async (req) => {
   } catch (error: unknown) {
     console.error("[create-agent-user] Error:", error);
     const message = error instanceof Error ? error.message : "Failed to create agent";
+    
+    // Return 400 for validation/user errors, 500 for system errors
+    const isUserError = message.includes("email") || message.includes("Email") || 
+                        message.includes("registrado") || message.includes("válido");
+    const statusCode = isUserError ? 400 : 500;
+    
     return new Response(
       JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: statusCode, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
