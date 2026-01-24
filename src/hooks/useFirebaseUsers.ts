@@ -55,18 +55,21 @@ export const useFirebaseLineLeaders = () => {
     queryKey: ['firebase-line-leaders'],
     queryFn: async (): Promise<FirebaseUser[]> => {
       const usersRef = collection(db, 'users');
-      const q = query(
-        usersRef,
-        where('role', '==', 'LINE_LEADER'),
-        orderBy('createdAt', 'desc')
-      );
+      // Avoid composite index by not using orderBy with where
+      const snapshot = await getDocs(query(usersRef, where('role', '==', 'LINE_LEADER')));
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        uid: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      })) as FirebaseUser[];
+      const users = snapshot.docs.map(d => {
+        const data = d.data() as any;
+        return {
+          uid: d.id,
+          ...data,
+          createdAt: data.createdAt?.toDate?.() || new Date(0),
+        };
+      }) as FirebaseUser[];
+
+      // Sort client-side
+      users.sort((a, b) => (b.createdAt?.getTime?.() || 0) - (a.createdAt?.getTime?.() || 0));
+      return users;
     },
   });
 };
