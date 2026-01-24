@@ -26,7 +26,7 @@ const FloatingChatButton = () => {
         )}
       </AnimatePresence>
 
-      <AIChatDrawer open={open} onOpenChange={setOpen} mode="auto" />
+      <AIChatDrawer open={open} onOpenChange={setOpen} />
     </>
   );
 };

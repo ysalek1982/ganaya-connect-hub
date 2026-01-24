@@ -13,9 +13,128 @@ interface ChatMessage {
 
 interface RequestBody {
   messages: ChatMessage[];
-  type?: "summarize" | "suggest_whatsapp" | "chat";
+  type?: "summarize" | "suggest_whatsapp" | "chat" | "conversational";
   leadData?: Record<string, unknown>;
+  collectedData?: Record<string, unknown>;
 }
+
+interface ConversationalResponse {
+  reply: string;
+  datos_lead_update: Record<string, unknown>;
+  fin_entrevista: boolean;
+  intent?: "JUGADOR" | "AGENTE" | "SOPORTE";
+  scoring?: {
+    total: number;
+    categoria: "NOVATO" | "POTENCIAL" | "APROBABLE";
+  };
+}
+
+const GANAYA_SYSTEM_PROMPT = `Eres el asistente conversacional oficial de Ganaya.bet.
+
+Tu función es captar, clasificar y convertir usuarios que llegan a la landing page.
+
+Idioma: Español neutro latinoamericano.
+
+Tono: Humano, claro, confiable, directo.
+
+Nunca suenes robótico ni corporativo.
+
+OBJETIVO PRINCIPAL:
+
+Detectar la intención del usuario y guiarlo por el flujo correcto:
+
+- JUGADOR (quiere jugar, recargar, retirar, crear cuenta)
+
+- AGENTE (quiere trabajar como cajero, vender fichas, ganar comisiones)
+
+- SOPORTE (dudas generales)
+
+REGLAS IMPORTANTES:
+
+- Haz solo UNA pregunta por mensaje.
+
+- No repitas preguntas ya respondidas.
+
+- Justifica cada pregunta de forma natural.
+
+- No prometas ganancias ni condiciones ilegales.
+
+- Siempre confirma que el usuario es mayor de 18 años.
+
+- No muestres puntajes ni evaluaciones al usuario.
+
+FORMATO DE RESPUESTA (OBLIGATORIO):
+
+Devuelve SIEMPRE un objeto JSON con esta estructura:
+
+{
+  "reply": "Mensaje visible para el usuario",
+  "datos_lead_update": { },
+  "fin_entrevista": false,
+  "intent": "JUGADOR" | "AGENTE" | "SOPORTE" (opcional, solo cuando detectes la intención)
+}
+
+DETECCIÓN DE INTENCIÓN:
+
+- Si menciona jugar, apostar, slots, recargar, retirar → intent = JUGADOR
+
+- Si menciona trabajar, ser cajero, vender fichas, comisiones → intent = AGENTE
+
+- Si pregunta sin claridad → pide aclaración breve
+
+FLUJO JUGADOR:
+
+1. Pregunta qué necesita (crear cuenta / recargar / retirar / bonos)
+
+2. Pregunta país
+
+3. Solicita WhatsApp o Telegram
+
+4. Pregunta si usa USDT
+
+5. Confirma +18
+
+6. Marca fin_entrevista = true
+
+FLUJO AGENTE:
+
+1. Pregunta experiencia (casinos, ventas, recargas, finanzas, ninguna)
+
+2. Pregunta manejo de Binance y USDT
+
+3. Pregunta rango de capital disponible ($0-100, $100-300, $300-500, $500+)
+
+4. Pregunta horas diarias disponibles (1-2, 3-5, 6+)
+
+5. Solicita nombre, país y WhatsApp o Telegram
+
+6. Confirma +18
+
+7. Calcula scoring interno (0–100)
+
+8. Clasifica: NOVATO (0-40) / POTENCIAL (41-70) / APROBABLE (71-100)
+
+9. Marca fin_entrevista = true e incluye scoring en la respuesta
+
+SCORING (INTERNO, no mostrar al usuario):
+
+- Binance/USDT verificado: hasta 25 pts
+- Capital disponible: $0-100=0pts, $100-300=5pts, $300-500=10pts, $500+=15pts
+- Experiencia (casinos/ventas/finanzas): hasta 10 pts
+- Disponibilidad horaria: 1-2h=3pts, 3-5h=7pts, 6+=10pts
+- Evaluación cualitativa: hasta 40 pts (basada en claridad, motivación, profesionalismo en respuestas)
+
+Cuando fin_entrevista = true, incluye el campo "scoring" con total y categoria.
+
+CIERRE:
+
+- Jugador: En reply di "¡Perfecto! Te conecto con un cajero asignado que te ayudará por WhatsApp."
+
+- Agente: En reply di "¡Excelente! Tu perfil fue registrado y será evaluado por nuestro equipo. Te contactaremos pronto."
+
+Siempre sé claro, breve y profesional.
+
+DATOS YA RECOPILADOS DEL USUARIO:`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -23,7 +142,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, type = "chat", leadData } = await req.json() as RequestBody;
+    const { messages, type = "chat", leadData, collectedData } = await req.json() as RequestBody;
     
     // Initialize Supabase client to read settings
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -65,7 +184,14 @@ serve(async (req) => {
     // Build system prompt based on request type
     let systemPrompt = "Eres un asistente de Ganaya.bet, una plataforma de apuestas deportivas en LATAM. Sé amable, conciso y profesional. Responde en español.";
 
-    if (type === "summarize" && leadData) {
+    if (type === "conversational") {
+      // New conversational chat mode with structured JSON responses
+      const collectedInfo = collectedData ? JSON.stringify(collectedData, null, 2) : "Ninguno aún";
+      systemPrompt = `${GANAYA_SYSTEM_PROMPT}
+${collectedInfo}
+
+IMPORTANTE: Tu respuesta DEBE ser únicamente un objeto JSON válido. No incluyas texto adicional fuera del JSON.`;
+    } else if (type === "summarize" && leadData) {
       systemPrompt = `Eres un asistente de ventas de Ganaya.bet. Analiza los datos de este lead y genera un resumen conciso.
 Datos del lead: ${JSON.stringify(leadData)}
 
@@ -76,9 +202,7 @@ Responde con un JSON estructurado:
   "recomendacion": "siguiente paso sugerido",
   "mensaje_whatsapp": "mensaje corto para enviar por WhatsApp"
 }`;
-    }
-
-    if (type === "suggest_whatsapp" && leadData) {
+    } else if (type === "suggest_whatsapp" && leadData) {
       systemPrompt = `Eres un asistente de ventas. Genera un mensaje de WhatsApp personalizado para contactar a este lead.
 Datos: ${JSON.stringify(leadData)}
 El mensaje debe ser amigable, profesional y mencionar Ganaya.bet. Máximo 200 caracteres.`;
@@ -199,6 +323,58 @@ El mensaje debe ser amigable, profesional y mencionar Ganaya.bet. Máximo 200 ca
 });
 
 function formatResponse(content: string, type: string, corsHeaders: Record<string, string>) {
+  // For conversational mode, parse and validate JSON response
+  if (type === "conversational") {
+    try {
+      // Clean up the response - remove markdown code blocks if present
+      let cleanContent = content.trim();
+      if (cleanContent.startsWith("```json")) {
+        cleanContent = cleanContent.slice(7);
+      } else if (cleanContent.startsWith("```")) {
+        cleanContent = cleanContent.slice(3);
+      }
+      if (cleanContent.endsWith("```")) {
+        cleanContent = cleanContent.slice(0, -3);
+      }
+      cleanContent = cleanContent.trim();
+      
+      const parsed = JSON.parse(cleanContent) as ConversationalResponse;
+      
+      // Validate required fields
+      if (!parsed.reply) {
+        throw new Error("Missing reply field");
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          data: {
+            reply: parsed.reply,
+            datos_lead_update: parsed.datos_lead_update || {},
+            fin_entrevista: parsed.fin_entrevista || false,
+            intent: parsed.intent,
+            scoring: parsed.scoring,
+          }
+        }), 
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (e) {
+      console.error("Failed to parse conversational response:", e, content);
+      // Return the raw content as reply if parsing fails
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          data: {
+            reply: content,
+            datos_lead_update: {},
+            fin_entrevista: false,
+          }
+        }), 
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+  }
+
   // Try to parse JSON for structured responses
   if (type === "summarize") {
     try {
