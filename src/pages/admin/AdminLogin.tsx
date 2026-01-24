@@ -1,20 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { toast } from 'sonner';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const { user, userData, loading: authLoading, signIn, signUp, signOut } = useFirebaseAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+
+  useEffect(() => {
+    // If user is logged in and has admin role, redirect to dashboard
+    if (user && userData) {
+      if (userData.role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else if (userData.role === 'LINE_LEADER' || userData.role === 'AGENT') {
+        // Non-admin roles can still access but with limited functionality
+        navigate('/admin/dashboard');
+      }
+    }
+  }, [user, userData, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,46 +35,24 @@ const AdminLogin = () => {
 
     try {
       if (isSignUp) {
-        // Sign up flow
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/admin`
-          }
-        });
-
-        if (error) throw error;
-
-        toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
-        setIsSignUp(false);
-        setPassword('');
+        const { error } = await signUp(email, password);
+        if (error) {
+          toast.error(error);
+        } else {
+          toast.success('Registro exitoso. Ahora puedes iniciar sesión.');
+          setIsSignUp(false);
+          setPassword('');
+        }
       } else {
-        // Login flow
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) throw error;
-
-        // Check if user has admin role
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Usuario no encontrado');
-
-        const { data: roles } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .single();
-
-        if (roles?.role !== 'admin') {
-          await supabase.auth.signOut();
-          throw new Error('No tienes permisos de administrador. Contacta al soporte.');
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast.error(error);
+          return;
         }
 
-        toast.success('Bienvenido al panel de administración');
-        navigate('/admin/dashboard');
+        // Wait for user data to load and check role
+        // The useEffect above will handle the redirect
+        toast.success('Verificando permisos...');
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Error al procesar solicitud';
@@ -70,6 +61,14 @@ const AdminLogin = () => {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="spinner w-8 h-8 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">

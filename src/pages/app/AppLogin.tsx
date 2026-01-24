@@ -5,11 +5,12 @@ import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { toast } from 'sonner';
 
 const AppLogin = () => {
   const navigate = useNavigate();
+  const { user, userData, loading: authLoading, signIn, signUp } = useFirebaseAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -17,18 +18,11 @@ const AppLogin = () => {
   const [isSignUp, setIsSignUp] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        navigate('/app');
-      }
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate('/app');
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    // Redirect if already logged in with valid user data
+    if (user && userData) {
+      navigate('/app');
+    }
+  }, [user, userData, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,17 +30,21 @@ const AppLogin = () => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/app` },
-        });
-        if (error) throw error;
-        toast.success('Cuenta creada. Revisa tu email para confirmar.');
+        const { error } = await signUp(email, password);
+        if (error) {
+          toast.error(error);
+        } else {
+          toast.success('Cuenta creada. Ahora puedes ingresar.');
+          setIsSignUp(false);
+          setPassword('');
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success('Bienvenido');
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast.error(error);
+        } else {
+          toast.success('Bienvenido');
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Error de autenticación');
@@ -54,6 +52,14 @@ const AppLogin = () => {
       setLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="spinner w-8 h-8 border-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">

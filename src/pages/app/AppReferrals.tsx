@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
-import { supabase } from '@/integrations/supabase/client';
 import { Copy, Link, QrCode, Download, Globe, Check, Share2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { toast } from 'sonner';
 
 const countries = [
@@ -23,32 +21,18 @@ const countries = [
 ];
 
 const AppReferrals = () => {
-  const { agentId } = useUserRole();
+  const { userData } = useFirebaseAuth();
   const [selectedCountry, setSelectedCountry] = useState('all');
   const [utmSource, setUtmSource] = useState('');
   const [utmCampaign, setUtmCampaign] = useState('');
   const [copied, setCopied] = useState(false);
 
-  const { data: agentInfo } = useQuery({
-    queryKey: ['agent-ref-info', agentId],
-    queryFn: async () => {
-      if (!agentId) return null;
-      const { data } = await supabase
-        .from('agentes')
-        .select('nombre, ref_code')
-        .eq('id', agentId)
-        .single();
-      return data;
-    },
-    enabled: !!agentId,
-  });
-
   const baseUrl = window.location.origin;
   
   const buildLink = () => {
-    if (!agentInfo?.ref_code) return '';
+    if (!userData?.refCode) return '';
     
-    let link = `${baseUrl}/?ref=${agentInfo.ref_code}`;
+    let link = `${baseUrl}/?ref=${userData.refCode}`;
     
     if (selectedCountry !== 'all') {
       link += `&country=${selectedCountry}`;
@@ -82,7 +66,7 @@ const AppReferrals = () => {
       const url = URL.createObjectURL(svgBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `qr-${agentInfo?.ref_code}.svg`;
+      a.download = `qr-${userData?.refCode}.svg`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success('QR descargado');
@@ -109,7 +93,7 @@ const AppReferrals = () => {
     },
   ];
 
-  if (!agentInfo?.ref_code) {
+  if (!userData?.refCode) {
     return (
       <div className="flex items-center justify-center py-20">
         <Card className="glass-card max-w-md">
@@ -143,7 +127,7 @@ const AppReferrals = () => {
             {/* Ref Code Display */}
             <div className="p-4 rounded-lg bg-primary/10 border border-primary/30 text-center">
               <p className="text-sm text-muted-foreground mb-1">Tu código</p>
-              <code className="text-2xl font-bold text-primary">{agentInfo.ref_code}</code>
+              <code className="text-2xl font-bold text-primary">{userData.refCode}</code>
             </div>
 
             {/* Country Selector */}

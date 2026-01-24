@@ -12,50 +12,24 @@ import {
   X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 
 const AppLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { role, isAdmin, isLineLeader, isAgent, agentId, loading: roleLoading } = useUserRole();
+  const { user, userData, loading, signOut, isAdmin, isLineLeader, isAgent } = useFirebaseAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [agentData, setAgentData] = useState<{ nombre: string; ref_code: string | null; can_recruit_subagents: boolean } | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate('/login');
-        return;
-      }
-
-      // Fetch agent data if user is agent/line_leader
-      if (agentId) {
-        const { data } = await supabase
-          .from('agentes')
-          .select('nombre, ref_code, can_recruit_subagents')
-          .eq('id', agentId)
-          .single();
-        
-        if (data) {
-          setAgentData(data);
-        }
-      }
-
-      setLoading(false);
-    };
-
-    if (!roleLoading) {
-      checkAuth();
+    // Redirect to login if not authenticated
+    if (!loading && !user) {
+      navigate('/login');
     }
-  }, [navigate, roleLoading, agentId]);
+  }, [user, loading, navigate]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success('Sesión cerrada');
     navigate('/login');
   };
@@ -69,7 +43,7 @@ const AppLayout = () => {
     ];
 
     // Show subagents if admin, line_leader, or agent with permission
-    if (isAdmin || isLineLeader || (isAgent && agentData?.can_recruit_subagents)) {
+    if (isAdmin || isLineLeader || (isAgent && userData?.canRecruitSubagents)) {
       items.push({ path: '/app/subagents', icon: UserPlus, label: 'Subagentes' });
     }
 
@@ -80,7 +54,7 @@ const AppLayout = () => {
 
   const navItems = getNavItems();
 
-  if (loading || roleLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="spinner w-8 h-8 border-primary" />
@@ -103,12 +77,12 @@ const AppLayout = () => {
           </div>
 
           {/* Agent Info */}
-          {agentData && (
+          {userData && (
             <div className="p-4 border-b border-sidebar-border">
-              <p className="font-medium text-sm truncate">{agentData.nombre}</p>
-              {agentData.ref_code && (
+              <p className="font-medium text-sm truncate">{userData.name}</p>
+              {userData.refCode && (
                 <code className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded mt-1 inline-block">
-                  {agentData.ref_code}
+                  {userData.refCode}
                 </code>
               )}
             </div>
