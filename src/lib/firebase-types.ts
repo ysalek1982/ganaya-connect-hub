@@ -15,6 +15,7 @@ export interface FirebaseUser {
   referralUrl: string | null;
   whatsapp: string | null;
   city: string | null;
+  needsPasswordReset?: boolean;
   createdAt: Date;
 }
 
