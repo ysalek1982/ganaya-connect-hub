@@ -28,7 +28,7 @@ interface AgentForm {
 
 const AdminAgentesNew = () => {
   const { isAdmin, isLineLeader, agentId } = useFirebaseAuth();
-  const { agents, lineLeaders, isLoading, createAgent, updateAgent, deleteAgent, getLeadCount } = useFirebaseUsers();
+  const { agents, lineLeaders, isLoading, error, refetch, createAgent, updateAgent, deleteAgent, getLeadCount } = useFirebaseUsers();
   
   const [search, setSearch] = useState('');
   const [filterPais, setFilterPais] = useState<string>('all');
@@ -260,6 +260,25 @@ const AdminAgentesNew = () => {
           </Select>
         )}
       </div>
+
+      {error && (
+        <div className="rounded-lg border border-border bg-card p-4 text-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-medium">No se pudieron cargar los agentes</p>
+              <p className="text-muted-foreground break-words">
+                {error instanceof Error ? error.message : 'Error desconocido'}
+              </p>
+              <p className="text-muted-foreground mt-2">
+                Si ves “permission-denied”, revisa que tus reglas de Firestore estén publicadas y que tu usuario admin tenga documento en <code>users</code>.
+              </p>
+            </div>
+            <Button variant="outline" onClick={refetch}>
+              Reintentar
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="glass-card rounded-xl overflow-hidden">
