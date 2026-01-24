@@ -6,9 +6,12 @@ import {
   signOut as firebaseSignOut,
   User
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { FirebaseUser, UserRole } from '@/lib/firebase-types';
+
+// Admin email that gets automatic admin role
+const ADMIN_EMAIL = 'ysalek@gmail.com';
 
 interface AuthState {
   user: User | null;
@@ -35,16 +38,18 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
     error: null,
   });
 
-  // Fetch user document from Firestore
-  const fetchUserData = useCallback(async (uid: string): Promise<FirebaseUser | null> => {
+  // Create or fetch user document from Firestore
+  const fetchOrCreateUserData = useCallback(async (user: User): Promise<FirebaseUser | null> => {
     try {
-      const userDoc = await getDoc(doc(db, 'users', uid));
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
       if (userDoc.exists()) {
         const data = userDoc.data();
         return {
-          uid,
+          uid: user.uid,
           name: data.name || '',
-          email: data.email || '',
+          email: data.email || user.email || '',
           role: data.role as UserRole || 'AGENT',
           country: data.country || '',
           isActive: data.isActive ?? true,
@@ -54,12 +59,36 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
           referralUrl: data.referralUrl || null,
           whatsapp: data.whatsapp || null,
           city: data.city || null,
+          needsPasswordReset: data.needsPasswordReset ?? false,
           createdAt: data.createdAt?.toDate() || new Date(),
         };
       }
-      return null;
+      
+      // User document doesn't exist, create it
+      const isAdminEmail = user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+      const newUserData: Omit<FirebaseUser, 'createdAt'> & { createdAt: Date } = {
+        uid: user.uid,
+        name: user.email?.split('@')[0] || 'Usuario',
+        email: user.email || '',
+        role: isAdminEmail ? 'ADMIN' : 'AGENT',
+        country: '',
+        isActive: true,
+        lineLeaderId: null,
+        canRecruitSubagents: false,
+        refCode: null,
+        referralUrl: null,
+        whatsapp: null,
+        city: null,
+        needsPasswordReset: false,
+        createdAt: new Date(),
+      };
+      
+      await setDoc(userDocRef, newUserData);
+      console.log(`Created user document for ${user.email} with role: ${newUserData.role}`);
+      
+      return newUserData;
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('Error fetching/creating user data:', error);
       return null;
     }
   }, []);
@@ -67,7 +96,7 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userData = await fetchUserData(user.uid);
+        const userData = await fetchOrCreateUserData(user);
         setState({
           user,
           userData,
@@ -85,7 +114,7 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
     });
 
     return () => unsubscribe();
-  }, [fetchUserData]);
+  }, [fetchOrCreateUserData]);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
