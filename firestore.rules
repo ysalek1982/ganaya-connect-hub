@@ -33,18 +33,25 @@ service cloud.firestore {
       allow read: if isAuthenticated() && request.auth.uid == userId;
       
       // Admin and Line Leaders can read all users (for agent listing)
-      // Using list for collection queries, get for single doc
       allow read: if isAuthenticated() && (
-        // Check if user exists and has admin role - safe because we're reading /users
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'LINE_LEADER']
       );
       
-      // Users can only update their own non-critical fields
+      // Users can update their own non-critical fields
       allow update: if isAuthenticated() && 
         request.auth.uid == userId &&
         !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['role', 'refCode', 'isActive', 'lineLeaderId']);
+          .hasAny(['role', 'refCode', 'lineLeaderId']);
+      
+      // Admin can update any user (for editing/deactivating agents)
+      allow update: if isAdmin();
+      
+      // Line Leaders can update agents in their network
+      allow update: if isLineLeader() && 
+        resource.data.lineLeaderId == request.auth.uid &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'refCode', 'lineLeaderId']);
       
       // Create and delete only via Cloud Functions (service account)
       allow create, delete: if false;
