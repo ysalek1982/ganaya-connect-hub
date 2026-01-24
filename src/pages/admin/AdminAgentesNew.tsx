@@ -10,8 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
-import { useFirebaseUsers } from '@/hooks/useFirebaseUsers';
+import { useFirebaseUsers, type CreateAgentResult } from '@/hooks/useFirebaseUsers';
 import AgentLinkModal from '@/components/admin/AgentLinkModal';
+import AgentCreatedModal from '@/components/admin/AgentCreatedModal';
 import type { FirebaseUser } from '@/lib/firebase-types';
 
 interface AgentForm {
@@ -35,6 +36,13 @@ const AdminAgentesNew = () => {
   const [filterLineLeader, setFilterLineLeader] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [showCreatedModal, setShowCreatedModal] = useState(false);
+  const [createdAgentData, setCreatedAgentData] = useState<{
+    email: string;
+    tempPassword: string;
+    refCode: string;
+    referralUrl: string;
+  } | null>(null);
   const [selectedAgentForLink, setSelectedAgentForLink] = useState<{ name: string; refCode: string } | null>(null);
   const [editingAgent, setEditingAgent] = useState<FirebaseUser | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,25 +125,33 @@ const AdminAgentesNew = () => {
           canRecruitSubagents: form.canRecruitSubagents,
         });
         toast.success('Agente actualizado');
+        closeModal();
       } else {
         // Create new agent via Edge Function
-        const result = await createAgent({
+        const result: CreateAgentResult = await createAgent({
           name: form.name,
           email: form.email,
-          whatsapp: form.whatsapp,
+          whatsapp: form.whatsapp || undefined,
           country: form.country,
           city: form.city || undefined,
           lineLeaderId: form.lineLeaderId || undefined,
           canRecruitSubagents: form.canRecruitSubagents,
         });
         
-        if (result.success) {
-          toast.success(`Agente creado con código: ${result.refCode}`);
+        if (result.success && result.tempPassword && result.refCode && result.referralUrl && result.email) {
+          // Show the created modal with temp password
+          setCreatedAgentData({
+            email: result.email,
+            tempPassword: result.tempPassword,
+            refCode: result.refCode,
+            referralUrl: result.referralUrl,
+          });
+          closeModal();
+          setShowCreatedModal(true);
         } else {
           throw new Error(result.error || 'Error al crear agente');
         }
       }
-      closeModal();
     } catch (error: any) {
       console.error('Error:', error);
       toast.error(error.message || 'Error al procesar la solicitud');
@@ -465,6 +481,16 @@ const AdminAgentesNew = () => {
         onClose={() => setShowLinkModal(false)}
         agentName={selectedAgentForLink?.name || ''}
         refCode={selectedAgentForLink?.refCode || ''}
+      />
+
+      {/* Agent Created Modal - shows temp password */}
+      <AgentCreatedModal
+        isOpen={showCreatedModal}
+        onClose={() => {
+          setShowCreatedModal(false);
+          setCreatedAgentData(null);
+        }}
+        agentData={createdAgentData}
       />
     </div>
   );

@@ -18,15 +18,21 @@ import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 const AppLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, userData, loading, signOut, isAdmin, isLineLeader, isAgent } = useFirebaseAuth();
+  const { user, userData, loading, signOut, isAdmin, isLineLeader, isAgent, needsPasswordReset } = useFirebaseAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Redirect to login if not authenticated
     if (!loading && !user) {
       navigate('/login');
+      return;
     }
-  }, [user, loading, navigate]);
+    
+    // Force password change if needed
+    if (!loading && user && needsPasswordReset) {
+      navigate('/app/change-password');
+    }
+  }, [user, loading, needsPasswordReset, navigate]);
 
   const handleLogout = async () => {
     await signOut();

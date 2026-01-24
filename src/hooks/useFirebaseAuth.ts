@@ -6,8 +6,9 @@ import {
   signOut as firebaseSignOut,
   User
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import type { FirebaseUser } from '@/lib/firebase-types';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import type { FirebaseUser, UserRole } from '@/lib/firebase-types';
 
 // Admin email that gets automatic admin role
 const ADMIN_EMAIL = 'ysalek@gmail.com';
@@ -27,6 +28,7 @@ interface UseFirebaseAuth extends AuthState {
   isLineLeader: boolean;
   isAgent: boolean;
   agentId: string | null;
+  needsPasswordReset: boolean;
 }
 
 export const useFirebaseAuth = (): UseFirebaseAuth => {
@@ -37,8 +39,7 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
     error: null,
   });
 
-  // NOTE: Firestore rules in your Firebase project currently deny reads/writes,
-  // so we avoid blocking login on Firestore during auth bootstrap.
+  // Build fallback user data when Firestore is unavailable
   const buildFallbackUserData = (user: User): FirebaseUser => {
     const email = user.email || '';
     const isAdminEmail = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
@@ -61,15 +62,58 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
     };
   };
 
+  // Fetch user data from Firestore (non-blocking)
+  const fetchUserData = async (user: User): Promise<FirebaseUser> => {
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        return {
+          uid: user.uid,
+          name: data.name || '',
+          email: data.email || user.email || '',
+          role: data.role as UserRole || 'AGENT',
+          country: data.country || '',
+          isActive: data.isActive ?? true,
+          lineLeaderId: data.lineLeaderId || null,
+          canRecruitSubagents: data.canRecruitSubagents ?? false,
+          refCode: data.refCode || null,
+          referralUrl: data.referralUrl || null,
+          whatsapp: data.whatsapp || null,
+          city: data.city || null,
+          needsPasswordReset: data.needsPasswordReset ?? false,
+          createdAt: data.createdAt?.toDate() || new Date(),
+        };
+      }
+    } catch (error) {
+      console.warn('[useFirebaseAuth] Firestore read failed, using fallback:', error);
+    }
+    
+    return buildFallbackUserData(user);
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
+        // Set initial state immediately with fallback
         setState({
           user,
           userData: buildFallbackUserData(user),
           loading: false,
           error: null,
         });
+        
+        // Then fetch actual data from Firestore (non-blocking)
+        setTimeout(() => {
+          fetchUserData(user).then((userData) => {
+            setState(prev => ({
+              ...prev,
+              userData,
+            }));
+          });
+        }, 0);
       } else {
         setState({
           user: null,
@@ -122,6 +166,7 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
     isLineLeader: role === 'LINE_LEADER',
     isAgent: role === 'AGENT',
     agentId: state.user?.uid || null,
+    needsPasswordReset: state.userData?.needsPasswordReset ?? false,
   };
 };
 
@@ -132,6 +177,7 @@ const mapFirebaseError = (code: string): string => {
     'auth/user-disabled': 'Esta cuenta ha sido deshabilitada',
     'auth/user-not-found': 'No existe una cuenta con este email',
     'auth/wrong-password': 'Contraseña incorrecta',
+    'auth/invalid-credential': 'Credenciales incorrectas',
     'auth/email-already-in-use': 'Este email ya está registrado',
     'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres',
     'auth/too-many-requests': 'Demasiados intentos. Espera un momento',

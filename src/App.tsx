@@ -25,6 +25,7 @@ import AppReferrals from "./pages/app/AppReferrals";
 import AppLeads from "./pages/app/AppLeads";
 import AppSubagents from "./pages/app/AppSubagents";
 import AppAssets from "./pages/app/AppAssets";
+import AppChangePassword from "./pages/app/AppChangePassword";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,8 @@ const App = () => (
           
           {/* Agent Portal */}
           <Route path="/login" element={<AppLogin />} />
+          <Route path="/app/login" element={<AppLogin />} />
+          <Route path="/app/change-password" element={<AppChangePassword />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<AppDashboard />} />
             <Route path="referrals" element={<AppReferrals />} />
