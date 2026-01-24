@@ -1,45 +1,59 @@
+import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
-import { Hero } from '@/components/home/Hero';
-import { LobbiesSection } from '@/components/home/LobbiesSection';
-import { PromosCarouselSection } from '@/components/home/PromosCarouselSection';
-import { SpotlightGamesSection } from '@/components/home/SpotlightGamesSection';
-import { BenefitsSection } from '@/components/home/BenefitsSection';
-import { FAQSection } from '@/components/home/FAQSection';
+import { HeroPremium } from '@/components/home/HeroPremium';
+import { HowItWorksPremium } from '@/components/home/HowItWorksPremium';
+import { CountriesSection } from '@/components/home/CountriesSection';
+import { BenefitsPremium } from '@/components/home/BenefitsPremium';
+import { FAQPremium } from '@/components/home/FAQPremium';
 import { ComplianceSection } from '@/components/home/ComplianceSection';
 import { MobileStickyNav } from '@/components/home/MobileStickyNav';
 import { StadiumLights } from '@/components/home/StadiumLights';
 import { SectionDivider } from '@/components/home/SectionDivider';
-import { TestimonialsSection } from '@/components/home/TestimonialsSection';
-import { PartnersSection } from '@/components/home/PartnersSection';
-import { LiveStatsBar } from '@/components/home/LiveStatsBar';
-import { HowItWorksSection } from '@/components/home/HowItWorksSection';
 import FloatingChatButton from '@/components/chat/FloatingChatButton';
+import AIChatDrawer from '@/components/chat/AIChatDrawer';
 import { useCMSSEO } from '@/hooks/useCMSPromos';
 import { useRefCode } from '@/hooks/useRefCode';
-import { useEffect } from 'react';
 
 const Index = () => {
   const { data: seo } = useCMSSEO('home');
+  const [chatOpen, setChatOpen] = useState(false);
+  const [autoOpenDone, setAutoOpenDone] = useState(false);
   
   // Capture ref_code from URL on page load
-  useRefCode();
+  const refCode = useRefCode();
 
-  // Update meta tags dynamically
+  // Auto-open chat after 8 seconds (once per session)
   useEffect(() => {
-    if (seo?.meta_title) {
-      document.title = seo.meta_title;
+    const hasAutoOpened = sessionStorage.getItem('chat_auto_opened');
+    if (!hasAutoOpened && !autoOpenDone) {
+      const timer = setTimeout(() => {
+        setChatOpen(true);
+        sessionStorage.setItem('chat_auto_opened', 'true');
+        setAutoOpenDone(true);
+      }, 8000);
+      return () => clearTimeout(timer);
     }
-    if (seo?.meta_description) {
+  }, [autoOpenDone]);
+
+  // Update meta tags dynamically based on ref_code
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hasRef = params.get('ref');
+    
+    if (hasRef) {
+      document.title = 'Atención personalizada | Ganaya.bet';
       const metaDesc = document.querySelector('meta[name="description"]');
       if (metaDesc) {
-        metaDesc.setAttribute('content', seo.meta_description);
+        metaDesc.setAttribute('content', 'Recarga y retira en minutos con soporte personalizado. Casino online con atención por cajeros.');
       }
-    }
-    if (seo?.og_image_url) {
-      const ogImage = document.querySelector('meta[property="og:image"]');
-      if (ogImage) {
-        ogImage.setAttribute('content', seo.og_image_url);
+    } else if (seo?.meta_title) {
+      document.title = seo.meta_title;
+      if (seo?.meta_description) {
+        const metaDesc = document.querySelector('meta[name="description"]');
+        if (metaDesc) {
+          metaDesc.setAttribute('content', seo.meta_description);
+        }
       }
     }
   }, [seo]);
@@ -47,36 +61,32 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
       {/* Subtle global ambient effect */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-50">
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-40">
         <StadiumLights />
       </div>
       
       <Header />
       <main className="relative z-10">
-        <Hero />
-        <LiveStatsBar />
+        <HeroPremium onOpenChat={() => setChatOpen(true)} />
         <SectionDivider variant="primary" />
-        <LobbiesSection />
+        <HowItWorksPremium />
         <SectionDivider variant="gold" />
-        <PromosCarouselSection />
+        <CountriesSection />
         <SectionDivider variant="accent" />
-        <SpotlightGamesSection />
+        <BenefitsPremium />
         <SectionDivider variant="primary" />
-        <HowItWorksSection />
-        <SectionDivider variant="gold" />
-        <BenefitsSection />
-        <SectionDivider variant="accent" />
-        <TestimonialsSection />
-        <PartnersSection />
-        <FAQSection />
+        <FAQPremium />
         <ComplianceSection />
       </main>
       <Footer />
 
-      {/* Floating Chat */}
-      <FloatingChatButton />
+      {/* Floating Chat Button */}
+      <FloatingChatButton onClick={() => setChatOpen(true)} isOpen={chatOpen} />
 
-      {/* Mobile sticky CTA - Now dynamic from CMS */}
+      {/* AI Chat Drawer */}
+      <AIChatDrawer open={chatOpen} onOpenChange={setChatOpen} />
+
+      {/* Mobile sticky CTA */}
       <MobileStickyNav />
     </div>
   );
