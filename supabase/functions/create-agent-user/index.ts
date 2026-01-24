@@ -240,8 +240,6 @@ serve(async (req) => {
 
     // Generate unique refCode
     const refCode = generateRefCode();
-    const baseUrl = Deno.env.get("PUBLIC_SITE_URL") || "https://ganaya.bet";
-    const referralUrl = `${baseUrl}/?ref=${refCode}`;
 
     // Create user document in Firestore
     const userData = {
@@ -256,7 +254,6 @@ serve(async (req) => {
       lineLeaderId: lineLeaderId || null,
       canRecruitSubagents: canRecruitSubagents || false,
       refCode,
-      referralUrl,
       needsPasswordReset: true, // Force password change on first login
       createdAt: new Date(),
     };
@@ -285,7 +282,6 @@ serve(async (req) => {
         email,
         tempPassword, // Only returned once, never stored
         refCode,
-        referralUrl,
         message: "Agent created successfully. Password is temporary and must be changed on first login.",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

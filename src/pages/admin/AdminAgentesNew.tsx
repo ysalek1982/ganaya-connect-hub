@@ -41,7 +41,6 @@ const AdminAgentesNew = () => {
     email: string;
     tempPassword: string;
     refCode: string;
-    referralUrl: string;
   } | null>(null);
   const [selectedAgentForLink, setSelectedAgentForLink] = useState<{ name: string; refCode: string } | null>(null);
   const [editingAgent, setEditingAgent] = useState<FirebaseUser | null>(null);
@@ -138,13 +137,12 @@ const AdminAgentesNew = () => {
           canRecruitSubagents: form.canRecruitSubagents,
         });
         
-        if (result.success && result.tempPassword && result.refCode && result.referralUrl && result.email) {
+        if (result.success && result.tempPassword && result.refCode && result.email) {
           // Show the created modal with temp password
           setCreatedAgentData({
             email: result.email,
             tempPassword: result.tempPassword,
             refCode: result.refCode,
-            referralUrl: result.referralUrl,
           });
           closeModal();
           setShowCreatedModal(true);

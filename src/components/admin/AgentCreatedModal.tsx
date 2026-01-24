@@ -13,7 +13,6 @@ interface AgentCreatedModalProps {
     email: string;
     tempPassword: string;
     refCode: string;
-    referralUrl: string;
   } | null;
 }
 
@@ -34,7 +33,10 @@ const AgentCreatedModal = ({ isOpen, onClose, agentData }: AgentCreatedModalProp
 
   if (!agentData) return null;
 
-  const { email, tempPassword, refCode, referralUrl } = agentData;
+  const { email, tempPassword, refCode } = agentData;
+  
+  // Build referral URL dynamically using current origin
+  const referralUrl = `${window.location.origin}/?ref=${refCode}`;
 
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text);
@@ -44,8 +46,7 @@ const AgentCreatedModal = ({ isOpen, onClose, agentData }: AgentCreatedModalProp
   };
 
   const getCountryLink = (countryCode: string) => {
-    const baseUrl = referralUrl.split('?')[0];
-    return `${baseUrl}?ref=${refCode}&country=${countryCode}`;
+    return `${window.location.origin}/?ref=${refCode}&country=${countryCode}`;
   };
 
   return (

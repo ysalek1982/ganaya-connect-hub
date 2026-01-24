@@ -123,7 +123,6 @@ export interface CreateAgentResult {
   email?: string;
   tempPassword?: string;
   refCode?: string;
-  referralUrl?: string;
   error?: string;
 }
 
@@ -155,7 +154,6 @@ export const useCreateAgentUser = () => {
         email: response.email,
         tempPassword: response.tempPassword,
         refCode: response.refCode,
-        referralUrl: response.referralUrl,
       };
     },
     onSuccess: () => {
@@ -218,7 +216,6 @@ export const useFirebaseUsers = () => {
         email: response.email,
         tempPassword: response.tempPassword,
         refCode: response.refCode,
-        referralUrl: response.referralUrl,
       };
     } catch (err: any) {
       return { success: false, error: err.message };
