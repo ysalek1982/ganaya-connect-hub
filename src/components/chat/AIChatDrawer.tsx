@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useRefCode } from '@/hooks/useRefCode';
 import type { Database } from '@/integrations/supabase/types';
 
 const WHATSAPP_NUMBER = '59176356972';
@@ -51,6 +52,7 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
   const [detectedIntent, setDetectedIntent] = useState<'JUGADOR' | 'AGENTE' | 'SOPORTE' | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
+  const { getRefCode } = useRefCode();
 
   // Initialize chat with greeting
   useEffect(() => {
@@ -185,12 +187,30 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
         }
       }
 
+      // Get ref_code from session
+      const refCode = getRefCode();
+      const country = String(data.pais || data.country || 'No especificado');
+
+      // Call the auto_assign_agent function to get the assigned agent
+      let assignedAgentId: string | null = null;
+      try {
+        const { data: agentId, error: rpcError } = await supabase.rpc('auto_assign_agent', {
+          p_ref_code: refCode,
+          p_country: country,
+        });
+        if (!rpcError && agentId) {
+          assignedAgentId = agentId;
+        }
+      } catch (e) {
+        console.error('Error in auto_assign_agent:', e);
+      }
+
       // Prepare lead data
       const leadData: Database['public']['Tables']['leads']['Insert'] = {
         tipo: intent === 'AGENTE' ? 'agente' : 'cliente',
         nombre: String(data.nombre || data.name || 'Sin nombre'),
         whatsapp: String(data.whatsapp || data.telefono || data.telegram || ''),
-        pais: String(data.pais || data.country || 'No especificado'),
+        pais: country,
         ciudad: data.ciudad ? String(data.ciudad) : null,
         email: data.email ? String(data.email) : null,
         binance_verificada: data.binance === true || data.binance_verificada === true || data.usdt === true,
@@ -204,6 +224,9 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
         score,
         etiqueta,
         origen: 'chat_ia',
+        ref_code: refCode || undefined,
+        asignado_agente_id: assignedAgentId,
+        estado: assignedAgentId ? 'asignado' : 'nuevo',
       };
 
       const { error } = await supabase.from('leads').insert(leadData);
@@ -211,7 +234,7 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
       if (error) {
         console.error('Error saving lead:', error);
       } else {
-        console.log('Lead saved successfully');
+        console.log('Lead saved successfully with agent:', assignedAgentId);
       }
     } catch (error) {
       console.error('Error in saveLead:', error);
