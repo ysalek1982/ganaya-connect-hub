@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import type { FirebaseUser, UserRole } from '@/lib/firebase-types';
 
 // Admin email that gets automatic admin role
@@ -64,6 +65,9 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
 
   // Fetch user data from Firestore (non-blocking)
   const fetchUserData = async (user: User): Promise<FirebaseUser> => {
+    const email = user.email || '';
+    const isAdminEmail = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+    
     try {
       const userDocRef = doc(db, 'users', user.uid);
       const userDoc = await getDoc(userDocRef);
@@ -87,8 +91,33 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
           createdAt: data.createdAt?.toDate() || new Date(),
         };
       }
+      
+      // Document doesn't exist - bootstrap admin if needed
+      if (isAdminEmail) {
+        console.log('[useFirebaseAuth] Admin document not found, bootstrapping...');
+        try {
+          await supabase.functions.invoke('bootstrap-admin', {
+            body: { uid: user.uid, email, name: 'Administrator' },
+          });
+          console.log('[useFirebaseAuth] Admin bootstrap complete');
+        } catch (bootstrapError) {
+          console.warn('[useFirebaseAuth] Bootstrap failed:', bootstrapError);
+        }
+      }
     } catch (error) {
       console.warn('[useFirebaseAuth] Firestore read failed, using fallback:', error);
+      
+      // Try to bootstrap admin on permission error
+      if (isAdminEmail) {
+        try {
+          await supabase.functions.invoke('bootstrap-admin', {
+            body: { uid: user.uid, email, name: 'Administrator' },
+          });
+          console.log('[useFirebaseAuth] Admin bootstrap complete after error');
+        } catch (bootstrapError) {
+          console.warn('[useFirebaseAuth] Bootstrap failed:', bootstrapError);
+        }
+      }
     }
     
     return buildFallbackUserData(user);
