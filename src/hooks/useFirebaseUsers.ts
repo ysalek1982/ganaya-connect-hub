@@ -21,26 +21,30 @@ export const useFirebaseAgents = (options?: { lineLeaderId?: string }) => {
     queryKey: ['firebase-agents', options?.lineLeaderId],
     queryFn: async (): Promise<FirebaseUser[]> => {
       const usersRef = collection(db, 'users');
-      let q = query(
-        usersRef,
-        where('role', 'in', ['AGENT', 'LINE_LEADER']),
-        orderBy('createdAt', 'desc')
-      );
 
+      // NOTE: Avoid composite-index requirements by not combining where+orderBy.
+      // We sort client-side by createdAt.
+      let snapshot;
       if (options?.lineLeaderId) {
-        q = query(
-          usersRef,
-          where('lineLeaderId', '==', options.lineLeaderId),
-          orderBy('createdAt', 'desc')
-        );
+        // Fetch by leader first (single-field filter), then filter roles client-side.
+        snapshot = await getDocs(query(usersRef, where('lineLeaderId', '==', options.lineLeaderId)));
+      } else {
+        snapshot = await getDocs(query(usersRef, where('role', 'in', ['AGENT', 'LINE_LEADER'])));
       }
 
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        uid: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      })) as FirebaseUser[];
+      const users = snapshot.docs
+        .map((d) => {
+          const data = d.data() as any;
+          return {
+            uid: d.id,
+            ...data,
+            createdAt: data.createdAt?.toDate?.() || new Date(0),
+          };
+        })
+        .filter((u) => u.role === 'AGENT' || u.role === 'LINE_LEADER') as FirebaseUser[];
+
+      users.sort((a, b) => (b.createdAt?.getTime?.() || 0) - (a.createdAt?.getTime?.() || 0));
+      return users;
     },
   });
 };
