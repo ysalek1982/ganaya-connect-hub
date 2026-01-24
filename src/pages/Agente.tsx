@@ -215,7 +215,7 @@ const Agente = () => {
       <Footer />
 
       {/* AI Chat Drawer */}
-      <AIChatDrawer open={chatOpen} onOpenChange={setChatOpen} mode="agente" />
+      <AIChatDrawer open={chatOpen} onOpenChange={setChatOpen} initialMessage="Quiero ser agente" />
     </div>
   );
 };
