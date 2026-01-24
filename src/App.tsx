@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Agente from "./pages/Agente";
 import NotFound from "./pages/NotFound";
+// Admin
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -16,6 +17,14 @@ import AdminAsignacion from "./pages/admin/AdminAsignacion";
 import AdminCMS from "./pages/admin/AdminCMS";
 import AdminCMSPromos from "./pages/admin/AdminCMSPromos";
 import AdminSettingsNew from "./pages/admin/AdminSettingsNew";
+// Agent Portal
+import AppLogin from "./pages/app/AppLogin";
+import AppLayout from "./pages/app/AppLayout";
+import AppDashboard from "./pages/app/AppDashboard";
+import AppReferrals from "./pages/app/AppReferrals";
+import AppLeads from "./pages/app/AppLeads";
+import AppSubagents from "./pages/app/AppSubagents";
+import AppAssets from "./pages/app/AppAssets";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +37,18 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/agente" element={<Agente />} />
+          
+          {/* Agent Portal */}
+          <Route path="/login" element={<AppLogin />} />
+          <Route path="/app" element={<AppLayout />}>
+            <Route index element={<AppDashboard />} />
+            <Route path="referrals" element={<AppReferrals />} />
+            <Route path="leads" element={<AppLeads />} />
+            <Route path="subagents" element={<AppSubagents />} />
+            <Route path="assets" element={<AppAssets />} />
+          </Route>
+
+          {/* Admin Panel */}
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/*" element={<AdminLayout />}>
             <Route path="dashboard" element={<AdminDashboard />} />
@@ -39,6 +60,7 @@ const App = () => (
             <Route path="cms-promos" element={<AdminCMSPromos />} />
             <Route path="settings" element={<AdminSettingsNew />} />
           </Route>
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

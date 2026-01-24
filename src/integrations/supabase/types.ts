@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       agentes: {
         Row: {
+          can_recruit_subagents: boolean | null
           ciudad: string | null
           created_at: string
           estado: Database["public"]["Enums"]["agent_status"] | null
@@ -28,6 +29,7 @@ export type Database = {
           whatsapp: string
         }
         Insert: {
+          can_recruit_subagents?: boolean | null
           ciudad?: string | null
           created_at?: string
           estado?: Database["public"]["Enums"]["agent_status"] | null
@@ -40,6 +42,7 @@ export type Database = {
           whatsapp: string
         }
         Update: {
+          can_recruit_subagents?: boolean | null
           ciudad?: string | null
           created_at?: string
           estado?: Database["public"]["Enums"]["agent_status"] | null
