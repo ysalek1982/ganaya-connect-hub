@@ -4,12 +4,12 @@ import { getFirestore } from 'firebase/firestore';
 
 // Firebase configuration - these are publishable keys, safe to include in client code
 const firebaseConfig = {
-  apiKey: "AIzaSyBpWrUxqJQa4R0mXRPHiU0B-8Fz1-P6dZI",
-  authDomain: "ganaya-bet.firebaseapp.com",
-  projectId: "ganaya-bet",
-  storageBucket: "ganaya-bet.firebasestorage.app",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abc123def456ghi789"
+  apiKey: "AIzaSyBm5QUjwbNrqeKl34cU1C0y1TFUsl5VSYY",
+  authDomain: "ganayachat.firebaseapp.com",
+  projectId: "ganayachat",
+  storageBucket: "ganayachat.firebasestorage.app",
+  messagingSenderId: "647232543674",
+  appId: "1:647232543674:web:70681521058c1d4498db83"
 };
 
 // Initialize Firebase
