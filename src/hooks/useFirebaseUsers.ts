@@ -116,6 +116,17 @@ export const useUpdateFirebaseUser = () => {
   });
 };
 
+// Create agent result type
+export interface CreateAgentResult {
+  success: boolean;
+  uid?: string;
+  email?: string;
+  tempPassword?: string;
+  refCode?: string;
+  referralUrl?: string;
+  error?: string;
+}
+
 // Create agent user via Edge Function
 export const useCreateAgentUser = () => {
   const queryClient = useQueryClient();
@@ -125,12 +136,12 @@ export const useCreateAgentUser = () => {
       name: string;
       email: string;
       country: string;
-      whatsapp: string;
+      whatsapp?: string;
       city?: string;
       lineLeaderId?: string;
       canRecruitSubagents?: boolean;
       role?: UserRole;
-    }) => {
+    }): Promise<CreateAgentResult> => {
       const { data: response, error } = await supabase.functions.invoke('create-agent-user', {
         body: data,
       });
@@ -138,7 +149,14 @@ export const useCreateAgentUser = () => {
       if (error) throw new Error(error.message);
       if (response?.error) throw new Error(response.error);
 
-      return response as { uid: string; refCode: string; referralUrl: string };
+      return {
+        success: true,
+        uid: response.uid,
+        email: response.email,
+        tempPassword: response.tempPassword,
+        refCode: response.refCode,
+        referralUrl: response.referralUrl,
+      };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['firebase-agents'] });
@@ -176,11 +194,11 @@ export const useFirebaseUsers = () => {
     name: string;
     email: string;
     country: string;
-    whatsapp: string;
+    whatsapp?: string;
     city?: string;
     lineLeaderId?: string;
     canRecruitSubagents?: boolean;
-  }): Promise<{ success: boolean; refCode?: string; error?: string }> => {
+  }): Promise<CreateAgentResult> => {
     try {
       const { data: response, error } = await supabase.functions.invoke('create-agent-user', {
         body: data,
@@ -194,7 +212,14 @@ export const useFirebaseUsers = () => {
       }
 
       queryClient.invalidateQueries({ queryKey: ['firebase-agents'] });
-      return { success: true, refCode: response.refCode };
+      return { 
+        success: true, 
+        uid: response.uid,
+        email: response.email,
+        tempPassword: response.tempPassword,
+        refCode: response.refCode,
+        referralUrl: response.referralUrl,
+      };
     } catch (err: any) {
       return { success: false, error: err.message };
     }
