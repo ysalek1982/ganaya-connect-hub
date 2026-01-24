@@ -4,9 +4,11 @@ import { X, Send, Bot, Loader2, MessageCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { useRefCode } from '@/hooks/useRefCode';
-import type { Database } from '@/integrations/supabase/types';
+import type { FirebaseLead, LeadTier, LeadIntent, LeadStatus } from '@/lib/firebase-types';
 
 const WHATSAPP_NUMBER = '59176356972';
 
@@ -39,17 +41,13 @@ interface ConversationalData {
   debug: DebugInfo;
 }
 
-type P2PLevel = Database['public']['Enums']['p2p_level'];
-type HoursPerDay = Database['public']['Enums']['hours_per_day'];
-type ScoreLabel = Database['public']['Enums']['score_label'];
-
 const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [collectedData, setCollectedData] = useState<Record<string, unknown>>({});
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [detectedIntent, setDetectedIntent] = useState<'JUGADOR' | 'AGENTE' | 'SOPORTE' | null>(null);
+  const [detectedIntent, setDetectedIntent] = useState<LeadIntent | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
   const { getRefCode } = useRefCode();
@@ -59,7 +57,6 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
     if (open && messages.length === 0 && !hasInitialized.current) {
       hasInitialized.current = true;
       
-      // Start with a greeting
       const greeting: Message = {
         id: Date.now().toString(),
         role: 'bot',
@@ -67,7 +64,6 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
       };
       setMessages([greeting]);
 
-      // If there's an initial message, send it automatically
       if (initialMessage) {
         setTimeout(() => {
           sendMessage(initialMessage);
@@ -94,13 +90,11 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
     setIsLoading(true);
 
     try {
-      // Build conversation history for the API
       const conversationHistory = messages.map(m => ({
         role: m.role === 'bot' ? 'assistant' as const : 'user' as const,
         content: m.content,
       }));
 
-      // Add current message
       conversationHistory.push({
         role: 'user' as const,
         content: content.trim(),
@@ -123,18 +117,15 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
       if (data?.success && data?.data) {
         const response = data.data as ConversationalData;
 
-        // Update collected data
         if (response.datos_lead_update && Object.keys(response.datos_lead_update).length > 0) {
           setCollectedData(prev => ({ ...prev, ...response.datos_lead_update }));
         }
 
-        // Track detected intent from debug info
         const intentFromDebug = response.debug?.intent_detected;
         if (intentFromDebug && !detectedIntent) {
-          setDetectedIntent(intentFromDebug as 'JUGADOR' | 'AGENTE' | 'SOPORTE');
+          setDetectedIntent(intentFromDebug as LeadIntent);
         }
 
-        // Add bot response
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'bot',
@@ -142,18 +133,14 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
         };
         setMessages(prev => [...prev, botMessage]);
 
-        // Check if interview is complete
         if (response.fin_entrevista) {
           setIsComplete(true);
-          
-          // Save lead to database
           await saveLead(response);
         }
       }
     } catch (error) {
       console.error('Chat error:', error);
       
-      // Add fallback response
       const fallbackMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'bot',
@@ -170,93 +157,74 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
   const saveLead = async (response: ConversationalData) => {
     try {
       const data = collectedData;
-      const intent = detectedIntent || response.debug?.intent_detected;
+      const intent = detectedIntent || response.debug?.intent_detected as LeadIntent;
       
-      // Map scoring from debug to our label system
-      let etiqueta: ScoreLabel = 'CLIENTE';
-      let score = 0;
+      // Map tier from debug
+      let tier: LeadTier = 'NOVATO';
+      let scoreTotal = 0;
       
       if (intent === 'AGENTE' && response.debug) {
-        score = response.debug.score_total;
+        scoreTotal = response.debug.score_total;
         if (response.debug.tier === 'APROBABLE') {
-          etiqueta = 'AGENTE_POTENCIAL_ALTO';
+          tier = 'APROBABLE';
         } else if (response.debug.tier === 'POTENCIAL') {
-          etiqueta = 'AGENTE_POTENCIAL_MEDIO';
+          tier = 'POTENCIAL';
         } else {
-          etiqueta = 'AGENTE_POTENCIAL_BAJO';
+          tier = 'NOVATO';
         }
       }
 
-      // Get ref_code from session
       const refCode = getRefCode();
       const country = String(data.pais || data.country || 'No especificado');
+      const name = String(data.nombre || data.name || 'Sin nombre');
 
-      // Call the auto_assign_agent function to get the assigned agent
+      // Call assign-lead edge function for agent assignment
       let assignedAgentId: string | null = null;
+      let assignedLineLeaderId: string | null = null;
+      
       try {
-        const { data: agentId, error: rpcError } = await supabase.rpc('auto_assign_agent', {
-          p_ref_code: refCode,
-          p_country: country,
+        const { data: assignData, error: assignError } = await supabase.functions.invoke('assign-lead', {
+          body: { refCode, country },
         });
-        if (!rpcError && agentId) {
-          assignedAgentId = agentId;
+        
+        if (!assignError && assignData?.success) {
+          assignedAgentId = assignData.assignedAgentId;
+          assignedLineLeaderId = assignData.assignedLineLeaderId;
         }
       } catch (e) {
-        console.error('Error in auto_assign_agent:', e);
+        console.error('Error in assign-lead:', e);
       }
 
-      // Prepare lead data
-      const leadData: Database['public']['Tables']['leads']['Insert'] = {
-        tipo: intent === 'AGENTE' ? 'agente' : 'cliente',
-        nombre: String(data.nombre || data.name || 'Sin nombre'),
-        whatsapp: String(data.whatsapp || data.telefono || data.telegram || ''),
-        pais: country,
-        ciudad: data.ciudad ? String(data.ciudad) : null,
-        email: data.email ? String(data.email) : null,
-        binance_verificada: data.binance === true || data.binance_verificada === true || data.usdt === true,
-        banca_300: data.capital === '$300-500' || data.capital === '$500+' || data.banca_300 === true,
-        exp_casinos: data.experiencia_casinos === true || (typeof data.experiencia === 'string' && data.experiencia.toLowerCase().includes('casino')),
-        exp_atencion: data.experiencia_atencion === true || (typeof data.experiencia === 'string' && data.experiencia.toLowerCase().includes('venta')),
-        prefiere_usdt: data.usdt === true || data.prefiere_usdt === true,
-        aposto_antes: data.aposto_antes === true,
-        p2p_nivel: mapP2PLevel(data.p2p_nivel || data.experiencia_p2p),
-        horas_dia: mapHoursPerDay(data.horas || data.disponibilidad),
-        score,
-        etiqueta,
+      // Build lead for Firestore
+      const leadData: Omit<FirebaseLead, 'id' | 'createdAt'> & { createdAt: ReturnType<typeof serverTimestamp> } = {
+        createdAt: serverTimestamp() as any,
+        intent: intent || null,
+        country,
+        city: data.ciudad ? String(data.ciudad) : null,
+        refCode: refCode || null,
+        assignedAgentId,
+        assignedLineLeaderId,
+        status: assignedAgentId ? 'ASIGNADO' : 'NUEVO' as LeadStatus,
+        scoreTotal,
+        tier: tier || null,
+        contact: {
+          whatsapp: String(data.whatsapp || data.telefono || ''),
+          email: data.email ? String(data.email) : undefined,
+          telegram: data.telegram ? String(data.telegram) : undefined,
+        },
+        rawJson: data,
+        name,
         origen: 'chat_ia',
-        ref_code: refCode || undefined,
-        asignado_agente_id: assignedAgentId,
-        estado: assignedAgentId ? 'asignado' : 'nuevo',
       };
 
-      const { error } = await supabase.from('leads').insert(leadData);
-
-      if (error) {
-        console.error('Error saving lead:', error);
-      } else {
-        console.log('Lead saved successfully with agent:', assignedAgentId);
-      }
+      // Save to Firestore
+      const leadsRef = collection(db, 'leads');
+      await addDoc(leadsRef, leadData);
+      
+      console.log('Lead saved to Firestore with agent:', assignedAgentId);
     } catch (error) {
-      console.error('Error in saveLead:', error);
+      console.error('Error saving lead to Firestore:', error);
     }
-  };
-
-  const mapP2PLevel = (value: unknown): P2PLevel | null => {
-    if (!value) return null;
-    const str = String(value).toLowerCase();
-    if (str.includes('avanzado') || str.includes('experto')) return 'avanzado';
-    if (str.includes('medio') || str.includes('intermedio')) return 'medio';
-    if (str.includes('basico') || str.includes('básico') || str.includes('principiante')) return 'basico';
-    return null;
-  };
-
-  const mapHoursPerDay = (value: unknown): HoursPerDay | null => {
-    if (!value) return null;
-    const str = String(value).toLowerCase();
-    if (str.includes('6') || str.includes('más') || str.includes('full')) return '6+';
-    if (str.includes('3') || str.includes('4') || str.includes('5')) return '3-5';
-    if (str.includes('1') || str.includes('2')) return '1-2';
-    return null;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -276,7 +244,6 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
     setDetectedIntent(null);
     hasInitialized.current = false;
     
-    // Reinitialize
     setTimeout(() => {
       const greeting: Message = {
         id: Date.now().toString(),

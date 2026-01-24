@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { Plus, Edit, Trash2, Search, Users, Link, QrCode, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Users, Link, QrCode } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,39 +9,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseUsers } from '@/hooks/useFirebaseUsers';
 import AgentLinkModal from '@/components/admin/AgentLinkModal';
-import type { Database } from '@/integrations/supabase/types';
-type AgentStatus = Database['public']['Enums']['agent_status'];
-
-interface AgentWithLineLeader {
-  id: string;
-  nombre: string;
-  whatsapp: string;
-  pais: string;
-  ciudad: string | null;
-  estado: AgentStatus | null;
-  ref_code: string | null;
-  line_leader_id: string | null;
-  user_id: string | null;
-  created_at: string;
-  leads_count?: number;
-  line_leader_name?: string;
-}
+import type { FirebaseUser } from '@/lib/firebase-types';
 
 interface AgentForm {
-  nombre: string;
+  name: string;
+  email: string;
   whatsapp: string;
-  pais: string;
-  ciudad: string;
-  estado: AgentStatus;
-  ref_code: string;
-  line_leader_id: string;
+  country: string;
+  city: string;
+  isActive: boolean;
+  lineLeaderId: string;
+  canRecruitSubagents: boolean;
 }
 
 const AdminAgentesNew = () => {
-  const queryClient = useQueryClient();
-  const { isAdmin, isLineLeader, agentId } = useUserRole();
+  const { isAdmin, isLineLeader, agentId } = useFirebaseAuth();
+  const { agents, lineLeaders, isLoading, createAgent, updateAgent, deleteAgent, getLeadCount } = useFirebaseUsers();
   
   const [search, setSearch] = useState('');
   const [filterPais, setFilterPais] = useState<string>('all');
@@ -52,135 +36,27 @@ const AdminAgentesNew = () => {
   const [showModal, setShowModal] = useState(false);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [selectedAgentForLink, setSelectedAgentForLink] = useState<{ name: string; refCode: string } | null>(null);
-  const [editingAgent, setEditingAgent] = useState<AgentWithLineLeader | null>(null);
+  const [editingAgent, setEditingAgent] = useState<FirebaseUser | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState<AgentForm>({
-    nombre: '',
+    name: '',
+    email: '',
     whatsapp: '',
-    pais: 'Paraguay',
-    ciudad: '',
-    estado: 'activo',
-    ref_code: '',
-    line_leader_id: '',
+    country: 'Paraguay',
+    city: '',
+    isActive: true,
+    lineLeaderId: '',
+    canRecruitSubagents: false,
   });
 
-  // Fetch all agents (admin) or network (line_leader)
-  const { data: agentes, isLoading } = useQuery({
-    queryKey: ['agentes-full'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('agentes')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as AgentWithLineLeader[];
-    },
-  });
-
-  // Fetch lead counts
-  const { data: leadCounts } = useQuery({
-    queryKey: ['agent-lead-counts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('asignado_agente_id')
-        .not('asignado_agente_id', 'is', null);
-      if (error) throw error;
-
-      const counts: Record<string, number> = {};
-      data?.forEach(lead => {
-        if (lead.asignado_agente_id) {
-          counts[lead.asignado_agente_id] = (counts[lead.asignado_agente_id] || 0) + 1;
-        }
-      });
-      return counts;
-    },
-  });
-
-  // Get potential line leaders (agents without a line_leader_id - top level)
-  const lineLeaders = agentes?.filter(a => !a.line_leader_id && a.estado === 'activo');
-
-  // Generate ref_code in format AGT-XXXXXX
-  const generateRefCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let suffix = '';
-    for (let i = 0; i < 6; i++) {
-      suffix += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `AGT-${suffix}`;
-  };
-
-  const openLinkModal = (agent: AgentWithLineLeader) => {
-    if (agent.ref_code) {
-      setSelectedAgentForLink({ name: agent.nombre, refCode: agent.ref_code });
+  const openLinkModal = (agent: FirebaseUser) => {
+    if (agent.refCode) {
+      setSelectedAgentForLink({ name: agent.name, refCode: agent.refCode });
       setShowLinkModal(true);
     } else {
       toast.error('Este agente no tiene código de referido');
     }
   };
-
-  const createAgent = useMutation({
-    mutationFn: async () => {
-      const refCode = form.ref_code || generateRefCode();
-      const { error } = await supabase.from('agentes').insert({
-        nombre: form.nombre,
-        whatsapp: form.whatsapp,
-        pais: form.pais,
-        ciudad: form.ciudad || null,
-        estado: form.estado,
-        ref_code: refCode,
-        line_leader_id: form.line_leader_id || null,
-      });
-      if (error) throw error;
-      return refCode;
-    },
-    onSuccess: (refCode) => {
-      queryClient.invalidateQueries({ queryKey: ['agentes-full'] });
-      toast.success(`Agente creado con código: ${refCode}`);
-      closeModal();
-    },
-    onError: (error: Error) => {
-      if (error.message.includes('unique')) {
-        toast.error('El código de referencia ya existe');
-      } else {
-        toast.error('Error al crear agente');
-      }
-    },
-  });
-
-  const updateAgent = useMutation({
-    mutationFn: async () => {
-      if (!editingAgent) return;
-      const { error } = await supabase
-        .from('agentes')
-        .update({
-          nombre: form.nombre,
-          whatsapp: form.whatsapp,
-          pais: form.pais,
-          ciudad: form.ciudad || null,
-          estado: form.estado,
-          ref_code: form.ref_code || null,
-          line_leader_id: form.line_leader_id || null,
-        })
-        .eq('id', editingAgent.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agentes-full'] });
-      toast.success('Agente actualizado');
-      closeModal();
-    },
-  });
-
-  const deleteAgent = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('agentes').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agentes-full'] });
-      toast.success('Agente eliminado');
-    },
-  });
 
   const copyRefLink = (refCode: string) => {
     const baseUrl = window.location.origin;
@@ -192,27 +68,29 @@ const AdminAgentesNew = () => {
   const openCreateModal = () => {
     setEditingAgent(null);
     setForm({
-      nombre: '',
+      name: '',
+      email: '',
       whatsapp: '',
-      pais: 'Paraguay',
-      ciudad: '',
-      estado: 'activo',
-      ref_code: '',
-      line_leader_id: isLineLeader && agentId ? agentId : '',
+      country: 'Paraguay',
+      city: '',
+      isActive: true,
+      lineLeaderId: isLineLeader && agentId ? agentId : '',
+      canRecruitSubagents: false,
     });
     setShowModal(true);
   };
 
-  const openEditModal = (agent: AgentWithLineLeader) => {
+  const openEditModal = (agent: FirebaseUser) => {
     setEditingAgent(agent);
     setForm({
-      nombre: agent.nombre,
-      whatsapp: agent.whatsapp,
-      pais: agent.pais,
-      ciudad: agent.ciudad || '',
-      estado: (agent.estado || 'activo') as AgentStatus,
-      ref_code: agent.ref_code || '',
-      line_leader_id: agent.line_leader_id || '',
+      name: agent.name,
+      email: agent.email,
+      whatsapp: agent.whatsapp || '',
+      country: agent.country,
+      city: agent.city || '',
+      isActive: agent.isActive,
+      lineLeaderId: agent.lineLeaderId || '',
+      canRecruitSubagents: agent.canRecruitSubagents,
     });
     setShowModal(true);
   };
@@ -222,39 +100,86 @@ const AdminAgentesNew = () => {
     setEditingAgent(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingAgent) {
-      updateAgent.mutate();
-    } else {
-      createAgent.mutate();
+    setIsSubmitting(true);
+    
+    try {
+      if (editingAgent) {
+        // Update existing agent
+        await updateAgent(editingAgent.uid, {
+          name: form.name,
+          whatsapp: form.whatsapp || null,
+          country: form.country,
+          city: form.city || null,
+          isActive: form.isActive,
+          lineLeaderId: form.lineLeaderId || null,
+          canRecruitSubagents: form.canRecruitSubagents,
+        });
+        toast.success('Agente actualizado');
+      } else {
+        // Create new agent via Edge Function
+        const result = await createAgent({
+          name: form.name,
+          email: form.email,
+          whatsapp: form.whatsapp,
+          country: form.country,
+          city: form.city || undefined,
+          lineLeaderId: form.lineLeaderId || undefined,
+          canRecruitSubagents: form.canRecruitSubagents,
+        });
+        
+        if (result.success) {
+          toast.success(`Agente creado con código: ${result.refCode}`);
+        } else {
+          throw new Error(result.error || 'Error al crear agente');
+        }
+      }
+      closeModal();
+    } catch (error: any) {
+      console.error('Error:', error);
+      toast.error(error.message || 'Error al procesar la solicitud');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (uid: string) => {
+    if (!confirm('¿Eliminar este agente?')) return;
+    
+    try {
+      await deleteAgent(uid);
+      toast.success('Agente eliminado');
+    } catch (error) {
+      toast.error('Error al eliminar agente');
     }
   };
 
   const getLineLeaderName = (id: string | null) => {
-    if (!id || !agentes) return '-';
-    const leader = agentes.find(a => a.id === id);
-    return leader?.nombre || '-';
+    if (!id) return '-';
+    const leader = lineLeaders?.find(a => a.uid === id);
+    return leader?.name || '-';
   };
 
-  // Filter agents
-  const filteredAgentes = agentes?.filter(a => {
+  // Filter agents based on role and filters
+  const filteredAgentes = agents?.filter(a => {
     // Role-based filtering
     if (isLineLeader && agentId) {
-      if (a.line_leader_id !== agentId && a.id !== agentId) return false;
+      if (a.lineLeaderId !== agentId && a.uid !== agentId) return false;
     }
 
     // Search
     const matchesSearch =
-      a.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      a.whatsapp.includes(search) ||
-      a.pais.toLowerCase().includes(search.toLowerCase()) ||
-      (a.ref_code && a.ref_code.toLowerCase().includes(search.toLowerCase()));
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      (a.whatsapp && a.whatsapp.includes(search)) ||
+      a.country.toLowerCase().includes(search.toLowerCase()) ||
+      (a.refCode && a.refCode.toLowerCase().includes(search.toLowerCase()));
 
     // Filters
-    const matchesPais = filterPais === 'all' || a.pais === filterPais;
-    const matchesEstado = filterEstado === 'all' || a.estado === filterEstado;
-    const matchesLeader = filterLineLeader === 'all' || a.line_leader_id === filterLineLeader;
+    const matchesPais = filterPais === 'all' || a.country === filterPais;
+    const matchesEstado = filterEstado === 'all' || 
+      (filterEstado === 'activo' ? a.isActive : !a.isActive);
+    const matchesLeader = filterLineLeader === 'all' || a.lineLeaderId === filterLineLeader;
 
     return matchesSearch && matchesPais && matchesEstado && matchesLeader;
   });
@@ -314,8 +239,8 @@ const AdminAgentesNew = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              {lineLeaders?.map(ll => (
-                <SelectItem key={ll.id} value={ll.id}>{ll.nombre}</SelectItem>
+              {lineLeaders?.filter(ll => ll.uid !== editingAgent?.uid).map(ll => (
+                <SelectItem key={ll.uid} value={ll.uid}>{ll.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -351,27 +276,27 @@ const AdminAgentesNew = () => {
               </TableRow>
             ) : (
               filteredAgentes?.map((agent) => (
-                <TableRow key={agent.id}>
+                <TableRow key={agent.uid}>
                   <TableCell>
                     <div>
-                      <p className="font-medium">{agent.nombre}</p>
-                      <p className="text-sm text-muted-foreground">{agent.whatsapp}</p>
+                      <p className="font-medium">{agent.name}</p>
+                      <p className="text-sm text-muted-foreground">{agent.whatsapp || agent.email}</p>
                     </div>
                   </TableCell>
-                  <TableCell>{agent.pais}</TableCell>
+                  <TableCell>{agent.country}</TableCell>
                   <TableCell>
-                    <Badge variant={agent.estado === 'activo' ? 'default' : 'secondary'}>
-                      {agent.estado}
+                    <Badge variant={agent.isActive ? 'default' : 'secondary'}>
+                      {agent.isActive ? 'activo' : 'inactivo'}
                     </Badge>
                   </TableCell>
-                  <TableCell>{getLineLeaderName(agent.line_leader_id)}</TableCell>
+                  <TableCell>{getLineLeaderName(agent.lineLeaderId)}</TableCell>
                   <TableCell>
-                    {agent.ref_code ? (
+                    {agent.refCode ? (
                       <div className="flex items-center gap-2">
                         <code className="text-xs bg-primary/10 px-2 py-1 rounded text-primary font-mono">
-                          {agent.ref_code}
+                          {agent.refCode}
                         </code>
-                        <Button size="sm" variant="ghost" onClick={() => copyRefLink(agent.ref_code!)}>
+                        <Button size="sm" variant="ghost" onClick={() => copyRefLink(agent.refCode!)}>
                           <Link className="w-3 h-3" />
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => openLinkModal(agent)}>
@@ -383,7 +308,7 @@ const AdminAgentesNew = () => {
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Users className="w-3 h-3 text-muted-foreground" />
-                      {leadCounts?.[agent.id] || 0}
+                      {getLeadCount(agent.uid)}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -395,11 +320,7 @@ const AdminAgentesNew = () => {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {
-                            if (confirm('¿Eliminar este agente?')) {
-                              deleteAgent.mutate(agent.id);
-                            }
-                          }}
+                          onClick={() => handleDelete(agent.uid)}
                         >
                           <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
@@ -424,23 +345,38 @@ const AdminAgentesNew = () => {
               <div className="space-y-2 col-span-2">
                 <Label>Nombre</Label>
                 <Input
-                  value={form.nombre}
-                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                   required
                 />
               </div>
+              {!editingAgent && (
+                <div className="space-y-2 col-span-2">
+                  <Label>Email</Label>
+                  <Input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    placeholder="agente@email.com"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se enviará un email para establecer contraseña
+                  </p>
+                </div>
+              )}
               <div className="space-y-2 col-span-2">
                 <Label>WhatsApp</Label>
                 <Input
                   value={form.whatsapp}
                   onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
                   placeholder="+595981123456"
-                  required
+                  required={!editingAgent}
                 />
               </div>
               <div className="space-y-2">
                 <Label>País</Label>
-                <Select value={form.pais} onValueChange={(v) => setForm({ ...form, pais: v })}>
+                <Select value={form.country} onValueChange={(v) => setForm({ ...form, country: v })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -460,13 +396,16 @@ const AdminAgentesNew = () => {
               <div className="space-y-2">
                 <Label>Ciudad</Label>
                 <Input
-                  value={form.ciudad}
-                  onChange={(e) => setForm({ ...form, ciudad: e.target.value })}
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Estado</Label>
-                <Select value={form.estado} onValueChange={(v) => setForm({ ...form, estado: v as AgentStatus })}>
+                <Select 
+                  value={form.isActive ? 'activo' : 'inactivo'} 
+                  onValueChange={(v) => setForm({ ...form, isActive: v === 'activo' })}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -479,60 +418,54 @@ const AdminAgentesNew = () => {
               {isAdmin && (
                 <div className="space-y-2">
                   <Label>Line Leader</Label>
-                  <Select value={form.line_leader_id || "none"} onValueChange={(v) => setForm({ ...form, line_leader_id: v === "none" ? "" : v })}>
+                  <Select 
+                    value={form.lineLeaderId || "none"} 
+                    onValueChange={(v) => setForm({ ...form, lineLeaderId: v === "none" ? "" : v })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Sin asignar" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Sin asignar</SelectItem>
-                      {lineLeaders?.filter(ll => ll.id !== editingAgent?.id).map(ll => (
-                        <SelectItem key={ll.id} value={ll.id}>{ll.nombre}</SelectItem>
+                      {lineLeaders?.filter(ll => ll.uid !== editingAgent?.uid).map(ll => (
+                        <SelectItem key={ll.uid} value={ll.uid}>{ll.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               )}
-              <div className="space-y-2 col-span-2">
-                <Label>Código de Referido</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={form.ref_code}
-                    onChange={(e) => setForm({ ...form, ref_code: e.target.value.toUpperCase() })}
-                    placeholder="Se genera automáticamente"
-                    className="font-mono"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setForm({ ...form, ref_code: generateRefCode() })}
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </Button>
-                </div>
+              <div className="col-span-2 flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="canRecruit"
+                  checked={form.canRecruitSubagents}
+                  onChange={(e) => setForm({ ...form, canRecruitSubagents: e.target.checked })}
+                  className="rounded"
+                />
+                <Label htmlFor="canRecruit" className="cursor-pointer">
+                  Puede reclutar subagentes
+                </Label>
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={closeModal}>Cancelar</Button>
-              <Button type="submit" variant="hero">
-                {editingAgent ? 'Actualizar' : 'Crear'}
+              <Button type="button" variant="outline" onClick={closeModal}>
+                Cancelar
+              </Button>
+              <Button type="submit" variant="hero" disabled={isSubmitting}>
+                {isSubmitting ? 'Guardando...' : editingAgent ? 'Actualizar' : 'Crear agente'}
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Link Modal with QR */}
-      {selectedAgentForLink && (
-        <AgentLinkModal
-          isOpen={showLinkModal}
-          onClose={() => {
-            setShowLinkModal(false);
-            setSelectedAgentForLink(null);
-          }}
-          agentName={selectedAgentForLink.name}
-          refCode={selectedAgentForLink.refCode}
-        />
-      )}
+      {/* Link/QR Modal */}
+      <AgentLinkModal
+        isOpen={showLinkModal}
+        onClose={() => setShowLinkModal(false)}
+        agentName={selectedAgentForLink?.name || ''}
+        refCode={selectedAgentForLink?.refCode || ''}
+      />
     </div>
   );
 };

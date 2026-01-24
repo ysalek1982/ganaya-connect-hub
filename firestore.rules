@@ -1,0 +1,87 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+    
+    function isLineLeader() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'LINE_LEADER';
+    }
+    
+    function isAgent() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'AGENT';
+    }
+    
+    function isActiveUser() {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isActive == true;
+    }
+    
+    // Users collection - only readable by authenticated users, writable only by Cloud Functions
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      // Users can only update their own non-critical fields
+      allow update: if isAuthenticated() && 
+        request.auth.uid == userId &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['role', 'refCode', 'referralUrl', 'isActive', 'lineLeaderId']);
+      // Create and delete only via Cloud Functions (service account)
+      allow create, delete: if false;
+    }
+    
+    // Leads collection
+    match /leads/{leadId} {
+      // Anyone can create leads (from chat)
+      allow create: if true;
+      
+      // Read access based on role
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        // Line leaders can see leads assigned to their network
+        (isLineLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
+        // Agents can see their assigned leads
+        (isAgent() && resource.data.assignedAgentId == request.auth.uid)
+      );
+      
+      // Update access for status changes
+      allow update: if isAuthenticated() && isActiveUser() && (
+        isAdmin() ||
+        (isLineLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
+        (isAgent() && resource.data.assignedAgentId == request.auth.uid)
+      );
+      
+      // Delete only by admin
+      allow delete: if isAdmin();
+    }
+    
+    // RefCodes collection - lookup table for referral codes
+    match /refCodes/{refCode} {
+      // Public read for attribution lookup
+      allow read: if true;
+      // Write only via Cloud Functions
+      allow write: if false;
+    }
+    
+    // Chat logs (if needed)
+    match /chatLogs/{logId} {
+      allow create: if true;
+      allow read: if isAuthenticated() && isAdmin();
+      allow update, delete: if false;
+    }
+    
+    // Settings (admin only)
+    match /settings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

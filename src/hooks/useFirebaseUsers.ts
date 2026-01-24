@@ -7,6 +7,7 @@ import {
   doc, 
   getDoc,
   updateDoc,
+  deleteDoc,
   orderBy,
   Timestamp
 } from 'firebase/firestore';
@@ -143,6 +144,103 @@ export const useCreateAgentUser = () => {
       queryClient.invalidateQueries({ queryKey: ['firebase-agents'] });
     },
   });
+};
+
+// Combined hook for admin pages - provides agents, line leaders, and mutations
+export const useFirebaseUsers = () => {
+  const queryClient = useQueryClient();
+  
+  const agentsQuery = useFirebaseAgents();
+  const lineLeadersQuery = useFirebaseLineLeaders();
+  
+  // Lead counts (simple in-memory tracking, could be enhanced with Firestore aggregation)
+  const leadCountsQuery = useQuery({
+    queryKey: ['lead-counts'],
+    queryFn: async (): Promise<Record<string, number>> => {
+      const leadsRef = collection(db, 'leads');
+      const snapshot = await getDocs(leadsRef);
+      
+      const counts: Record<string, number> = {};
+      snapshot.docs.forEach(doc => {
+        const agentId = doc.data().assignedAgentId;
+        if (agentId) {
+          counts[agentId] = (counts[agentId] || 0) + 1;
+        }
+      });
+      return counts;
+    },
+  });
+
+  // Create agent
+  const createAgent = async (data: {
+    name: string;
+    email: string;
+    country: string;
+    whatsapp: string;
+    city?: string;
+    lineLeaderId?: string;
+    canRecruitSubagents?: boolean;
+  }): Promise<{ success: boolean; refCode?: string; error?: string }> => {
+    try {
+      const { data: response, error } = await supabase.functions.invoke('create-agent-user', {
+        body: data,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      if (response?.error) {
+        return { success: false, error: response.error };
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['firebase-agents'] });
+      return { success: true, refCode: response.refCode };
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  };
+
+  // Update agent
+  const updateAgent = async (uid: string, data: Partial<FirebaseUser>) => {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      ...data,
+      updatedAt: Timestamp.now(),
+    });
+    queryClient.invalidateQueries({ queryKey: ['firebase-agents'] });
+  };
+
+  // Delete agent (soft delete by setting isActive to false, or hard delete)
+  const deleteAgent = async (uid: string) => {
+    // Soft delete - just deactivate
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, {
+      isActive: false,
+      updatedAt: Timestamp.now(),
+    });
+    queryClient.invalidateQueries({ queryKey: ['firebase-agents'] });
+  };
+
+  // Get lead count for an agent
+  const getLeadCount = (agentUid: string): number => {
+    return leadCountsQuery.data?.[agentUid] || 0;
+  };
+
+  return {
+    agents: agentsQuery.data,
+    lineLeaders: lineLeadersQuery.data,
+    isLoading: agentsQuery.isLoading || lineLeadersQuery.isLoading,
+    error: agentsQuery.error || lineLeadersQuery.error,
+    createAgent,
+    updateAgent,
+    deleteAgent,
+    getLeadCount,
+    refetch: () => {
+      agentsQuery.refetch();
+      lineLeadersQuery.refetch();
+      leadCountsQuery.refetch();
+    },
+  };
 };
 
 export default useFirebaseAgents;
