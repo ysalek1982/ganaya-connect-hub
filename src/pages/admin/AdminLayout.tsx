@@ -57,9 +57,8 @@ const AdminLayout = () => {
 
   const navItems = [
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/admin/leads-clientes', icon: Users, label: 'Leads Clientes' },
-    { path: '/admin/leads-agentes', icon: UserCheck, label: 'Leads Agentes' },
-    { path: '/admin/agentes', icon: Users, label: 'Agentes' },
+    { path: '/admin/leads', icon: Users, label: 'Leads' },
+    { path: '/admin/agentes', icon: UserCheck, label: 'Agentes' },
     { path: '/admin/asignacion', icon: Shuffle, label: 'Asignación' },
     { path: '/admin/cms', icon: FileText, label: 'CMS' },
     { path: '/admin/settings', icon: Settings, label: 'Settings' },
