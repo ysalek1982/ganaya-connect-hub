@@ -14,46 +14,33 @@ import {
   Network
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, userData, loading, signOut, isAdmin, isLineLeader, isAgent } = useFirebaseAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
+    if (!loading) {
+      if (!user) {
         navigate('/admin');
         return;
       }
-
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', session.user.id)
-        .single();
 
       // Allow admin, line_leader, and agent roles
-      const allowedRoles = ['admin', 'line_leader', 'agent'];
-      if (!roles?.role || !allowedRoles.includes(roles.role)) {
-        await supabase.auth.signOut();
+      const allowedRoles = ['ADMIN', 'LINE_LEADER', 'AGENT'];
+      if (!userData?.role || !allowedRoles.includes(userData.role)) {
+        signOut();
         navigate('/admin');
-        return;
       }
-
-      setLoading(false);
-    };
-
-    checkAuth();
-  }, [navigate]);
+    }
+  }, [user, userData, loading, navigate, signOut]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     toast.success('Sesión cerrada');
     navigate('/admin');
   };

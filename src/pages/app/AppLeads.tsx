@@ -1,94 +1,88 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { Search, Eye, Copy, Plus, Phone, MessageCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseLeads, useAddFirebaseLead } from '@/hooks/useFirebaseLeads';
 import { toast } from 'sonner';
-import type { Database } from '@/integrations/supabase/types';
-
-type Lead = Database['public']['Tables']['leads']['Row'];
+import type { FirebaseLead, LeadStatus } from '@/lib/firebase-types';
 
 const AppLeads = () => {
-  const queryClient = useQueryClient();
-  const { agentId, isAdmin, isLineLeader } = useUserRole();
+  const { agentId, isAdmin, isLineLeader, userData } = useFirebaseAuth();
   const [search, setSearch] = useState('');
   const [filterEstado, setFilterEstado] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLead, setSelectedLead] = useState<FirebaseLead | null>(null);
   const [newLead, setNewLead] = useState({ nombre: '', whatsapp: '', pais: 'Paraguay' });
 
-  const { data: leads, isLoading } = useQuery({
-    queryKey: ['app-leads', agentId],
-    queryFn: async () => {
-      let query = supabase.from('leads').select('*').order('created_at', { ascending: false });
-      
-      if (!isAdmin) {
-        query = query.eq('asignado_agente_id', agentId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Lead[];
-    },
-    enabled: !!agentId || isAdmin,
+  const { data: leads, isLoading } = useFirebaseLeads({
+    agentId,
+    lineLeaderId: isLineLeader ? agentId : null,
+    isAdmin,
   });
 
-  const addLead = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase.from('leads').insert({
-        nombre: newLead.nombre,
-        whatsapp: newLead.whatsapp,
-        pais: newLead.pais,
-        tipo: 'cliente',
+  const addLeadMutation = useAddFirebaseLead();
+
+  const handleAddLead = () => {
+    addLeadMutation.mutate(
+      {
+        name: newLead.nombre,
+        country: newLead.pais,
+        contact: { whatsapp: newLead.whatsapp },
+        intent: 'JUGADOR',
+        refCode: userData?.refCode || null,
+        scoreTotal: 0,
+        tier: null,
+        rawJson: {},
+        status: 'NUEVO',
+        assignedAgentId: agentId,
+        assignedLineLeaderId: userData?.lineLeaderId || null,
         origen: 'manual_agent',
-        asignado_agente_id: agentId,
-        estado: 'nuevo',
-      });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['app-leads'] });
-      toast.success('Lead agregado');
-      setShowAddModal(false);
-      setNewLead({ nombre: '', whatsapp: '', pais: 'Paraguay' });
-    },
-    onError: () => toast.error('Error al agregar lead'),
-  });
+      },
+      {
+        onSuccess: () => {
+          toast.success('Lead agregado');
+          setShowAddModal(false);
+          setNewLead({ nombre: '', whatsapp: '', pais: 'Paraguay' });
+        },
+        onError: () => toast.error('Error al agregar lead'),
+      }
+    );
+  };
 
   const filteredLeads = leads?.filter(lead => {
     const matchesSearch = 
-      lead.nombre.toLowerCase().includes(search.toLowerCase()) ||
-      lead.whatsapp.includes(search);
-    const matchesEstado = filterEstado === 'all' || lead.estado === filterEstado;
+      lead.name.toLowerCase().includes(search.toLowerCase()) ||
+      (lead.contact.whatsapp || '').includes(search);
+    const matchesEstado = filterEstado === 'all' || lead.status.toLowerCase() === filterEstado;
     return matchesSearch && matchesEstado;
   });
 
-  const copyContact = (lead: Lead) => {
-    navigator.clipboard.writeText(lead.whatsapp);
+  const copyContact = (lead: FirebaseLead) => {
+    navigator.clipboard.writeText(lead.contact.whatsapp || '');
     toast.success('Contacto copiado');
   };
 
-  const openWhatsApp = (lead: Lead) => {
-    window.open(`https://wa.me/${lead.whatsapp.replace(/[^0-9]/g, '')}`, '_blank');
+  const openWhatsApp = (lead: FirebaseLead) => {
+    const phone = (lead.contact.whatsapp || '').replace(/[^0-9]/g, '');
+    window.open(`https://wa.me/${phone}`, '_blank');
   };
 
-  const statusColor = (estado: string | null) => {
-    const colors: Record<string, string> = {
-      nuevo: 'bg-primary/20 text-primary border-primary/30',
-      contactado: 'bg-gold/20 text-gold border-gold/30',
-      asignado: 'bg-accent/20 text-accent border-accent/30',
-      cerrado: 'bg-muted text-muted-foreground',
-      descartado: 'bg-destructive/20 text-destructive border-destructive/30',
+  const statusColor = (status: LeadStatus) => {
+    const colors: Record<LeadStatus, string> = {
+      'NUEVO': 'bg-primary/20 text-primary border-primary/30',
+      'CONTACTADO': 'bg-gold/20 text-gold border-gold/30',
+      'ASIGNADO': 'bg-accent/20 text-accent border-accent/30',
+      'CERRADO': 'bg-muted text-muted-foreground',
+      'DESCARTADO': 'bg-destructive/20 text-destructive border-destructive/30',
     };
-    return colors[estado || 'nuevo'];
+    return colors[status] || colors['NUEVO'];
   };
 
   return (
@@ -148,21 +142,21 @@ const AppLeads = () => {
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium truncate">{lead.nombre}</span>
-                      <Badge variant="outline" className={statusColor(lead.estado)}>
-                        {lead.estado || 'nuevo'}
+                      <span className="font-medium truncate">{lead.name}</span>
+                      <Badge variant="outline" className={statusColor(lead.status)}>
+                        {lead.status.toLowerCase()}
                       </Badge>
                       <Badge variant="outline" className="text-xs">
-                        {lead.tipo}
+                        {lead.intent?.toLowerCase() || 'cliente'}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Phone className="w-3 h-3" />
-                        {lead.whatsapp}
+                        {lead.contact.whatsapp || 'Sin WhatsApp'}
                       </span>
-                      <span>{lead.pais}</span>
-                      <span>{format(new Date(lead.created_at), 'dd/MM/yy')}</span>
+                      <span>{lead.country}</span>
+                      <span>{format(new Date(lead.createdAt), 'dd/MM/yy')}</span>
                     </div>
                   </div>
                   <div className="flex gap-1">
@@ -227,10 +221,10 @@ const AppLeads = () => {
             <Button variant="outline" onClick={() => setShowAddModal(false)}>Cancelar</Button>
             <Button 
               variant="hero" 
-              onClick={() => addLead.mutate()}
-              disabled={!newLead.nombre || !newLead.whatsapp}
+              onClick={handleAddLead}
+              disabled={!newLead.nombre || !newLead.whatsapp || addLeadMutation.isPending}
             >
-              Agregar
+              {addLeadMutation.isPending ? 'Agregando...' : 'Agregar'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -247,33 +241,33 @@ const AppLeads = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-muted-foreground">Nombre</Label>
-                  <p className="font-medium">{selectedLead.nombre}</p>
+                  <p className="font-medium">{selectedLead.name}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">WhatsApp</Label>
-                  <p className="font-medium">{selectedLead.whatsapp}</p>
+                  <p className="font-medium">{selectedLead.contact.whatsapp || 'N/A'}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">País</Label>
-                  <p className="font-medium">{selectedLead.pais}</p>
+                  <p className="font-medium">{selectedLead.country}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Estado</Label>
-                  <p className="font-medium">{selectedLead.estado}</p>
+                  <p className="font-medium">{selectedLead.status}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Tipo</Label>
-                  <p className="font-medium">{selectedLead.tipo}</p>
+                  <Label className="text-muted-foreground">Intent</Label>
+                  <p className="font-medium">{selectedLead.intent || 'N/A'}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Fecha</Label>
-                  <p className="font-medium">{format(new Date(selectedLead.created_at), 'dd/MM/yyyy HH:mm')}</p>
+                  <p className="font-medium">{format(new Date(selectedLead.createdAt), 'dd/MM/yyyy HH:mm')}</p>
                 </div>
               </div>
-              {selectedLead.ref_code && (
+              {selectedLead.refCode && (
                 <div>
                   <Label className="text-muted-foreground">Ref Code</Label>
-                  <code className="block mt-1 text-primary">{selectedLead.ref_code}</code>
+                  <code className="block mt-1 text-primary">{selectedLead.refCode}</code>
                 </div>
               )}
             </div>
