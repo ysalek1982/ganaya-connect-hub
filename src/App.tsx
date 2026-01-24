@@ -9,13 +9,12 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminLeadsClientes from "./pages/admin/AdminLeadsClientes";
-import AdminLeadsAgentes from "./pages/admin/AdminLeadsAgentes";
-import AdminAgentes from "./pages/admin/AdminAgentes";
+import AdminLeads from "./pages/admin/AdminLeads";
+import AdminAgentesNew from "./pages/admin/AdminAgentesNew";
 import AdminAsignacion from "./pages/admin/AdminAsignacion";
 import AdminCMS from "./pages/admin/AdminCMS";
 import AdminCMSPromos from "./pages/admin/AdminCMSPromos";
-import AdminSettings from "./pages/admin/AdminSettings";
+import AdminSettingsNew from "./pages/admin/AdminSettingsNew";
 
 const queryClient = new QueryClient();
 
@@ -31,13 +30,12 @@ const App = () => (
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/*" element={<AdminLayout />}>
             <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="leads-clientes" element={<AdminLeadsClientes />} />
-            <Route path="leads-agentes" element={<AdminLeadsAgentes />} />
-            <Route path="agentes" element={<AdminAgentes />} />
+            <Route path="leads" element={<AdminLeads />} />
+            <Route path="agentes" element={<AdminAgentesNew />} />
             <Route path="asignacion" element={<AdminAsignacion />} />
             <Route path="cms" element={<AdminCMS />} />
             <Route path="cms-promos" element={<AdminCMSPromos />} />
-            <Route path="settings" element={<AdminSettings />} />
+            <Route path="settings" element={<AdminSettingsNew />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

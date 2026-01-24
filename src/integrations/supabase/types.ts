@@ -20,9 +20,11 @@ export type Database = {
           created_at: string
           estado: Database["public"]["Enums"]["agent_status"] | null
           id: string
+          line_leader_id: string | null
           nombre: string
           pais: string
           ref_code: string | null
+          user_id: string | null
           whatsapp: string
         }
         Insert: {
@@ -30,9 +32,11 @@ export type Database = {
           created_at?: string
           estado?: Database["public"]["Enums"]["agent_status"] | null
           id?: string
+          line_leader_id?: string | null
           nombre: string
           pais: string
           ref_code?: string | null
+          user_id?: string | null
           whatsapp: string
         }
         Update: {
@@ -40,12 +44,22 @@ export type Database = {
           created_at?: string
           estado?: Database["public"]["Enums"]["agent_status"] | null
           id?: string
+          line_leader_id?: string | null
           nombre?: string
           pais?: string
           ref_code?: string | null
+          user_id?: string | null
           whatsapp?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agentes_line_leader_id_fkey"
+            columns: ["line_leader_id"]
+            isOneToOne: false
+            referencedRelation: "agentes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_logs: {
         Row: {
@@ -485,10 +499,12 @@ export type Database = {
       }
       settings: {
         Row: {
+          enabled_countries: Json | null
           fallback_mode: boolean | null
           from_email: string | null
           gemini_api_key: string | null
           id: string
+          scoring_rules: Json | null
           smtp_host: string | null
           smtp_pass: string | null
           smtp_port: number | null
@@ -497,10 +513,12 @@ export type Database = {
           whatsapp_default: string | null
         }
         Insert: {
+          enabled_countries?: Json | null
           fallback_mode?: boolean | null
           from_email?: string | null
           gemini_api_key?: string | null
           id?: string
+          scoring_rules?: Json | null
           smtp_host?: string | null
           smtp_pass?: string | null
           smtp_port?: number | null
@@ -509,10 +527,12 @@ export type Database = {
           whatsapp_default?: string | null
         }
         Update: {
+          enabled_countries?: Json | null
           fallback_mode?: boolean | null
           from_email?: string | null
           gemini_api_key?: string | null
           id?: string
+          scoring_rules?: Json | null
           smtp_host?: string | null
           smtp_pass?: string | null
           smtp_port?: number | null
@@ -564,7 +584,7 @@ export type Database = {
     }
     Enums: {
       agent_status: "activo" | "inactivo"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "line_leader" | "agent"
       hours_per_day: "1-2" | "3-5" | "6+"
       lead_status:
         | "nuevo"
@@ -707,7 +727,7 @@ export const Constants = {
   public: {
     Enums: {
       agent_status: ["activo", "inactivo"],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "line_leader", "agent"],
       hours_per_day: ["1-2", "3-5", "6+"],
       lead_status: ["nuevo", "contactado", "asignado", "cerrado", "descartado"],
       p2p_level: ["basico", "medio", "avanzado"],
