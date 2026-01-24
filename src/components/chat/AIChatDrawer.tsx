@@ -21,15 +21,21 @@ interface AIChatDrawerProps {
   initialMessage?: string;
 }
 
+interface DebugInfo {
+  intent_detected: string | null;
+  missing_fields: string[];
+  score_rules: number;
+  score_ai: number;
+  score_total: number;
+  tier: 'NOVATO' | 'POTENCIAL' | 'APROBABLE' | null;
+  error?: string;
+}
+
 interface ConversationalData {
   reply: string;
   datos_lead_update: Record<string, unknown>;
   fin_entrevista: boolean;
-  intent?: 'JUGADOR' | 'AGENTE' | 'SOPORTE';
-  scoring?: {
-    total: number;
-    categoria: 'NOVATO' | 'POTENCIAL' | 'APROBABLE';
-  };
+  debug: DebugInfo;
 }
 
 type P2PLevel = Database['public']['Enums']['p2p_level'];
@@ -120,9 +126,10 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
           setCollectedData(prev => ({ ...prev, ...response.datos_lead_update }));
         }
 
-        // Track detected intent
-        if (response.intent && !detectedIntent) {
-          setDetectedIntent(response.intent);
+        // Track detected intent from debug info
+        const intentFromDebug = response.debug?.intent_detected;
+        if (intentFromDebug && !detectedIntent) {
+          setDetectedIntent(intentFromDebug as 'JUGADOR' | 'AGENTE' | 'SOPORTE');
         }
 
         // Add bot response
@@ -161,17 +168,17 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
   const saveLead = async (response: ConversationalData) => {
     try {
       const data = collectedData;
-      const intent = detectedIntent || response.intent;
+      const intent = detectedIntent || response.debug?.intent_detected;
       
-      // Map scoring to our label system
+      // Map scoring from debug to our label system
       let etiqueta: ScoreLabel = 'CLIENTE';
       let score = 0;
       
-      if (intent === 'AGENTE' && response.scoring) {
-        score = response.scoring.total;
-        if (response.scoring.categoria === 'APROBABLE') {
+      if (intent === 'AGENTE' && response.debug) {
+        score = response.debug.score_total;
+        if (response.debug.tier === 'APROBABLE') {
           etiqueta = 'AGENTE_POTENCIAL_ALTO';
-        } else if (response.scoring.categoria === 'POTENCIAL') {
+        } else if (response.debug.tier === 'POTENCIAL') {
           etiqueta = 'AGENTE_POTENCIAL_MEDIO';
         } else {
           etiqueta = 'AGENTE_POTENCIAL_BAJO';
