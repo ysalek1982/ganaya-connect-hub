@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
@@ -6,9 +6,8 @@ import {
   signOut as firebaseSignOut,
   User
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import type { FirebaseUser, UserRole } from '@/lib/firebase-types';
+import { auth } from '@/lib/firebase';
+import type { FirebaseUser } from '@/lib/firebase-types';
 
 // Admin email that gets automatic admin role
 const ADMIN_EMAIL = 'ysalek@gmail.com';
@@ -38,68 +37,36 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
     error: null,
   });
 
-  // Create or fetch user document from Firestore
-  const fetchOrCreateUserData = useCallback(async (user: User): Promise<FirebaseUser | null> => {
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        return {
-          uid: user.uid,
-          name: data.name || '',
-          email: data.email || user.email || '',
-          role: data.role as UserRole || 'AGENT',
-          country: data.country || '',
-          isActive: data.isActive ?? true,
-          lineLeaderId: data.lineLeaderId || null,
-          canRecruitSubagents: data.canRecruitSubagents ?? false,
-          refCode: data.refCode || null,
-          referralUrl: data.referralUrl || null,
-          whatsapp: data.whatsapp || null,
-          city: data.city || null,
-          needsPasswordReset: data.needsPasswordReset ?? false,
-          createdAt: data.createdAt?.toDate() || new Date(),
-        };
-      }
-      
-      // User document doesn't exist, create it
-      const isAdminEmail = user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-      const newUserData: Omit<FirebaseUser, 'createdAt'> & { createdAt: Date } = {
-        uid: user.uid,
-        name: user.email?.split('@')[0] || 'Usuario',
-        email: user.email || '',
-        role: isAdminEmail ? 'ADMIN' : 'AGENT',
-        country: '',
-        isActive: true,
-        lineLeaderId: null,
-        canRecruitSubagents: false,
-        refCode: null,
-        referralUrl: null,
-        whatsapp: null,
-        city: null,
-        needsPasswordReset: false,
-        createdAt: new Date(),
-      };
-      
-      await setDoc(userDocRef, newUserData);
-      console.log(`Created user document for ${user.email} with role: ${newUserData.role}`);
-      
-      return newUserData;
-    } catch (error) {
-      console.error('Error fetching/creating user data:', error);
-      return null;
-    }
-  }, []);
+  // NOTE: Firestore rules in your Firebase project currently deny reads/writes,
+  // so we avoid blocking login on Firestore during auth bootstrap.
+  const buildFallbackUserData = (user: User): FirebaseUser => {
+    const email = user.email || '';
+    const isAdminEmail = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+
+    return {
+      uid: user.uid,
+      name: email.split('@')[0] || 'Usuario',
+      email,
+      role: isAdminEmail ? 'ADMIN' : 'AGENT',
+      country: '',
+      isActive: true,
+      lineLeaderId: null,
+      canRecruitSubagents: false,
+      refCode: null,
+      referralUrl: null,
+      whatsapp: null,
+      city: null,
+      needsPasswordReset: false,
+      createdAt: new Date(),
+    };
+  };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        const userData = await fetchOrCreateUserData(user);
         setState({
           user,
-          userData,
+          userData: buildFallbackUserData(user),
           loading: false,
           error: null,
         });
@@ -114,7 +81,7 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
     });
 
     return () => unsubscribe();
-  }, [fetchOrCreateUserData]);
+  }, []);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
