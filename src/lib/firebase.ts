@@ -16,3 +16,10 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+// Debug (safe): helps confirm which Firebase project is being used in the browser
+console.info('[firebase] initialized', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  apiKeyPrefix: firebaseConfig.apiKey?.slice(0, 10),
+});
