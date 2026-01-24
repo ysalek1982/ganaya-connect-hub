@@ -479,12 +479,12 @@ const AdminAgentesNew = () => {
               {isAdmin && (
                 <div className="space-y-2">
                   <Label>Line Leader</Label>
-                  <Select value={form.line_leader_id} onValueChange={(v) => setForm({ ...form, line_leader_id: v })}>
+                  <Select value={form.line_leader_id || "none"} onValueChange={(v) => setForm({ ...form, line_leader_id: v === "none" ? "" : v })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Sin asignar" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Sin asignar</SelectItem>
+                      <SelectItem value="none">Sin asignar</SelectItem>
                       {lineLeaders?.filter(ll => ll.id !== editingAgent?.id).map(ll => (
                         <SelectItem key={ll.id} value={ll.id}>{ll.nombre}</SelectItem>
                       ))}
