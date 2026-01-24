@@ -22,6 +22,7 @@ export type Database = {
           id: string
           nombre: string
           pais: string
+          ref_code: string | null
           whatsapp: string
         }
         Insert: {
@@ -31,6 +32,7 @@ export type Database = {
           id?: string
           nombre: string
           pais: string
+          ref_code?: string | null
           whatsapp: string
         }
         Update: {
@@ -40,6 +42,7 @@ export type Database = {
           id?: string
           nombre?: string
           pais?: string
+          ref_code?: string | null
           whatsapp?: string
         }
         Relationships: []
@@ -377,6 +380,7 @@ export type Database = {
           pais: string
           prefiere_usdt: boolean | null
           quiere_empezar: boolean | null
+          ref_code: string | null
           score: number | null
           tipo: string
           utm_campaign: string | null
@@ -405,6 +409,7 @@ export type Database = {
           pais: string
           prefiere_usdt?: boolean | null
           quiere_empezar?: boolean | null
+          ref_code?: string | null
           score?: number | null
           tipo?: string
           utm_campaign?: string | null
@@ -433,6 +438,7 @@ export type Database = {
           pais?: string
           prefiere_usdt?: boolean | null
           quiere_empezar?: boolean | null
+          ref_code?: string | null
           score?: number | null
           tipo?: string
           utm_campaign?: string | null
@@ -539,6 +545,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_assign_agent: {
+        Args: { p_country?: string; p_ref_code?: string }
+        Returns: string
+      }
+      get_agent_load: { Args: { agent_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -16,10 +16,14 @@ import { LiveStatsBar } from '@/components/home/LiveStatsBar';
 import { HowItWorksSection } from '@/components/home/HowItWorksSection';
 import FloatingChatButton from '@/components/chat/FloatingChatButton';
 import { useCMSSEO } from '@/hooks/useCMSPromos';
+import { useRefCode } from '@/hooks/useRefCode';
 import { useEffect } from 'react';
 
 const Index = () => {
   const { data: seo } = useCMSSEO('home');
+  
+  // Capture ref_code from URL on page load
+  useRefCode();
 
   // Update meta tags dynamically
   useEffect(() => {

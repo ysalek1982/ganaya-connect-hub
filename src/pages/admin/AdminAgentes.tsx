@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { Plus, Edit, Trash2, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Copy, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,12 +14,28 @@ import type { Database } from '@/integrations/supabase/types';
 type Agente = Database['public']['Tables']['agentes']['Row'];
 type AgentStatus = Database['public']['Enums']['agent_status'];
 
+interface AgentForm {
+  nombre: string;
+  whatsapp: string;
+  pais: string;
+  ciudad: string;
+  estado: AgentStatus;
+  ref_code: string;
+}
+
 const AdminAgentes = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agente | null>(null);
-  const [form, setForm] = useState<{ nombre: string; whatsapp: string; pais: string; ciudad: string; estado: AgentStatus }>({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo' });
+  const [form, setForm] = useState<AgentForm>({ 
+    nombre: '', 
+    whatsapp: '', 
+    pais: 'Paraguay', 
+    ciudad: '', 
+    estado: 'activo',
+    ref_code: '',
+  });
 
   const { data: agentes, isLoading } = useQuery({
     queryKey: ['agentes'],
@@ -33,21 +49,57 @@ const AdminAgentes = () => {
     },
   });
 
+  // Fetch lead counts per agent
+  const { data: leadCounts } = useQuery({
+    queryKey: ['agent-lead-counts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('asignado_agente_id')
+        .not('asignado_agente_id', 'is', null);
+      if (error) throw error;
+      
+      const counts: Record<string, number> = {};
+      data?.forEach(lead => {
+        if (lead.asignado_agente_id) {
+          counts[lead.asignado_agente_id] = (counts[lead.asignado_agente_id] || 0) + 1;
+        }
+      });
+      return counts;
+    },
+  });
+
+  const generateRefCode = (name: string) => {
+    const baseCode = name.substring(0, 4).toUpperCase().replace(/\s/g, '');
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `${baseCode}${randomSuffix}`;
+  };
+
   const createAgent = useMutation({
     mutationFn: async () => {
+      const refCode = form.ref_code || generateRefCode(form.nombre);
       const { error } = await supabase.from('agentes').insert({
         nombre: form.nombre,
         whatsapp: form.whatsapp,
         pais: form.pais,
         ciudad: form.ciudad || null,
         estado: form.estado as Database['public']['Enums']['agent_status'],
+        ref_code: refCode,
       });
       if (error) throw error;
+      return refCode;
     },
-    onSuccess: () => {
+    onSuccess: (refCode) => {
       queryClient.invalidateQueries({ queryKey: ['agentes'] });
-      toast.success('Agente creado');
+      toast.success(`Agente creado con código: ${refCode}`);
       closeModal();
+    },
+    onError: (error: Error) => {
+      if (error.message.includes('unique')) {
+        toast.error('El código de referencia ya existe');
+      } else {
+        toast.error('Error al crear agente');
+      }
     },
   });
 
@@ -62,6 +114,7 @@ const AdminAgentes = () => {
           pais: form.pais,
           ciudad: form.ciudad || null,
           estado: form.estado as Database['public']['Enums']['agent_status'],
+          ref_code: form.ref_code || null,
         })
         .eq('id', editingAgent.id);
       if (error) throw error;
@@ -70,6 +123,13 @@ const AdminAgentes = () => {
       queryClient.invalidateQueries({ queryKey: ['agentes'] });
       toast.success('Agente actualizado');
       closeModal();
+    },
+    onError: (error: Error) => {
+      if (error.message.includes('unique')) {
+        toast.error('El código de referencia ya existe');
+      } else {
+        toast.error('Error al actualizar agente');
+      }
     },
   });
 
@@ -84,9 +144,16 @@ const AdminAgentes = () => {
     },
   });
 
+  const copyRefLink = (refCode: string) => {
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/?ref=${refCode}`;
+    navigator.clipboard.writeText(link);
+    toast.success('Link de referido copiado');
+  };
+
   const openCreateModal = () => {
     setEditingAgent(null);
-    setForm({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo' as AgentStatus });
+    setForm({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo', ref_code: '' });
     setShowModal(true);
   };
 
@@ -98,6 +165,7 @@ const AdminAgentes = () => {
       pais: agent.pais,
       ciudad: agent.ciudad || '',
       estado: (agent.estado || 'activo') as AgentStatus,
+      ref_code: agent.ref_code || '',
     });
     setShowModal(true);
   };
@@ -105,7 +173,7 @@ const AdminAgentes = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingAgent(null);
-    setForm({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo' as AgentStatus });
+    setForm({ nombre: '', whatsapp: '', pais: 'Paraguay', ciudad: '', estado: 'activo', ref_code: '' });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -120,7 +188,8 @@ const AdminAgentes = () => {
   const filteredAgentes = agentes?.filter(a =>
     a.nombre.toLowerCase().includes(search.toLowerCase()) ||
     a.whatsapp.includes(search) ||
-    a.pais.toLowerCase().includes(search.toLowerCase())
+    a.pais.toLowerCase().includes(search.toLowerCase()) ||
+    (a.ref_code && a.ref_code.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
@@ -140,7 +209,7 @@ const AdminAgentes = () => {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar agente..."
+          placeholder="Buscar por nombre, WhatsApp o ref_code..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
@@ -171,10 +240,36 @@ const AdminAgentes = () => {
                   {agent.estado}
                 </span>
               </div>
-              <div className="text-sm text-muted-foreground mb-4">
+              
+              {/* Ref Code */}
+              {agent.ref_code && (
+                <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Código de referido</p>
+                      <p className="font-mono font-bold text-primary">{agent.ref_code}</p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => copyRefLink(agent.ref_code!)}
+                      title="Copiar link de referido"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-sm text-muted-foreground mb-4 space-y-1">
                 <p>📍 {agent.pais}{agent.ciudad ? `, ${agent.ciudad}` : ''}</p>
                 <p>📅 {format(new Date(agent.created_at), 'dd/MM/yyyy')}</p>
+                <p className="flex items-center gap-1">
+                  <Users className="w-3 h-3" />
+                  {leadCounts?.[agent.id] || 0} leads asignados
+                </p>
               </div>
+              
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => openEditModal(agent)}>
                   <Edit className="w-4 h-4" />
@@ -225,6 +320,27 @@ const AdminAgentes = () => {
                 required
               />
             </div>
+            <div className="space-y-2">
+              <Label>Código de Referido (opcional)</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={form.ref_code}
+                  onChange={(e) => setForm({ ...form, ref_code: e.target.value.toUpperCase() })}
+                  placeholder="Se genera automáticamente"
+                  className="font-mono"
+                />
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => setForm({ ...form, ref_code: generateRefCode(form.nombre || 'AGENT') })}
+                >
+                  Generar
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Link: {window.location.origin}/?ref={form.ref_code || '[código]'}
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>País</Label>
@@ -235,8 +351,12 @@ const AdminAgentes = () => {
                   <SelectContent>
                     <SelectItem value="Paraguay">Paraguay</SelectItem>
                     <SelectItem value="Argentina">Argentina</SelectItem>
+                    <SelectItem value="Bolivia">Bolivia</SelectItem>
                     <SelectItem value="Colombia">Colombia</SelectItem>
                     <SelectItem value="Ecuador">Ecuador</SelectItem>
+                    <SelectItem value="Perú">Perú</SelectItem>
+                    <SelectItem value="Chile">Chile</SelectItem>
+                    <SelectItem value="México">México</SelectItem>
                     <SelectItem value="USA">USA</SelectItem>
                   </SelectContent>
                 </Select>
