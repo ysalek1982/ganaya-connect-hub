@@ -11,6 +11,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLeads from "./pages/admin/AdminLeads";
 import AdminAgentesNew from "./pages/admin/AdminAgentesNew";
+import AdminNetwork from "./pages/admin/AdminNetwork";
 import AdminAsignacion from "./pages/admin/AdminAsignacion";
 import AdminCMS from "./pages/admin/AdminCMS";
 import AdminCMSPromos from "./pages/admin/AdminCMSPromos";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="leads" element={<AdminLeads />} />
             <Route path="agentes" element={<AdminAgentesNew />} />
+            <Route path="red" element={<AdminNetwork />} />
             <Route path="asignacion" element={<AdminAsignacion />} />
             <Route path="cms" element={<AdminCMS />} />
             <Route path="cms-promos" element={<AdminCMSPromos />} />

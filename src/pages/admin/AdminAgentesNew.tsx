@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { Plus, Edit, Trash2, Search, Copy, Users, Link } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Users, Link, QrCode, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,8 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { useUserRole } from '@/hooks/useUserRole';
+import AgentLinkModal from '@/components/admin/AgentLinkModal';
 import type { Database } from '@/integrations/supabase/types';
-
 type AgentStatus = Database['public']['Enums']['agent_status'];
 
 interface AgentWithLineLeader {
@@ -50,6 +50,8 @@ const AdminAgentesNew = () => {
   const [filterEstado, setFilterEstado] = useState<string>('all');
   const [filterLineLeader, setFilterLineLeader] = useState<string>('all');
   const [showModal, setShowModal] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [selectedAgentForLink, setSelectedAgentForLink] = useState<{ name: string; refCode: string } | null>(null);
   const [editingAgent, setEditingAgent] = useState<AgentWithLineLeader | null>(null);
   const [form, setForm] = useState<AgentForm>({
     nombre: '',
@@ -97,15 +99,28 @@ const AdminAgentesNew = () => {
   // Get potential line leaders (agents without a line_leader_id - top level)
   const lineLeaders = agentes?.filter(a => !a.line_leader_id && a.estado === 'activo');
 
-  const generateRefCode = (name: string) => {
-    const baseCode = name.substring(0, 4).toUpperCase().replace(/\s/g, '');
-    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${baseCode}${randomSuffix}`;
+  // Generate ref_code in format AGT-XXXXXX
+  const generateRefCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let suffix = '';
+    for (let i = 0; i < 6; i++) {
+      suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `AGT-${suffix}`;
+  };
+
+  const openLinkModal = (agent: AgentWithLineLeader) => {
+    if (agent.ref_code) {
+      setSelectedAgentForLink({ name: agent.nombre, refCode: agent.ref_code });
+      setShowLinkModal(true);
+    } else {
+      toast.error('Este agente no tiene código de referido');
+    }
   };
 
   const createAgent = useMutation({
     mutationFn: async () => {
-      const refCode = form.ref_code || generateRefCode(form.nombre);
+      const refCode = form.ref_code || generateRefCode();
       const { error } = await supabase.from('agentes').insert({
         nombre: form.nombre,
         whatsapp: form.whatsapp,
@@ -353,11 +368,14 @@ const AdminAgentesNew = () => {
                   <TableCell>
                     {agent.ref_code ? (
                       <div className="flex items-center gap-2">
-                        <code className="text-xs bg-primary/10 px-2 py-1 rounded text-primary">
+                        <code className="text-xs bg-primary/10 px-2 py-1 rounded text-primary font-mono">
                           {agent.ref_code}
                         </code>
                         <Button size="sm" variant="ghost" onClick={() => copyRefLink(agent.ref_code!)}>
                           <Link className="w-3 h-3" />
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => openLinkModal(agent)}>
+                          <QrCode className="w-3 h-3" />
                         </Button>
                       </div>
                     ) : '-'}
@@ -486,9 +504,9 @@ const AdminAgentesNew = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setForm({ ...form, ref_code: generateRefCode(form.nombre || 'AGENT') })}
+                    onClick={() => setForm({ ...form, ref_code: generateRefCode() })}
                   >
-                    Generar
+                    <RefreshCw className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -502,6 +520,19 @@ const AdminAgentesNew = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Link Modal with QR */}
+      {selectedAgentForLink && (
+        <AgentLinkModal
+          isOpen={showLinkModal}
+          onClose={() => {
+            setShowLinkModal(false);
+            setSelectedAgentForLink(null);
+          }}
+          agentName={selectedAgentForLink.name}
+          refCode={selectedAgentForLink.refCode}
+        />
+      )}
     </div>
   );
 };

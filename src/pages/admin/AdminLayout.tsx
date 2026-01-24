@@ -10,7 +10,8 @@ import {
   LogOut, 
   Menu,
   X,
-  Shuffle
+  Shuffle,
+  Network
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,7 +38,9 @@ const AdminLayout = () => {
         .eq('user_id', session.user.id)
         .single();
 
-      if (roles?.role !== 'admin') {
+      // Allow admin, line_leader, and agent roles
+      const allowedRoles = ['admin', 'line_leader', 'agent'];
+      if (!roles?.role || !allowedRoles.includes(roles.role)) {
         await supabase.auth.signOut();
         navigate('/admin');
         return;
@@ -59,6 +62,7 @@ const AdminLayout = () => {
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/admin/leads', icon: Users, label: 'Leads' },
     { path: '/admin/agentes', icon: UserCheck, label: 'Agentes' },
+    { path: '/admin/red', icon: Network, label: 'Red' },
     { path: '/admin/asignacion', icon: Shuffle, label: 'Asignación' },
     { path: '/admin/cms', icon: FileText, label: 'CMS' },
     { path: '/admin/settings', icon: Settings, label: 'Settings' },
