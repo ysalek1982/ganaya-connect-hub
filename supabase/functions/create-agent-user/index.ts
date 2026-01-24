@@ -146,7 +146,16 @@ const createFirebaseUser = async (
   if (!response.ok) {
     const error = await response.json();
     console.error("[Firebase Admin] Create user failed:", error);
-    throw new Error(error.error?.message || "Failed to create Firebase user");
+    const errorCode = error.error?.message || "UNKNOWN_ERROR";
+    
+    // Map Firebase errors to user-friendly messages
+    const errorMessages: Record<string, string> = {
+      "EMAIL_EXISTS": "Este email ya está registrado. Usa otro email.",
+      "INVALID_EMAIL": "El formato del email no es válido.",
+      "WEAK_PASSWORD": "La contraseña es muy débil.",
+    };
+    
+    throw new Error(errorMessages[errorCode] || `Error de Firebase: ${errorCode}`);
   }
 
   const data = await response.json();
