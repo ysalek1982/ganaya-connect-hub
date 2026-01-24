@@ -1,148 +1,151 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
-import { Search, Download, Eye, Check, UserPlus, ArrowUpDown, Filter } from 'lucide-react';
+import { Search, Download, Eye, Check, UserPlus, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseUsers } from '@/hooks/useFirebaseUsers';
 import LeadDetailModal from '@/components/admin/LeadDetailModal';
-import type { Database } from '@/integrations/supabase/types';
-
-type Lead = Database['public']['Tables']['leads']['Row'];
-type LeadStatus = Database['public']['Enums']['lead_status'];
-type ScoreLabel = Database['public']['Enums']['score_label'];
-type Agente = Database['public']['Tables']['agentes']['Row'];
+import type { FirebaseLead, LeadStatus, LeadTier, LeadIntent } from '@/lib/firebase-types';
 
 const AdminLeads = () => {
-  const queryClient = useQueryClient();
-  const { isAdmin, isLineLeader, agentId } = useUserRole();
+  const { isAdmin, isLineLeader, agentId } = useFirebaseAuth();
+  const { agents, createAgent } = useFirebaseUsers();
   
+  const [leads, setLeads] = useState<(FirebaseLead & { id: string })[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterPais, setFilterPais] = useState<string>('all');
   const [filterEstado, setFilterEstado] = useState<LeadStatus | 'all'>('all');
   const [filterIntent, setFilterIntent] = useState<string>('all');
-  const [filterTier, setFilterTier] = useState<ScoreLabel | 'all'>('all');
+  const [filterTier, setFilterTier] = useState<LeadTier | 'all'>('all');
   const [filterAgente, setFilterAgente] = useState<string>('all');
   const [sortByScore, setSortByScore] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [selectedLead, setSelectedLead] = useState<(FirebaseLead & { id: string }) | null>(null);
 
-  // Fetch agents for filter dropdown
-  const { data: agentes } = useQuery({
-    queryKey: ['agentes-list'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('agentes')
-        .select('id, nombre, ref_code, line_leader_id')
-        .eq('estado', 'activo')
-        .order('nombre');
-      if (error) throw error;
-      return data as (Agente & { line_leader_id: string | null })[];
-    },
-  });
+  // Subscribe to leads from Firestore
+  useEffect(() => {
+    const leadsRef = collection(db, 'leads');
+    let q;
 
-  // Filter agents based on role
-  const visibleAgents = agentes?.filter(agent => {
+    if (isAdmin) {
+      q = query(leadsRef, orderBy('createdAt', 'desc'));
+    } else if (isLineLeader && agentId) {
+      q = query(leadsRef, where('assignedLineLeaderId', '==', agentId), orderBy('createdAt', 'desc'));
+    } else if (agentId) {
+      q = query(leadsRef, where('assignedAgentId', '==', agentId), orderBy('createdAt', 'desc'));
+    } else {
+      setLeads([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const leadsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+      })) as (FirebaseLead & { id: string })[];
+      
+      setLeads(leadsData);
+      setIsLoading(false);
+    }, (error) => {
+      console.error('Error fetching leads:', error);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [isAdmin, isLineLeader, agentId]);
+
+  // Filter agents visible to user
+  const visibleAgents = agents?.filter(agent => {
     if (isAdmin) return true;
     if (isLineLeader && agentId) {
-      return agent.line_leader_id === agentId || agent.id === agentId;
+      return agent.lineLeaderId === agentId || agent.uid === agentId;
     }
-    return agent.id === agentId;
+    return agent.uid === agentId;
   });
 
-  const { data: leads, isLoading } = useQuery({
-    queryKey: ['leads-unified', filterPais, filterEstado, filterIntent, filterTier, filterAgente, sortByScore],
-    queryFn: async () => {
-      let query = supabase
-        .from('leads')
-        .select('*')
-        .order(sortByScore ? 'score' : 'created_at', { ascending: false });
-
-      if (filterPais !== 'all') query = query.eq('pais', filterPais);
-      if (filterEstado !== 'all') query = query.eq('estado', filterEstado);
-      if (filterIntent !== 'all') query = query.eq('tipo', filterIntent);
-      if (filterTier !== 'all') query = query.eq('etiqueta', filterTier);
-      if (filterAgente !== 'all') query = query.eq('asignado_agente_id', filterAgente);
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as Lead[];
-    },
-  });
-
-  const updateEstado = useMutation({
-    mutationFn: async ({ id, estado }: { id: string; estado: LeadStatus }) => {
-      const { error } = await supabase.from('leads').update({ estado }).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads-unified'] });
+  const updateEstado = async (leadId: string, status: LeadStatus) => {
+    try {
+      await updateDoc(doc(db, 'leads', leadId), { status });
       toast.success('Estado actualizado');
-    },
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Error al actualizar estado');
+    }
+  };
+
+  const convertToAgent = async (lead: FirebaseLead & { id: string }) => {
+    try {
+      const result = await createAgent({
+        name: lead.name,
+        email: lead.contact.email || `${lead.name.toLowerCase().replace(/\s/g, '')}@temp.com`,
+        whatsapp: lead.contact.whatsapp || '',
+        country: lead.country,
+        city: lead.city || undefined,
+      });
+
+      if (result.success) {
+        // Update lead status
+        await updateDoc(doc(db, 'leads', lead.id), { status: 'CERRADO' });
+        toast.success(`Agente creado con código: ${result.refCode}`);
+        setSelectedLead(null);
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error: any) {
+      console.error('Error converting to agent:', error);
+      toast.error(error.message || 'Error al convertir a agente');
+    }
+  };
+
+  // Apply filters
+  let filteredLeads = leads.filter(lead => {
+    const matchesSearch =
+      lead.name.toLowerCase().includes(search.toLowerCase()) ||
+      (lead.contact.whatsapp && lead.contact.whatsapp.includes(search)) ||
+      (lead.refCode && lead.refCode.toLowerCase().includes(search.toLowerCase()));
+
+    const matchesPais = filterPais === 'all' || lead.country === filterPais;
+    const matchesEstado = filterEstado === 'all' || lead.status === filterEstado;
+    const matchesIntent = filterIntent === 'all' || 
+      (filterIntent === 'agente' && lead.intent === 'AGENTE') ||
+      (filterIntent === 'cliente' && lead.intent === 'JUGADOR');
+    const matchesTier = filterTier === 'all' || lead.tier === filterTier;
+    const matchesAgente = filterAgente === 'all' || lead.assignedAgentId === filterAgente;
+
+    return matchesSearch && matchesPais && matchesEstado && matchesIntent && matchesTier && matchesAgente;
   });
 
-  const convertToAgent = useMutation({
-    mutationFn: async (lead: Lead) => {
-      const baseCode = lead.nombre.substring(0, 4).toUpperCase().replace(/\s/g, '');
-      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-      const refCode = `${baseCode}${randomSuffix}`;
+  // Sort
+  if (sortByScore) {
+    filteredLeads = [...filteredLeads].sort((a, b) => (b.scoreTotal || 0) - (a.scoreTotal || 0));
+  }
 
-      const { error: agentError } = await supabase
-        .from('agentes')
-        .insert({
-          nombre: lead.nombre,
-          whatsapp: lead.whatsapp,
-          pais: lead.pais,
-          ciudad: lead.ciudad || undefined,
-          estado: 'activo',
-          ref_code: refCode,
-        });
-      if (agentError) throw agentError;
-
-      const { error: leadError } = await supabase
-        .from('leads')
-        .update({ estado: 'cerrado' })
-        .eq('id', lead.id);
-      if (leadError) throw leadError;
-
-      return refCode;
-    },
-    onSuccess: (refCode) => {
-      queryClient.invalidateQueries({ queryKey: ['leads-unified'] });
-      queryClient.invalidateQueries({ queryKey: ['agentes'] });
-      toast.success(`Agente creado con código: ${refCode}`);
-      setSelectedLead(null);
-    },
-  });
-
-  const filteredLeads = leads?.filter(lead =>
-    lead.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    lead.whatsapp.includes(search) ||
-    (lead.ref_code && lead.ref_code.toLowerCase().includes(search.toLowerCase()))
-  );
-
-  const getAgentName = (agentId: string | null) => {
-    if (!agentId || !agentes) return '-';
-    const agent = agentes.find(a => a.id === agentId);
-    return agent?.nombre || '-';
+  const getAgentName = (agentUid: string | null) => {
+    if (!agentUid || !agents) return '-';
+    const agent = agents.find(a => a.uid === agentUid);
+    return agent?.name || '-';
   };
 
   const exportCSV = () => {
-    if (!filteredLeads) return;
     const headers = ['Fecha', 'Intent', 'Nombre', 'País', 'Contacto', 'Estado', 'Agente', 'Tier', 'Score'];
     const rows = filteredLeads.map(l => [
-      format(new Date(l.created_at), 'dd/MM/yyyy'),
-      l.tipo,
-      l.nombre,
-      l.pais,
-      l.whatsapp,
-      l.estado || '',
-      getAgentName(l.asignado_agente_id),
-      l.etiqueta || '',
-      l.score || 0,
+      format(l.createdAt, 'dd/MM/yyyy'),
+      l.intent || '',
+      l.name,
+      l.country,
+      l.contact.whatsapp || '',
+      l.status,
+      getAgentName(l.assignedAgentId),
+      l.tier || '',
+      l.scoreTotal || 0,
     ]);
     const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -153,31 +156,30 @@ const AdminLeads = () => {
     a.click();
   };
 
-  const intentBadge = (tipo: string) => {
-    return tipo === 'agente' 
+  const intentBadge = (intent: LeadIntent | null) => {
+    return intent === 'AGENTE' 
       ? 'bg-gold/20 text-gold border-gold/30' 
       : 'bg-primary/20 text-primary border-primary/30';
   };
 
-  const estadoBadge = (estado: string | null) => {
-    const colors: Record<string, string> = {
-      nuevo: 'bg-green-500/20 text-green-400 border-green-500/30',
-      contactado: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-      asignado: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      cerrado: 'bg-muted text-muted-foreground border-muted',
-      descartado: 'bg-red-500/20 text-red-400 border-red-500/30',
+  const estadoBadge = (status: LeadStatus) => {
+    const colors: Record<LeadStatus, string> = {
+      NUEVO: 'bg-green-500/20 text-green-400 border-green-500/30',
+      CONTACTADO: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+      ASIGNADO: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      CERRADO: 'bg-muted text-muted-foreground border-muted',
+      DESCARTADO: 'bg-red-500/20 text-red-400 border-red-500/30',
     };
-    return colors[estado || 'nuevo'] || colors.nuevo;
+    return colors[status] || colors.NUEVO;
   };
 
-  const tierBadge = (etiqueta: string | null) => {
-    const colors: Record<string, string> = {
-      'AGENTE_POTENCIAL_ALTO': 'bg-primary/20 text-primary border-primary/30',
-      'AGENTE_POTENCIAL_MEDIO': 'bg-gold/20 text-gold border-gold/30',
-      'AGENTE_POTENCIAL_BAJO': 'bg-orange-400/20 text-orange-400 border-orange-400/30',
-      'CLIENTE': 'bg-muted text-muted-foreground border-muted',
+  const tierBadge = (tier: LeadTier | null) => {
+    const colors: Record<LeadTier, string> = {
+      APROBABLE: 'bg-primary/20 text-primary border-primary/30',
+      POTENCIAL: 'bg-gold/20 text-gold border-gold/30',
+      NOVATO: 'bg-orange-400/20 text-orange-400 border-orange-400/30',
     };
-    return colors[etiqueta || ''] || 'bg-muted text-muted-foreground border-muted';
+    return tier ? colors[tier] : 'bg-muted text-muted-foreground border-muted';
   };
 
   return (
@@ -248,24 +250,23 @@ const AdminLeads = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="nuevo">Nuevo</SelectItem>
-              <SelectItem value="contactado">Contactado</SelectItem>
-              <SelectItem value="asignado">Asignado</SelectItem>
-              <SelectItem value="cerrado">Cerrado</SelectItem>
-              <SelectItem value="descartado">Descartado</SelectItem>
+              <SelectItem value="NUEVO">Nuevo</SelectItem>
+              <SelectItem value="CONTACTADO">Contactado</SelectItem>
+              <SelectItem value="ASIGNADO">Asignado</SelectItem>
+              <SelectItem value="CERRADO">Cerrado</SelectItem>
+              <SelectItem value="DESCARTADO">Descartado</SelectItem>
             </SelectContent>
           </Select>
 
-          <Select value={filterTier} onValueChange={(v) => setFilterTier(v as ScoreLabel | 'all')}>
+          <Select value={filterTier} onValueChange={(v) => setFilterTier(v as LeadTier | 'all')}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Tier" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los tiers</SelectItem>
-              <SelectItem value="AGENTE_POTENCIAL_ALTO">Alto</SelectItem>
-              <SelectItem value="AGENTE_POTENCIAL_MEDIO">Medio</SelectItem>
-              <SelectItem value="AGENTE_POTENCIAL_BAJO">Bajo</SelectItem>
-              <SelectItem value="CLIENTE">Cliente</SelectItem>
+              <SelectItem value="APROBABLE">Alto</SelectItem>
+              <SelectItem value="POTENCIAL">Medio</SelectItem>
+              <SelectItem value="NOVATO">Bajo</SelectItem>
             </SelectContent>
           </Select>
 
@@ -277,8 +278,8 @@ const AdminLeads = () => {
               <SelectContent>
                 <SelectItem value="all">Todos los agentes</SelectItem>
                 {visibleAgents?.map(agent => (
-                  <SelectItem key={agent.id} value={agent.id}>
-                    {agent.nombre}
+                  <SelectItem key={agent.uid} value={agent.uid}>
+                    {agent.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -311,48 +312,48 @@ const AdminLeads = () => {
                     <div className="spinner mx-auto" />
                   </td>
                 </tr>
-              ) : filteredLeads?.length === 0 ? (
+              ) : filteredLeads.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-8 text-center text-muted-foreground">
                     No hay leads
                   </td>
                 </tr>
               ) : (
-                filteredLeads?.map((lead) => (
+                filteredLeads.map((lead) => (
                   <tr key={lead.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="p-4 text-muted-foreground text-sm">
-                      {format(new Date(lead.created_at), 'dd/MM/yyyy')}
+                      {format(lead.createdAt, 'dd/MM/yyyy')}
                     </td>
                     <td className="p-4">
-                      <Badge variant="outline" className={intentBadge(lead.tipo)}>
-                        {lead.tipo}
+                      <Badge variant="outline" className={intentBadge(lead.intent)}>
+                        {lead.intent === 'AGENTE' ? 'agente' : lead.intent === 'JUGADOR' ? 'cliente' : 'soporte'}
                       </Badge>
                     </td>
-                    <td className="p-4">{lead.pais}</td>
+                    <td className="p-4">{lead.country}</td>
                     <td className="p-4">
                       <div>
-                        <p className="font-medium">{lead.nombre}</p>
-                        <p className="text-sm text-muted-foreground">{lead.whatsapp}</p>
+                        <p className="font-medium">{lead.name}</p>
+                        <p className="text-sm text-muted-foreground">{lead.contact.whatsapp}</p>
                       </div>
                     </td>
                     <td className="p-4">
-                      <Badge variant="outline" className={estadoBadge(lead.estado)}>
-                        {lead.estado || 'nuevo'}
+                      <Badge variant="outline" className={estadoBadge(lead.status)}>
+                        {lead.status.toLowerCase()}
                       </Badge>
                     </td>
                     <td className="p-4 text-sm">
-                      {getAgentName(lead.asignado_agente_id)}
+                      {getAgentName(lead.assignedAgentId)}
                     </td>
                     <td className="p-4">
-                      {lead.etiqueta ? (
-                        <Badge variant="outline" className={tierBadge(lead.etiqueta)}>
-                          {lead.etiqueta.split('_').pop()}
+                      {lead.tier ? (
+                        <Badge variant="outline" className={tierBadge(lead.tier)}>
+                          {lead.tier}
                         </Badge>
                       ) : '-'}
                     </td>
                     <td className="p-4">
                       <span className="font-display font-bold text-primary">
-                        {lead.score || 0}
+                        {lead.scoreTotal || 0}
                       </span>
                     </td>
                     <td className="p-4">
@@ -360,20 +361,20 @@ const AdminLeads = () => {
                         <Button size="sm" variant="ghost" onClick={() => setSelectedLead(lead)}>
                           <Eye className="w-4 h-4" />
                         </Button>
-                        {lead.estado === 'nuevo' && (
+                        {lead.status === 'NUEVO' && (
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => updateEstado.mutate({ id: lead.id, estado: 'contactado' })}
+                            onClick={() => updateEstado(lead.id, 'CONTACTADO')}
                           >
                             <Check className="w-4 h-4 text-primary" />
                           </Button>
                         )}
-                        {isAdmin && lead.tipo === 'agente' && lead.etiqueta?.includes('ALTO') && lead.estado !== 'cerrado' && (
+                        {isAdmin && lead.intent === 'AGENTE' && lead.tier === 'APROBABLE' && lead.status !== 'CERRADO' && (
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => convertToAgent.mutate(lead)}
+                            onClick={() => convertToAgent(lead)}
                           >
                             <UserPlus className="w-4 h-4 text-gold" />
                           </Button>
@@ -388,11 +389,43 @@ const AdminLeads = () => {
         </div>
       </div>
 
-      <LeadDetailModal
-        lead={selectedLead}
-        onClose={() => setSelectedLead(null)}
-        getAgentName={getAgentName}
-      />
+      {selectedLead && (
+        <LeadDetailModal
+          lead={{
+            id: selectedLead.id,
+            nombre: selectedLead.name,
+            whatsapp: selectedLead.contact.whatsapp || '',
+            pais: selectedLead.country,
+            ciudad: selectedLead.city,
+            email: selectedLead.contact.email,
+            estado: selectedLead.status.toLowerCase() as any,
+            tipo: selectedLead.intent === 'AGENTE' ? 'agente' : 'cliente',
+            score: selectedLead.scoreTotal,
+            etiqueta: selectedLead.tier === 'APROBABLE' ? 'AGENTE_POTENCIAL_ALTO' : 
+                     selectedLead.tier === 'POTENCIAL' ? 'AGENTE_POTENCIAL_MEDIO' : 
+                     selectedLead.tier === 'NOVATO' ? 'AGENTE_POTENCIAL_BAJO' : 'CLIENTE',
+            ref_code: selectedLead.refCode,
+            asignado_agente_id: selectedLead.assignedAgentId,
+            created_at: selectedLead.createdAt.toISOString(),
+            binance_verificada: null,
+            banca_300: null,
+            exp_casinos: null,
+            exp_atencion: null,
+            prefiere_usdt: null,
+            aposto_antes: null,
+            p2p_nivel: null,
+            horas_dia: null,
+            edad: null,
+            origen: selectedLead.origen,
+            utm_source: null,
+            utm_medium: null,
+            utm_campaign: null,
+            quiere_empezar: null,
+          }}
+          onClose={() => setSelectedLead(null)}
+          getAgentName={getAgentName}
+        />
+      )}
     </div>
   );
 };
