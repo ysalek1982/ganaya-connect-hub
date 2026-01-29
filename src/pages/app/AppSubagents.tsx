@@ -1,21 +1,28 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { Plus, Users, UserPlus, TrendingUp, Copy } from 'lucide-react';
+import { Users, UserPlus, TrendingUp, Copy, ExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
-import { useFirebaseAgents, useCreateAgentUser } from '@/hooks/useFirebaseUsers';
+import { useSubagents, useCreateSubagent, CreateSubagentResult } from '@/hooks/useSubagents';
 import { useFirebaseLeadCounts } from '@/hooks/useFirebaseLeads';
+import SubagentCreatedModal from '@/components/app/SubagentCreatedModal';
 import { toast } from 'sonner';
 
+const COUNTRIES = [
+  'Paraguay', 'Argentina', 'Chile', 'Colombia', 'Ecuador', 
+  'Perú', 'Bolivia', 'México', 'USA', 'España'
+];
+
 const AppSubagents = () => {
-  const { agentId, isAdmin, userData } = useFirebaseAuth();
+  const { userData, isAdmin, isLineLeader } = useFirebaseAuth();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showCreatedModal, setShowCreatedModal] = useState(false);
+  const [createdData, setCreatedData] = useState<CreateSubagentResult | null>(null);
   const [newAgent, setNewAgent] = useState({ 
     nombre: '', 
     email: '',
@@ -24,30 +31,41 @@ const AppSubagents = () => {
     ciudad: '',
   });
 
-  const { data: subagents, isLoading } = useFirebaseAgents({
-    lineLeaderId: isAdmin ? undefined : agentId || undefined,
-  });
-
+  const { data: subagents, isLoading, error } = useSubagents();
   const { data: leadCounts } = useFirebaseLeadCounts();
-  const createAgentMutation = useCreateAgentUser();
+  const createSubagentMutation = useCreateSubagent();
+
+  // Check if user can recruit
+  const canRecruit = isAdmin || isLineLeader || userData?.canRecruitSubagents;
 
   const handleCreateSubagent = () => {
-    createAgentMutation.mutate(
+    if (!newAgent.nombre || !newAgent.email) {
+      toast.error('Nombre y email son requeridos');
+      return;
+    }
+
+    createSubagentMutation.mutate(
       {
         name: newAgent.nombre,
         email: newAgent.email,
         country: newAgent.pais,
-        whatsapp: newAgent.whatsapp,
+        whatsapp: newAgent.whatsapp || undefined,
         city: newAgent.ciudad || undefined,
-        lineLeaderId: agentId || undefined,
-        canRecruitSubagents: false,
-        role: 'AGENT',
       },
       {
         onSuccess: (result) => {
-          toast.success(`Subagente creado con código: ${result.refCode}`);
-          setShowAddModal(false);
-          setNewAgent({ nombre: '', email: '', whatsapp: '', pais: 'Paraguay', ciudad: '' });
+          if (result.success) {
+            setShowAddModal(false);
+            setCreatedData({
+              ...result,
+              // Add name for the modal message
+              email: result.email || newAgent.email,
+            });
+            setShowCreatedModal(true);
+            setNewAgent({ nombre: '', email: '', whatsapp: '', pais: 'Paraguay', ciudad: '' });
+          } else {
+            toast.error(result.error || 'Error al crear subagente');
+          }
         },
         onError: (error) => {
           toast.error(error.message || 'Error al crear subagente');
@@ -63,6 +81,26 @@ const AppSubagents = () => {
   };
 
   const totalLeads = subagents?.reduce((acc, a) => acc + (leadCounts?.[a.uid] || 0), 0) || 0;
+
+  if (!canRecruit) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-display text-2xl md:text-3xl font-bold">Subagentes</h1>
+          <p className="text-muted-foreground">Gestiona tu red de agentes</p>
+        </div>
+        <Card className="glass-card">
+          <CardContent className="py-12 text-center">
+            <UserPlus className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="font-semibold text-lg mb-2">Función no habilitada</h3>
+            <p className="text-muted-foreground">
+              Contacta a tu administrador para activar la opción de reclutar subagentes.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -122,6 +160,15 @@ const AppSubagents = () => {
         </Card>
       </div>
 
+      {/* Error state */}
+      {error && (
+        <Card className="glass-card border-destructive/50">
+          <CardContent className="py-6 text-center text-destructive">
+            Error al cargar subagentes: {error.message}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Subagents List */}
       <div className="space-y-3">
         {isLoading ? (
@@ -131,7 +178,9 @@ const AppSubagents = () => {
         ) : subagents?.length === 0 ? (
           <Card className="glass-card">
             <CardContent className="py-12 text-center text-muted-foreground">
-              No tienes subagentes aún. ¡Crea uno para expandir tu red!
+              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No tienes subagentes aún.</p>
+              <p className="text-sm mt-2">¡Crea uno para expandir tu red!</p>
             </CardContent>
           </Card>
         ) : (
@@ -140,27 +189,45 @@ const AppSubagents = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium">{agent.name}</span>
-                      <Badge variant={agent.isActive ? 'default' : 'secondary'}>
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="font-medium">{agent.name || agent.displayName}</span>
+                      <Badge variant={agent.isActive ? 'default' : 'secondary'} className="text-xs">
                         {agent.isActive ? 'activo' : 'inactivo'}
                       </Badge>
+                      {agent.canRecruitSubagents && (
+                        <Badge variant="outline" className="text-xs">
+                          reclutador
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                       <span>{agent.country}</span>
                       {agent.refCode && (
-                        <code className="text-primary bg-primary/10 px-1.5 py-0.5 rounded text-xs">
+                        <code className="text-primary bg-primary/10 px-1.5 py-0.5 rounded text-xs font-mono">
                           {agent.refCode}
                         </code>
                       )}
                       <span>{leadCounts?.[agent.uid] || 0} leads</span>
                     </div>
+                    {agent.email && (
+                      <p className="text-xs text-muted-foreground mt-1 truncate">{agent.email}</p>
+                    )}
                   </div>
                   <div className="flex gap-1">
                     {agent.refCode && (
-                      <Button size="sm" variant="ghost" onClick={() => copyLink(agent.refCode!)}>
-                        <Copy className="w-4 h-4" />
-                      </Button>
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => copyLink(agent.refCode!)} title="Copiar link">
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => window.open(`/?ref=${agent.refCode}`, '_blank')}
+                          title="Abrir link"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -175,10 +242,13 @@ const AppSubagents = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Crear subagente</DialogTitle>
+            <DialogDescription>
+              Se creará una cuenta con contraseña temporal que el subagente deberá cambiar.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Nombre</Label>
+              <Label>Nombre *</Label>
               <Input
                 value={newAgent.nombre}
                 onChange={(e) => setNewAgent({ ...newAgent, nombre: e.target.value })}
@@ -186,7 +256,7 @@ const AppSubagents = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label>Email *</Label>
               <Input
                 type="email"
                 value={newAgent.email}
@@ -199,23 +269,20 @@ const AppSubagents = () => {
               <Input
                 value={newAgent.whatsapp}
                 onChange={(e) => setNewAgent({ ...newAgent, whatsapp: e.target.value })}
-                placeholder="+59891234567"
+                placeholder="+595981234567"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>País</Label>
+                <Label>País *</Label>
                 <Select value={newAgent.pais} onValueChange={(v) => setNewAgent({ ...newAgent, pais: v })}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Paraguay">Paraguay</SelectItem>
-                    <SelectItem value="Argentina">Argentina</SelectItem>
-                    <SelectItem value="Chile">Chile</SelectItem>
-                    <SelectItem value="Colombia">Colombia</SelectItem>
-                    <SelectItem value="Ecuador">Ecuador</SelectItem>
-                    <SelectItem value="USA">USA</SelectItem>
+                    {COUNTRIES.map(country => (
+                      <SelectItem key={country} value={country}>{country}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -228,23 +295,34 @@ const AppSubagents = () => {
                 />
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Se creará una cuenta de Firebase Auth y se generará un código de referido único (AGT-XXXXXX).
-              El agente recibirá un email para establecer su contraseña.
-            </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddModal(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setShowAddModal(false)}>
+              Cancelar
+            </Button>
             <Button 
               variant="hero" 
               onClick={handleCreateSubagent}
-              disabled={!newAgent.nombre || !newAgent.email || !newAgent.whatsapp || createAgentMutation.isPending}
+              disabled={!newAgent.nombre || !newAgent.email || createSubagentMutation.isPending}
             >
-              {createAgentMutation.isPending ? 'Creando...' : 'Crear subagente'}
+              {createSubagentMutation.isPending ? 'Creando...' : 'Crear subagente'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Created Success Modal */}
+      <SubagentCreatedModal
+        open={showCreatedModal}
+        onClose={() => setShowCreatedModal(false)}
+        data={createdData ? {
+          email: createdData.email || '',
+          tempPassword: createdData.tempPassword || '',
+          refCode: createdData.refCode || '',
+          referralUrl: createdData.referralUrl,
+          name: newAgent.nombre,
+        } : null}
+      />
     </div>
   );
 };

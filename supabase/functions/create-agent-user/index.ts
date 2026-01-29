@@ -8,7 +8,7 @@ const corsHeaders = {
 // Generate secure temporary password (12-16 chars)
 const generateTempPassword = (): string => {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-  const length = 12 + Math.floor(Math.random() * 5); // 12-16 chars
+  const length = 12 + Math.floor(Math.random() * 5);
   let password = "";
   for (let i = 0; i < length; i++) {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -35,7 +35,6 @@ const initFirebaseAdmin = async () => {
 
   const serviceAccount = JSON.parse(serviceAccountJson);
   
-  // Get access token using service account
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
   const claims = {
@@ -47,7 +46,6 @@ const initFirebaseAdmin = async () => {
     scope: "https://www.googleapis.com/auth/identitytoolkit https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/datastore"
   };
 
-  // Base64url encode helper
   const base64urlEncode = (data: Uint8Array | string): string => {
     let bytes: Uint8Array;
     if (typeof data === 'string') {
@@ -55,15 +53,11 @@ const initFirebaseAdmin = async () => {
     } else {
       bytes = data;
     }
-    
-    // Convert to base64
     let binary = '';
     for (let i = 0; i < bytes.length; i++) {
       binary += String.fromCharCode(bytes[i]);
     }
     const base64 = btoa(binary);
-    
-    // Convert to base64url
     return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   };
 
@@ -71,7 +65,6 @@ const initFirebaseAdmin = async () => {
   const claimsB64 = base64urlEncode(JSON.stringify(claims));
   const unsignedToken = `${headerB64}.${claimsB64}`;
   
-  // Import private key and sign
   const pemHeader = "-----BEGIN PRIVATE KEY-----";
   const pemFooter = "-----END PRIVATE KEY-----";
   const pemContents = serviceAccount.private_key
@@ -96,7 +89,6 @@ const initFirebaseAdmin = async () => {
 
   const signedToken = `${unsignedToken}.${base64urlEncode(new Uint8Array(signature))}`;
 
-  // Exchange for access token
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -120,12 +112,114 @@ const initFirebaseAdmin = async () => {
   };
 };
 
+// Verify Firebase ID token and get user claims
+const verifyIdToken = async (
+  accessToken: string,
+  projectId: string,
+  idToken: string
+): Promise<{ uid: string; email: string }> => {
+  // Use Firebase Auth REST API to verify token
+  const apiKey = Deno.env.get("FIREBASE_API_KEY") || "";
+  
+  // Decode the token to get uid (we'll verify via Firestore lookup)
+  const parts = idToken.split('.');
+  if (parts.length !== 3) {
+    throw new Error("Token inválido");
+  }
+  
+  try {
+    const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(payloadB64));
+    
+    // Verify token hasn't expired
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) {
+      throw new Error("Token expirado");
+    }
+    
+    // Verify issuer matches our project
+    const expectedIssuer = `https://securetoken.google.com/${projectId}`;
+    if (payload.iss !== expectedIssuer) {
+      throw new Error("Token de proyecto incorrecto");
+    }
+    
+    return {
+      uid: payload.user_id || payload.sub,
+      email: payload.email || "",
+    };
+  } catch (e) {
+    console.error("[verifyIdToken] Error:", e);
+    throw new Error("No se pudo verificar el token");
+  }
+};
+
+// Get Firestore document
+const getFirestoreDoc = async (
+  accessToken: string,
+  projectId: string,
+  collection: string,
+  docId: string
+): Promise<Record<string, unknown> | null> => {
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}`,
+    {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    const error = await response.json();
+    console.error(`[Firestore] Get ${collection}/${docId} failed:`, error);
+    return null;
+  }
+
+  const doc = await response.json();
+  
+  // Parse Firestore value format to plain object
+  const parseValue = (val: Record<string, unknown>): unknown => {
+    if ('stringValue' in val) return val.stringValue;
+    if ('booleanValue' in val) return val.booleanValue;
+    if ('integerValue' in val) return parseInt(val.integerValue as string);
+    if ('doubleValue' in val) return val.doubleValue;
+    if ('nullValue' in val) return null;
+    if ('timestampValue' in val) return new Date(val.timestampValue as string);
+    if ('mapValue' in val) {
+      const map = val.mapValue as { fields?: Record<string, unknown> };
+      const result: Record<string, unknown> = {};
+      if (map.fields) {
+        for (const [k, v] of Object.entries(map.fields)) {
+          result[k] = parseValue(v as Record<string, unknown>);
+        }
+      }
+      return result;
+    }
+    if ('arrayValue' in val) {
+      const arr = val.arrayValue as { values?: unknown[] };
+      return (arr.values || []).map(v => parseValue(v as Record<string, unknown>));
+    }
+    return null;
+  };
+  
+  const result: Record<string, unknown> = {};
+  if (doc.fields) {
+    for (const [k, v] of Object.entries(doc.fields)) {
+      result[k] = parseValue(v as Record<string, unknown>);
+    }
+  }
+  return result;
+};
+
 // Create Firebase Auth user
 const createFirebaseUser = async (
   accessToken: string,
   projectId: string,
   email: string,
-  password: string
+  password: string,
+  displayName?: string
 ): Promise<string> => {
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts`,
@@ -138,6 +232,7 @@ const createFirebaseUser = async (
       body: JSON.stringify({
         email,
         password,
+        displayName,
         emailVerified: true,
       }),
     }
@@ -148,7 +243,6 @@ const createFirebaseUser = async (
     console.error("[Firebase Admin] Create user failed:", error);
     const errorCode = error.error?.message || "UNKNOWN_ERROR";
     
-    // Map Firebase errors to user-friendly messages
     const errorMessages: Record<string, string> = {
       "EMAIL_EXISTS": "Este email ya está registrado. Usa otro email.",
       "INVALID_EMAIL": "El formato del email no es válido.",
@@ -159,7 +253,7 @@ const createFirebaseUser = async (
   }
 
   const data = await response.json();
-  return data.localId; // This is the uid
+  return data.localId;
 };
 
 // Create Firestore document
@@ -170,7 +264,6 @@ const createFirestoreDoc = async (
   docId: string,
   data: Record<string, unknown>
 ): Promise<void> => {
-  // Convert data to Firestore format
   const convertToFirestoreValue = (value: unknown): Record<string, unknown> => {
     if (value === null) return { nullValue: null };
     if (typeof value === "boolean") return { booleanValue: value };
@@ -215,6 +308,97 @@ const createFirestoreDoc = async (
   }
 };
 
+// Query Firestore documents
+const queryFirestoreDocs = async (
+  accessToken: string,
+  projectId: string,
+  collection: string,
+  fieldPath: string,
+  op: string,
+  value: unknown
+): Promise<Array<{ id: string; data: Record<string, unknown> }>> => {
+  const convertToFirestoreValue = (val: unknown): Record<string, unknown> => {
+    if (val === null) return { nullValue: null };
+    if (typeof val === "boolean") return { booleanValue: val };
+    if (typeof val === "number") return { integerValue: String(val) };
+    if (typeof val === "string") return { stringValue: val };
+    return { stringValue: String(val) };
+  };
+  
+  const parseValue = (val: Record<string, unknown>): unknown => {
+    if ('stringValue' in val) return val.stringValue;
+    if ('booleanValue' in val) return val.booleanValue;
+    if ('integerValue' in val) return parseInt(val.integerValue as string);
+    if ('doubleValue' in val) return val.doubleValue;
+    if ('nullValue' in val) return null;
+    if ('timestampValue' in val) return new Date(val.timestampValue as string);
+    if ('mapValue' in val) {
+      const map = val.mapValue as { fields?: Record<string, unknown> };
+      const result: Record<string, unknown> = {};
+      if (map.fields) {
+        for (const [k, v] of Object.entries(map.fields)) {
+          result[k] = parseValue(v as Record<string, unknown>);
+        }
+      }
+      return result;
+    }
+    if ('arrayValue' in val) {
+      const arr = val.arrayValue as { values?: unknown[] };
+      return (arr.values || []).map(v => parseValue(v as Record<string, unknown>));
+    }
+    return null;
+  };
+
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: collection }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath },
+              op,
+              value: convertToFirestoreValue(value),
+            },
+          },
+          limit: 100,
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error(`[Firestore] Query ${collection} failed:`, error);
+    return [];
+  }
+
+  const results = await response.json();
+  const docs: Array<{ id: string; data: Record<string, unknown> }> = [];
+  
+  for (const result of results) {
+    if (result.document) {
+      const name = result.document.name as string;
+      const id = name.split('/').pop() || '';
+      const data: Record<string, unknown> = {};
+      if (result.document.fields) {
+        for (const [k, v] of Object.entries(result.document.fields)) {
+          data[k] = parseValue(v as Record<string, unknown>);
+        }
+      }
+      docs.push({ id, data });
+    }
+  }
+  
+  return docs;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -224,19 +408,117 @@ serve(async (req) => {
     console.log("[create-agent-user] Starting...");
     
     const body = await req.json();
-    const { name, email, country, whatsapp, city, lineLeaderId, canRecruitSubagents, role } = body;
-
-    // Validate required fields
-    if (!name || !email || !country) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: name, email, country" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const { 
+      action,
+      idToken,
+      name, 
+      email, 
+      country, 
+      whatsapp, 
+      city, 
+      lineLeaderId, 
+      canRecruitSubagents, 
+      role,
+      // For listing subagents
+      callerUid,
+    } = body;
 
     console.log("[create-agent-user] Initializing Firebase Admin...");
     const { accessToken, projectId } = await initFirebaseAdmin();
     console.log("[create-agent-user] Firebase Admin initialized for project:", projectId);
+
+    // ACTION: List subagents for a recruiter
+    if (action === 'list-subagents') {
+      if (!idToken) {
+        return new Response(
+          JSON.stringify({ error: "Token de autenticación requerido" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const caller = await verifyIdToken(accessToken, projectId, idToken);
+      console.log("[create-agent-user] Caller verified:", caller.uid);
+      
+      // Get caller's user document
+      const callerDoc = await getFirestoreDoc(accessToken, projectId, "users", caller.uid);
+      if (!callerDoc) {
+        return new Response(
+          JSON.stringify({ error: "Usuario no encontrado" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const callerRole = callerDoc.role as string;
+      const callerCanRecruit = callerDoc.canRecruitSubagents as boolean;
+      
+      // Query subagents where lineLeaderId == caller.uid
+      const subagents = await queryFirestoreDocs(
+        accessToken,
+        projectId,
+        "users",
+        "lineLeaderId",
+        "EQUAL",
+        caller.uid
+      );
+      
+      console.log(`[create-agent-user] Found ${subagents.length} subagents for ${caller.uid}`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          subagents: subagents.map(s => ({
+            uid: s.id,
+            ...s.data,
+          })),
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // DEFAULT ACTION: Create subagent
+    // Validate required fields
+    if (!name || !email || !country) {
+      return new Response(
+        JSON.stringify({ error: "Campos requeridos: name, email, country" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify caller has permission if idToken is provided
+    let effectiveLineLeaderId = lineLeaderId;
+    let creatorRole = 'ADMIN'; // Default for legacy calls
+    
+    if (idToken) {
+      const caller = await verifyIdToken(accessToken, projectId, idToken);
+      console.log("[create-agent-user] Caller verified:", caller.uid);
+      
+      // Get caller's user document to check permissions
+      const callerDoc = await getFirestoreDoc(accessToken, projectId, "users", caller.uid);
+      if (!callerDoc) {
+        return new Response(
+          JSON.stringify({ error: "Usuario no encontrado" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      creatorRole = callerDoc.role as string;
+      const callerCanRecruit = callerDoc.canRecruitSubagents as boolean;
+      
+      // Check permissions
+      if (creatorRole !== 'ADMIN' && !callerCanRecruit) {
+        return new Response(
+          JSON.stringify({ error: "No tienes permiso para crear subagentes" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // For non-admin callers, set lineLeaderId to the caller's uid
+      if (creatorRole !== 'ADMIN') {
+        effectiveLineLeaderId = caller.uid;
+      }
+      
+      console.log(`[create-agent-user] Permission granted. Role: ${creatorRole}, canRecruit: ${callerCanRecruit}`);
+    }
 
     // Generate secure temporary password
     const tempPassword = generateTempPassword();
@@ -244,26 +526,36 @@ serve(async (req) => {
 
     // Create Firebase Auth user
     console.log("[create-agent-user] Creating Firebase Auth user...");
-    const uid = await createFirebaseUser(accessToken, projectId, email, tempPassword);
+    const uid = await createFirebaseUser(accessToken, projectId, email, tempPassword, name);
     console.log("[create-agent-user] Firebase Auth user created:", uid);
 
     // Generate unique refCode
     const refCode = generateRefCode();
+    
+    // Build referral URL
+    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || "https://ganaya-connect-hub.lovable.app";
+    const referralUrl = `${siteUrl}/?ref=${refCode}`;
 
     // Create user document in Firestore
     const userData = {
       uid,
       name,
+      displayName: name,
       email,
       role: role || "AGENT",
       country,
       city: city || null,
       whatsapp: whatsapp || null,
       isActive: true,
-      lineLeaderId: lineLeaderId || null,
+      lineLeaderId: effectiveLineLeaderId || null,
       canRecruitSubagents: canRecruitSubagents || false,
       refCode,
-      needsPasswordReset: true, // Force password change on first login
+      referralUrl,
+      needsPasswordReset: true,
+      publicContact: {
+        whatsapp: whatsapp || null,
+        contactLabel: name,
+      },
       createdAt: new Date(),
     };
 
@@ -274,7 +566,7 @@ serve(async (req) => {
     // Create refCode document
     const refCodeData = {
       agentUid: uid,
-      lineLeaderId: lineLeaderId || null,
+      lineLeaderId: effectiveLineLeaderId || null,
       active: true,
       createdAt: new Date(),
     };
@@ -289,19 +581,20 @@ serve(async (req) => {
         success: true,
         uid,
         email,
-        tempPassword, // Only returned once, never stored
+        tempPassword,
         refCode,
-        message: "Agent created successfully. Password is temporary and must be changed on first login.",
+        referralUrl,
+        message: "Subagente creado. Comparte las credenciales (solo se muestran una vez).",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
     console.error("[create-agent-user] Error:", error);
-    const message = error instanceof Error ? error.message : "Failed to create agent";
+    const message = error instanceof Error ? error.message : "Error al crear agente";
     
-    // Return 400 for validation/user errors, 500 for system errors
     const isUserError = message.includes("email") || message.includes("Email") || 
-                        message.includes("registrado") || message.includes("válido");
+                        message.includes("registrado") || message.includes("válido") ||
+                        message.includes("permiso") || message.includes("Token");
     const statusCode = isUserError ? 400 : 500;
     
     return new Response(
