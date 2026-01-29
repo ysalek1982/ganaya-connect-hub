@@ -227,13 +227,7 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
                 // Fallback: Display from agentProfile or rawJson
                 <div className="grid grid-cols-1 gap-2">
                   <ScoringItem 
-                    label="Banca $300+"
-                    value={agentProfile.working_capital_usd ?? agentProfile.capital_range}
-                    points={parseCapitalPoints(agentProfile.working_capital_usd ?? agentProfile.capital_range)}
-                    maxPoints={30}
-                  />
-                  <ScoringItem 
-                    label="Horas/día (4+)"
+                    label="Horas/día"
                     value={agentProfile.hours_per_day ?? agentProfile.availability_hours}
                     points={parseHoursPoints(agentProfile.hours_per_day ?? agentProfile.availability_hours)}
                     maxPoints={20}
@@ -245,16 +239,10 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
                     maxPoints={15}
                   />
                   <ScoringItem 
-                    label="Experiencia atención/ventas"
-                    value={agentProfile.sales_or_customer_service_exp}
-                    points={agentProfile.sales_or_customer_service_exp === true ? 15 : 0}
+                    label="Red de contactos casino"
+                    value={agentProfile.knows_casino_players}
+                    points={agentProfile.knows_casino_players === 'yes' || agentProfile.knows_casino_players === true ? 15 : 0}
                     maxPoints={15}
-                  />
-                  <ScoringItem 
-                    label="Experiencia casinos/apuestas"
-                    value={agentProfile.casino_or_betting_exp}
-                    points={agentProfile.casino_or_betting_exp === true ? 10 : 0}
-                    maxPoints={10}
                   />
                   <ScoringItem 
                     label="Quiere empezar ya"
@@ -379,15 +367,6 @@ const ScoringItem = ({
 };
 
 // Helper functions
-function parseCapitalPoints(value: unknown): number {
-  if (!value) return 0;
-  const str = String(value).toLowerCase();
-  if (str.includes('500') || str.includes('+') || str.includes('más')) return 30;
-  if (str.includes('300')) return 30;
-  if (str.includes('100')) return 15;
-  return 0;
-}
-
 function parseHoursPoints(value: unknown): number {
   if (!value) return 0;
   const str = String(value).toLowerCase();
