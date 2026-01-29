@@ -6,9 +6,68 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ============ TYPES ============
+
 interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;
+}
+
+interface QuestionOption {
+  value: string;
+  label: string;
+  points: number;
+}
+
+interface ScoringRule {
+  condition: string;
+  value?: string | number | boolean;
+  points: number;
+}
+
+interface ChatQuestion {
+  id: string;
+  label: string;
+  prompt: string;
+  type: "text" | "select" | "boolean" | "number";
+  required: boolean;
+  options?: QuestionOption[];
+  scoring?: { rules: ScoringRule[] };
+  storeKey?: string;
+  order: number;
+}
+
+interface ChatConfig {
+  id: string;
+  name: string;
+  isActive: boolean;
+  version: number;
+  thresholds: {
+    prometedorMin: number;
+    potencialMin: number;
+  };
+  closing: {
+    successTitle: string;
+    successMessage: string;
+    nextSteps: string;
+    ctaWhatsAppLabel: string;
+  };
+  questions: ChatQuestion[];
+}
+
+interface ChatState {
+  configId: string;
+  configVersion: number;
+  currentQuestionId: string | null;
+  answeredIds: string[];
+}
+
+interface ScoreBreakdownItem {
+  key: string;
+  label: string;
+  value: unknown;
+  pointsAwarded: number;
+  maxPoints: number;
 }
 
 interface RequestBody {
@@ -18,390 +77,549 @@ interface RequestBody {
   collectedData?: Record<string, unknown>;
 }
 
-interface DebugInfo {
-  intent_detected: string | null;
-  missing_fields: string[];
-  score_total: number;
-  tier: "NOVATO" | "POTENCIAL" | "PROMETEDOR" | null;
-  error?: string;
-}
-
 interface ConversationalResponse {
   reply: string;
   datos_lead_update: Record<string, unknown>;
   fin_entrevista: boolean;
-  debug: DebugInfo;
+  debug: {
+    configId: string | null;
+    currentQuestionId: string | null;
+    missingRequiredIds: string[];
+    score_total: number;
+    tier: "NOVATO" | "POTENCIAL" | "PROMETEDOR" | null;
+    error?: string;
+  };
 }
 
-// Required fields for AGENTE before fin_entrevista can be true
-// Using the new canonical agent_profile fields
-const REQUIRED_AGENT_FIELDS = [
-  "name",
-  "country", 
-  "whatsapp",
-  "age18",
-  "working_capital_usd",
-  "hours_per_day",
-  "has_local_payment_methods",
-  "wants_to_start_now"
-];
+// ============ FIREBASE ADMIN ============
 
-// Updated system prompt focused on agent recruitment with NEW fields
-const GANAYA_SYSTEM_PROMPT = `Eres el asistente de reclutamiento de Ganaya.bet.
-
-Tu ÚNICO objetivo es reclutar AGENTES (cajeros) para la red de pagos de Ganaya.bet.
-NO atiendes jugadores ni solicitudes de soporte en este flujo.
-
-Idioma: Español neutro latinoamericano.
-Tono: Profesional pero amigable, directo, motivador.
-
-ENFOQUE: MONEDA LOCAL
-- Los agentes procesan pagos en MONEDA LOCAL de cada país.
-- Métodos: transferencia bancaria, billeteras electrónicas (Mercado Pago, Nequi, Yape, etc.), efectivo.
-- NO menciones USDT, Binance ni criptomonedas como requisito ni foco del negocio.
-
-REGLAS:
-- Haz solo UNA pregunta por mensaje.
-- Presenta opciones numeradas (1, 2, 3) para respuestas fáciles.
-- NUNCA muestres puntajes ni scores al usuario.
-- Confirma que es mayor de 18 ANTES de cerrar.
-
-**FORMATO DE RESPUESTA - SOLO JSON:**
-Tu respuesta DEBE ser ÚNICAMENTE un objeto JSON válido. Sin markdown, sin texto extra.
-
-{
-  "reply": "Mensaje para el usuario",
-  "datos_lead_update": {
-    "name": "nombre completo",
-    "country": "país",
-    "whatsapp": "número con código de país",
-    "age18": true/false,
-    "working_capital_usd": "0-100 | 100-300 | 300-500 | 500+",
-    "hours_per_day": "1-2 | 3-5 | 6+",
-    "sales_or_customer_service_exp": true/false/null,
-    "casino_or_betting_exp": true/false/null,
-    "has_local_payment_methods": true/false,
-    "wants_to_start_now": true/false
-  },
-  "fin_entrevista": false,
-  "debug": {
-    "intent_detected": "AGENTE",
-    "missing_fields": ["lista de campos que faltan"],
-    "score_total": 0,
-    "tier": "NOVATO | POTENCIAL | PROMETEDOR"
+const initFirebaseAdmin = async () => {
+  const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON");
+  if (!serviceAccountJson) {
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON not configured");
   }
-}
 
-FLUJO DE PREGUNTAS (en este orden):
-
-1. "¡Hola! Soy el asistente de reclutamiento de Ganaya.bet. ¿Cuál es tu nombre completo?"
-   → Guarda en: name
-
-2. "¿En qué país te encuentras?"
-   → Guarda en: country
-
-3. "¿Tienes experiencia en ventas, atención al cliente o trabajos similares?
-   1) Sí, tengo experiencia
-   2) No, pero quiero aprender"
-   → Guarda en: sales_or_customer_service_exp (true/false)
-
-4. "¿Has trabajado antes con casinos, apuestas deportivas o plataformas de juegos?
-   1) Sí
-   2) No"
-   → Guarda en: casino_or_betting_exp (true/false)
-
-5. "¿Conoces los métodos de pago locales de tu país (transferencias, billeteras como Mercado Pago, Nequi, Yape)?
-   1) Sí, los manejo bien
-   2) Conozco algunos
-   3) No los conozco"
-   → Guarda en: has_local_payment_methods (true si opción 1 o 2, false si 3)
-
-6. "Para operar como agente necesitas capital de trabajo (para cubrir recargas). ¿Con qué rango podrías empezar?
-   1) Menos de $100 USD
-   2) Entre $100 y $300 USD
-   3) Entre $300 y $500 USD
-   4) Más de $500 USD"
-   → Guarda en: working_capital_usd ("0-100", "100-300", "300-500", "500+")
-
-7. "¿Cuántas horas al día podrías dedicar?
-   1) 1-2 horas
-   2) 3-5 horas
-   3) 6 horas o más"
-   → Guarda en: hours_per_day ("1-2", "3-5", "6+")
-
-8. "¿Estás listo para empezar en los próximos días?
-   1) Sí, quiero empezar cuanto antes
-   2) Aún estoy evaluando"
-   → Guarda en: wants_to_start_now (true/false)
-
-9. "¿Cuál es tu número de WhatsApp? (incluye código de país, ej: +52 55 1234 5678)"
-   → Guarda en: whatsapp
-
-10. "Por último, ¿confirmas que eres mayor de 18 años?
-    1) Sí, soy mayor de 18
-    2) No"
-    → Guarda en: age18 (true/false)
-
-Cuando tengas TODOS los campos requeridos (name, country, whatsapp, age18, working_capital_usd, hours_per_day, has_local_payment_methods, wants_to_start_now), marca fin_entrevista=true y responde:
-
-"¡Excelente! Tu perfil fue registrado y será evaluado por nuestro equipo. Te contactaremos pronto por WhatsApp."
-
-SCORING (interno, NO mostrar):
-- working_capital_usd >= 300 → +30 pts
-- hours_per_day >= 4h → +20 pts (2-4h → +10 pts)
-- has_local_payment_methods → +15 pts
-- sales_or_customer_service_exp → +15 pts
-- casino_or_betting_exp → +10 pts
-- wants_to_start_now → +10 pts
-Total posible: 100 pts
-
-Tiers:
-- PROMETEDOR: ≥70 pts
-- POTENCIAL: 40-69 pts
-- NOVATO: <40 pts
-
-RECUERDA: Responde SOLO con JSON válido.`;
-
-// Extract JSON from potentially malformed response
-function extractJSON(text: string): Record<string, unknown> | null {
-  let cleaned = text.trim();
-  cleaned = cleaned.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
+  const serviceAccount = JSON.parse(serviceAccountJson);
   
-  const firstBrace = cleaned.indexOf('{');
-  const lastBrace = cleaned.lastIndexOf('}');
-  
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    const jsonCandidate = cleaned.substring(firstBrace, lastBrace + 1);
-    try {
-      return JSON.parse(jsonCandidate);
-    } catch (e) {
-      console.error("Failed to parse extracted JSON:", e);
+  const now = Math.floor(Date.now() / 1000);
+  const header = { alg: "RS256", typ: "JWT" };
+  const claims = {
+    iss: serviceAccount.client_email,
+    sub: serviceAccount.client_email,
+    aud: "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+    scope: "https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/datastore"
+  };
+
+  const base64urlEncode = (data: Uint8Array | string): string => {
+    let bytes: Uint8Array;
+    if (typeof data === 'string') {
+      bytes = new TextEncoder().encode(data);
+    } else {
+      bytes = data;
     }
-  }
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  };
+
+  const headerB64 = base64urlEncode(JSON.stringify(header));
+  const claimsB64 = base64urlEncode(JSON.stringify(claims));
+  const unsignedToken = `${headerB64}.${claimsB64}`;
   
-  try {
-    return JSON.parse(cleaned);
-  } catch (e) {
-    console.error("Direct JSON parse failed:", e);
-  }
+  const pemHeader = "-----BEGIN PRIVATE KEY-----";
+  const pemFooter = "-----END PRIVATE KEY-----";
+  const pemContents = serviceAccount.private_key
+    .replace(pemHeader, '')
+    .replace(pemFooter, '')
+    .replace(/\n/g, '');
+  const binaryDer = Uint8Array.from(atob(pemContents), (c: string) => c.charCodeAt(0));
   
-  // Fallback: wrap plain text as reply
-  if (cleaned.length > 10 && !cleaned.startsWith('{')) {
-    console.log("Creating JSON wrapper for plain text response");
-    return {
-      reply: cleaned,
-      datos_lead_update: {},
-      fin_entrevista: false,
-      debug: {
-        intent_detected: "AGENTE",
-        missing_fields: [],
-        score_total: 0,
-        tier: null,
-        wrapped_plain_text: true
-      }
-    };
+  const cryptoKey = await crypto.subtle.importKey(
+    "pkcs8",
+    binaryDer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    cryptoKey,
+    new TextEncoder().encode(unsignedToken)
+  );
+
+  const signedToken = `${unsignedToken}.${base64urlEncode(new Uint8Array(signature))}`;
+
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion: signedToken,
+    }),
+  });
+
+  if (!tokenResponse.ok) {
+    const error = await tokenResponse.text();
+    console.error("[ai-chat] Token exchange failed:", error);
+    throw new Error("Failed to get Firebase access token");
   }
+
+  const { access_token } = await tokenResponse.json();
   
+  return {
+    accessToken: access_token,
+    projectId: serviceAccount.project_id,
+  };
+};
+
+// Parse Firestore value
+function parseFirestoreValue(value: Record<string, unknown>): unknown {
+  if (value.stringValue !== undefined) return value.stringValue;
+  if (value.integerValue !== undefined) return parseInt(String(value.integerValue), 10);
+  if (value.doubleValue !== undefined) return value.doubleValue;
+  if (value.booleanValue !== undefined) return value.booleanValue;
+  if (value.nullValue !== undefined) return null;
+  if (value.timestampValue !== undefined) return new Date(String(value.timestampValue));
+  if (value.mapValue !== undefined) {
+    const fields = (value.mapValue as Record<string, unknown>).fields as Record<string, Record<string, unknown>>;
+    if (!fields) return {};
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(fields)) {
+      result[k] = parseFirestoreValue(v);
+    }
+    return result;
+  }
+  if (value.arrayValue !== undefined) {
+    const values = (value.arrayValue as Record<string, unknown>).values as Array<Record<string, unknown>>;
+    if (!values) return [];
+    return values.map(parseFirestoreValue);
+  }
   return null;
 }
 
-// Normalize field aliases to canonical names
-function normalizeFieldAliases(data: Record<string, unknown>): Record<string, unknown> {
-  const normalized = { ...data };
-  
-  // pais -> country
-  if (normalized.pais && !normalized.country) {
-    normalized.country = normalized.pais;
-  }
-  
-  // nombre -> name
-  if (normalized.nombre && !normalized.name) {
-    normalized.name = normalized.nombre;
-  }
-  
-  // Various contact aliases -> whatsapp
-  if (!normalized.whatsapp) {
-    if (normalized.telefono) normalized.whatsapp = normalized.telefono;
-    const contact = normalized.contact as Record<string, unknown> | undefined;
-    if (contact?.whatsapp) normalized.whatsapp = contact.whatsapp;
-  }
-  
-  // mayor_18/mayor_edad/age_confirmed_18plus -> age18
-  if (normalized.age18 === undefined) {
-    if (normalized.age_confirmed_18plus !== undefined) {
-      normalized.age18 = normalized.age_confirmed_18plus;
-    } else if (normalized.mayor_18 !== undefined) {
-      normalized.age18 = normalized.mayor_18;
-    } else if (normalized.mayor_edad !== undefined) {
-      normalized.age18 = normalized.mayor_edad;
+// ============ LOAD ACTIVE CONFIG FROM FIRESTORE ============
+
+async function loadActiveConfig(accessToken: string, projectId: string): Promise<ChatConfig | null> {
+  try {
+    const query = {
+      structuredQuery: {
+        from: [{ collectionId: "chat_configs" }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "isActive" },
+            op: "EQUAL",
+            value: { booleanValue: true }
+          }
+        },
+        limit: 1
+      }
+    };
+
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`,
+      {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${accessToken}`, 
+          "Content-Type": "application/json" 
+        },
+        body: JSON.stringify(query),
+      }
+    );
+
+    if (!response.ok) {
+      console.error("[ai-chat] Failed to query chat_configs:", await response.text());
+      return null;
     }
-  }
-  
-  // capital aliases -> working_capital_usd
-  if (normalized.working_capital_usd === undefined) {
-    if (normalized.capital_range !== undefined) {
-      normalized.working_capital_usd = normalized.capital_range;
-    } else if (normalized.capital !== undefined) {
-      normalized.working_capital_usd = normalized.capital;
-    } else if (normalized.banca !== undefined) {
-      normalized.working_capital_usd = normalized.banca;
-    }
-  }
-  
-  // hours aliases -> hours_per_day
-  if (normalized.hours_per_day === undefined) {
-    if (normalized.availability_hours !== undefined) {
-      normalized.hours_per_day = normalized.availability_hours;
-    } else if (normalized.horas !== undefined) {
-      normalized.hours_per_day = normalized.horas;
-    }
-  }
-  
-  // experience aliases
-  if (normalized.experience !== undefined) {
-    const exp = String(normalized.experience).toLowerCase();
-    if (normalized.sales_or_customer_service_exp === undefined) {
-      if (exp.includes('venta') || exp.includes('atencion') || exp.includes('finanza')) {
-        normalized.sales_or_customer_service_exp = true;
+
+    const results = await response.json();
+    
+    for (const result of results) {
+      if (result.document) {
+        const fields = result.document.fields as Record<string, Record<string, unknown>>;
+        const docName = result.document.name as string;
+        const docId = docName.split('/').pop() || '';
+        
+        const parsed: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(fields)) {
+          parsed[key] = parseFirestoreValue(value);
+        }
+
+        const config: ChatConfig = {
+          id: docId,
+          name: String(parsed.name || 'Default'),
+          isActive: true,
+          version: Number(parsed.version || 1),
+          thresholds: (parsed.thresholds as ChatConfig['thresholds']) || { prometedorMin: 70, potencialMin: 40 },
+          closing: (parsed.closing as ChatConfig['closing']) || {
+            successTitle: '¡Gracias!',
+            successMessage: 'Tu postulación fue recibida.',
+            nextSteps: 'Te contactaremos pronto.',
+            ctaWhatsAppLabel: 'Contactar por WhatsApp'
+          },
+          questions: ((parsed.questions as ChatQuestion[]) || []).sort((a, b) => a.order - b.order),
+        };
+
+        console.log("[ai-chat] Loaded active config:", config.id, "with", config.questions.length, "questions");
+        return config;
       }
     }
-    if (normalized.casino_or_betting_exp === undefined) {
-      if (exp.includes('casino') || exp.includes('apuesta') || exp.includes('plataforma') || exp.includes('juego')) {
-        normalized.casino_or_betting_exp = true;
-      }
-    }
+
+    return null;
+  } catch (error) {
+    console.error("[ai-chat] Error loading config:", error);
+    return null;
   }
-  
-  // payment_methods_knowledge -> has_local_payment_methods
-  if (normalized.has_local_payment_methods === undefined && normalized.payment_methods_knowledge !== undefined) {
-    const level = String(normalized.payment_methods_knowledge).toLowerCase();
-    normalized.has_local_payment_methods = level !== 'ninguno' && level !== 'no';
-  }
-  
-  // quiere_empezar -> wants_to_start_now
-  if (normalized.wants_to_start_now === undefined && normalized.quiere_empezar !== undefined) {
-    normalized.wants_to_start_now = normalized.quiere_empezar;
-  }
-  
-  return normalized;
 }
 
-// Calculate score (matches agent-scoring.ts logic)
-function calculateScore(data: Record<string, unknown>): { total: number; tier: "NOVATO" | "POTENCIAL" | "PROMETEDOR" } {
-  let total = 0;
-  
-  // working_capital_usd >= 300 => +30
-  const capital = String(data.working_capital_usd || '');
-  if (capital.includes('500') || capital.includes('+') || capital.includes('más')) total += 30;
-  else if (capital.includes('300')) total += 30;
-  else if (capital.includes('100')) total += 15;
-  
-  // hours_per_day >= 4 => +20 (>=2 => +10)
-  const hours = String(data.hours_per_day || '');
-  if (hours.includes('6') || hours.includes('+') || hours.includes('más')) total += 20;
-  else if (hours.includes('3') || hours.includes('4') || hours.includes('5')) total += 10;
-  
-  // has_local_payment_methods => +15
-  if (data.has_local_payment_methods === true) total += 15;
-  
-  // sales_or_customer_service_exp => +15
-  if (data.sales_or_customer_service_exp === true) total += 15;
-  
-  // casino_or_betting_exp => +10
-  if (data.casino_or_betting_exp === true) total += 10;
-  
-  // wants_to_start_now => +10
-  if (data.wants_to_start_now === true) total += 10;
-  
-  const tier = total >= 70 ? "PROMETEDOR" : total >= 40 ? "POTENCIAL" : "NOVATO";
-  
-  return { total, tier };
-}
+// ============ DEFAULT CONFIG (FALLBACK) ============
 
-// Validate required fields
-function validateRequiredFields(data: Record<string, unknown>): string[] {
-  const missing: string[] = [];
-  
-  for (const field of REQUIRED_AGENT_FIELDS) {
-    if (field === "whatsapp") {
-      const contact = data.contact as Record<string, unknown> | undefined;
-      if (!data.whatsapp && !contact?.whatsapp) {
-        missing.push("whatsapp");
-      }
-    } else if (data[field] === undefined || data[field] === null) {
-      missing.push(field);
-    }
-  }
-  
-  return missing;
-}
-
-// Create fallback response
-function createFallbackResponse(errorMsg: string): ConversationalResponse {
-  return {
-    reply: "Tuve un problema técnico, ¿podrías repetir tu última respuesta por favor?",
-    datos_lead_update: {},
-    fin_entrevista: false,
-    debug: {
-      intent_detected: "AGENTE",
-      missing_fields: [],
-      score_total: 0,
-      tier: null,
-      error: errorMsg,
+const DEFAULT_CONFIG: ChatConfig = {
+  id: 'default',
+  name: 'Default Config',
+  isActive: true,
+  version: 1,
+  thresholds: { prometedorMin: 70, potencialMin: 40 },
+  closing: {
+    successTitle: '¡Gracias por tu interés!',
+    successMessage: 'Tu postulación fue registrada correctamente.',
+    nextSteps: 'Un reclutador te contactará pronto por WhatsApp.',
+    ctaWhatsAppLabel: 'Contactar por WhatsApp'
+  },
+  questions: [
+    { id: 'name', label: 'Nombre', prompt: '¿Cuál es tu nombre completo?', type: 'text', required: true, storeKey: 'name', order: 1 },
+    { id: 'country', label: 'País', prompt: '¿En qué país te encuentras?', type: 'text', required: true, storeKey: 'country', order: 2 },
+    { id: 'whatsapp', label: 'WhatsApp', prompt: '¿Cuál es tu número de WhatsApp con código de país?', type: 'text', required: true, storeKey: 'whatsapp', order: 3 },
+    { id: 'age18', label: 'Mayor de edad', prompt: '¿Eres mayor de 18 años?\n1) Sí\n2) No', type: 'boolean', required: true, storeKey: 'age18', order: 4 },
+    { 
+      id: 'working_capital', 
+      label: 'Capital operativo', 
+      prompt: '¿Con cuánto capital inicial (USD) podrías comenzar?\n1) $500 o más\n2) $300-$500\n3) $150-$300\n4) Menos de $150', 
+      type: 'select', 
+      required: true, 
+      storeKey: 'working_capital_usd',
+      options: [
+        { value: '500+', label: '$500 o más', points: 30 },
+        { value: '300-500', label: '$300-$500', points: 25 },
+        { value: '150-300', label: '$150-$300', points: 15 },
+        { value: '0-150', label: 'Menos de $150', points: 0 },
+      ],
+      order: 5 
     },
-  };
+    { 
+      id: 'hours_per_day', 
+      label: 'Horas disponibles', 
+      prompt: '¿Cuántas horas al día podrías dedicar?\n1) 6 o más horas\n2) 4-6 horas\n3) 2-4 horas\n4) Menos de 2 horas', 
+      type: 'select', 
+      required: true, 
+      storeKey: 'hours_per_day',
+      options: [
+        { value: '6+', label: '6+ horas', points: 20 },
+        { value: '4-6', label: '4-6 horas', points: 15 },
+        { value: '2-4', label: '2-4 horas', points: 10 },
+        { value: '0-2', label: '<2 horas', points: 5 },
+      ],
+      order: 6 
+    },
+    { 
+      id: 'has_local_payment', 
+      label: 'Métodos de pago', 
+      prompt: '¿Tienes acceso a métodos de cobro locales (transferencias, billeteras móviles)?\n1) Sí\n2) No', 
+      type: 'boolean', 
+      required: true, 
+      storeKey: 'has_local_payment_methods',
+      scoring: { rules: [{ condition: '==', value: true, points: 15 }] },
+      order: 7 
+    },
+    { 
+      id: 'wants_to_start', 
+      label: 'Inicio inmediato', 
+      prompt: '¿Estás listo para comenzar esta semana?\n1) Sí, quiero empezar\n2) Aún estoy evaluando', 
+      type: 'boolean', 
+      required: true, 
+      storeKey: 'wants_to_start_now',
+      scoring: { rules: [{ condition: '==', value: true, points: 10 }] },
+      order: 8 
+    },
+  ],
+};
+
+// ============ SCORING LOGIC ============
+
+function calculateScoreFromConfig(
+  answers: Record<string, unknown>,
+  config: ChatConfig
+): { scoreTotal: number; tier: "NOVATO" | "POTENCIAL" | "PROMETEDOR"; scoreBreakdown: ScoreBreakdownItem[] } {
+  const breakdown: ScoreBreakdownItem[] = [];
+  let total = 0;
+
+  for (const question of config.questions) {
+    const answerValue = answers[question.id];
+    let pointsAwarded = 0;
+    let maxPoints = 0;
+
+    if (question.type === 'select' && question.options) {
+      maxPoints = Math.max(...question.options.map(o => o.points));
+      const selectedOption = question.options.find(o => o.value === answerValue || o.label === answerValue);
+      if (selectedOption) {
+        pointsAwarded = selectedOption.points;
+      }
+    } else if (question.type === 'boolean' && question.scoring?.rules) {
+      for (const rule of question.scoring.rules) {
+        if (rule.condition === '==' && rule.value === true) {
+          maxPoints = rule.points;
+          if (answerValue === true) {
+            pointsAwarded = rule.points;
+          }
+        }
+      }
+    } else if (question.type === 'number' && question.scoring?.rules) {
+      const numValue = typeof answerValue === 'number' ? answerValue : parseFloat(String(answerValue || '0'));
+      maxPoints = Math.max(...question.scoring.rules.map(r => r.points));
+      for (const rule of question.scoring.rules) {
+        const ruleValue = Number(rule.value);
+        let matched = false;
+        if (rule.condition === '>=' && numValue >= ruleValue) matched = true;
+        if (rule.condition === '>' && numValue > ruleValue) matched = true;
+        if (rule.condition === '<=' && numValue <= ruleValue) matched = true;
+        if (rule.condition === '<' && numValue < ruleValue) matched = true;
+        if (rule.condition === '==' && numValue === ruleValue) matched = true;
+        if (matched && rule.points > pointsAwarded) {
+          pointsAwarded = rule.points;
+        }
+      }
+    }
+
+    if (maxPoints > 0 || pointsAwarded > 0) {
+      breakdown.push({
+        key: question.id,
+        label: question.label,
+        value: answerValue ?? null,
+        pointsAwarded,
+        maxPoints,
+      });
+    }
+
+    total += pointsAwarded;
+  }
+
+  const tier = total >= config.thresholds.prometedorMin 
+    ? "PROMETEDOR" 
+    : total >= config.thresholds.potencialMin 
+      ? "POTENCIAL" 
+      : "NOVATO";
+
+  return { scoreTotal: total, tier, scoreBreakdown: breakdown };
 }
 
-// Process and validate AI response
-function processAIResponse(rawContent: string, collectedData: Record<string, unknown>): ConversationalResponse {
-  const parsed = extractJSON(rawContent);
+// ============ PARSE USER ANSWER ============
+
+function parseUserAnswer(
+  userMessage: string,
+  question: ChatQuestion
+): { value: unknown; storeKeyValue: unknown } {
+  const msg = userMessage.trim().toLowerCase();
+
+  if (question.type === 'select' && question.options) {
+    // Check for number input (1, 2, 3...)
+    const numMatch = userMessage.trim().match(/^(\d+)$/);
+    if (numMatch) {
+      const idx = parseInt(numMatch[1]) - 1;
+      if (idx >= 0 && idx < question.options.length) {
+        const opt = question.options[idx];
+        return { value: opt.value, storeKeyValue: opt.value };
+      }
+    }
+    // Check for exact value or label match
+    for (const opt of question.options) {
+      if (msg === opt.value.toLowerCase() || msg === opt.label.toLowerCase()) {
+        return { value: opt.value, storeKeyValue: opt.value };
+      }
+    }
+    // Partial match
+    for (const opt of question.options) {
+      if (msg.includes(opt.value.toLowerCase()) || opt.label.toLowerCase().includes(msg)) {
+        return { value: opt.value, storeKeyValue: opt.value };
+      }
+    }
+    return { value: userMessage.trim(), storeKeyValue: userMessage.trim() };
+  }
+
+  if (question.type === 'boolean') {
+    const yesPatterns = ['1', 'sí', 'si', 'yes', 'ok', 'claro', 'dale', 'listo', 'afirmativo'];
+    const noPatterns = ['2', 'no', 'nope', 'negativo', 'todavia no', 'aun no'];
+    
+    if (yesPatterns.some(p => msg === p || msg.startsWith(p + ' ') || msg.startsWith(p + ','))) {
+      return { value: true, storeKeyValue: true };
+    }
+    if (noPatterns.some(p => msg === p || msg.startsWith(p + ' ') || msg.startsWith(p + ','))) {
+      return { value: false, storeKeyValue: false };
+    }
+    return { value: null, storeKeyValue: null };
+  }
+
+  if (question.type === 'number') {
+    const num = parseFloat(userMessage.replace(/[^0-9.]/g, ''));
+    return { value: isNaN(num) ? null : num, storeKeyValue: isNaN(num) ? null : num };
+  }
+
+  // text
+  return { value: userMessage.trim(), storeKeyValue: userMessage.trim() };
+}
+
+// ============ BUILD QUESTION PROMPT ============
+
+function buildQuestionPrompt(question: ChatQuestion): string {
+  let prompt = question.prompt;
   
-  if (!parsed) {
-    console.error("Failed to extract JSON from:", rawContent.substring(0, 200));
-    return createFallbackResponse("invalid_json_extraction");
+  // If select type and options not already in prompt, add them
+  if (question.type === 'select' && question.options && !prompt.includes('1)') && !prompt.includes('1.')) {
+    prompt += '\n';
+    question.options.forEach((opt, i) => {
+      prompt += `${i + 1}) ${opt.label}\n`;
+    });
   }
   
-  if (typeof parsed.reply !== 'string' || !parsed.reply) {
-    console.error("Missing or invalid 'reply' field");
-    return createFallbackResponse("missing_reply_field");
+  // If boolean and not already formatted
+  if (question.type === 'boolean' && !prompt.includes('1)') && !prompt.includes('Sí') && !prompt.includes('No')) {
+    prompt += '\n1) Sí\n2) No';
   }
   
-  // Merge with collected data
-  const datosUpdate = (parsed.datos_lead_update || {}) as Record<string, unknown>;
-  const rawMergedData = { ...collectedData, ...datosUpdate };
+  return prompt.trim();
+}
+
+// ============ CONFIG-DRIVEN CHAT HANDLER ============
+
+async function handleConfigDrivenChat(
+  userMessage: string,
+  collectedData: Record<string, unknown>,
+  config: ChatConfig
+): Promise<ConversationalResponse> {
+  const answers = (collectedData.answers || {}) as Record<string, unknown>;
+  let chatState = collectedData._chatState as ChatState | undefined;
   
-  // Normalize field aliases
-  const mergedData = normalizeFieldAliases(rawMergedData);
-  
-  // Calculate scores
-  const { total: scoreTotal, tier: scoreTier } = calculateScore(mergedData);
-  
-  // Validate required fields
-  let finEntrevista = Boolean(parsed.fin_entrevista);
-  const missingFields = validateRequiredFields(mergedData);
-  
-  // Don't allow fin_entrevista if fields are missing
-  if (finEntrevista && missingFields.length > 0) {
-    console.log("Blocking fin_entrevista due to missing fields:", missingFields);
-    finEntrevista = false;
+  // Initialize chat state if not present
+  if (!chatState) {
+    chatState = {
+      configId: config.id,
+      configVersion: config.version,
+      currentQuestionId: null,
+      answeredIds: [],
+    };
   }
+
+  // Get sorted questions
+  const sortedQuestions = [...config.questions].sort((a, b) => a.order - b.order);
+
+  // If this is the start message or no current question, find first unanswered
+  const isStartMessage = userMessage === '__start__' || userMessage.toLowerCase().includes('quiero ser agente') || userMessage.toLowerCase().includes('comenzar');
   
-  const response: ConversationalResponse = {
-    reply: String(parsed.reply),
+  if (!isStartMessage && chatState.currentQuestionId) {
+    // Process answer to current question
+    const currentQ = sortedQuestions.find(q => q.id === chatState!.currentQuestionId);
+    if (currentQ) {
+      const { value, storeKeyValue } = parseUserAnswer(userMessage, currentQ);
+      
+      if (value !== null && value !== undefined) {
+        answers[currentQ.id] = value;
+        if (currentQ.storeKey) {
+          answers[currentQ.storeKey] = storeKeyValue;
+        }
+        if (!chatState.answeredIds.includes(currentQ.id)) {
+          chatState.answeredIds.push(currentQ.id);
+        }
+      }
+    }
+  }
+
+  // Find next unanswered question
+  let nextQuestion: ChatQuestion | null = null;
+  const missingRequired: string[] = [];
+  
+  for (const q of sortedQuestions) {
+    if (!chatState.answeredIds.includes(q.id) && answers[q.id] === undefined) {
+      if (nextQuestion === null) {
+        nextQuestion = q;
+      }
+      if (q.required) {
+        missingRequired.push(q.id);
+      }
+    } else if (q.required && (answers[q.id] === undefined || answers[q.id] === null)) {
+      missingRequired.push(q.id);
+    }
+  }
+
+  // Calculate score
+  const { scoreTotal, tier, scoreBreakdown } = calculateScoreFromConfig(answers, config);
+
+  // Check if interview is complete
+  const allRequiredAnswered = sortedQuestions
+    .filter(q => q.required)
+    .every(q => chatState!.answeredIds.includes(q.id) || answers[q.id] !== undefined);
+
+  const finEntrevista = allRequiredAnswered && nextQuestion === null;
+
+  // Build reply
+  let reply: string;
+  
+  if (finEntrevista) {
+    const name = answers.name || answers.nombre || '';
+    const country = answers.country || answers.pais || '';
+    const whatsapp = answers.whatsapp || '';
+    
+    reply = `${config.closing.successTitle}\n\n${config.closing.successMessage}\n\n`;
+    reply += `📋 Resumen:\n• Nombre: ${name}\n• País: ${country}\n• WhatsApp: ${whatsapp}\n\n`;
+    reply += `${config.closing.nextSteps}`;
+  } else if (nextQuestion) {
+    chatState.currentQuestionId = nextQuestion.id;
+    
+    if (isStartMessage) {
+      reply = `¡Hola! 👋 Soy el asistente de reclutamiento de Ganaya.bet.\n\nVoy a hacerte algunas preguntas rápidas para evaluar tu perfil como agente.\n\n${buildQuestionPrompt(nextQuestion)}`;
+    } else {
+      reply = buildQuestionPrompt(nextQuestion);
+    }
+  } else {
+    reply = "¡Gracias! Hemos completado todas las preguntas.";
+  }
+
+  // Build response
+  const datosUpdate: Record<string, unknown> = {
+    answers,
+    _chatState: chatState,
+    scoreTotal,
+    tier,
+    scoreBreakdown,
+    chatConfigId: config.id,
+    chatConfigVersion: config.version,
+  };
+
+  // Also include storeKey values at top level for compatibility
+  for (const q of sortedQuestions) {
+    if (q.storeKey && answers[q.id] !== undefined) {
+      datosUpdate[q.storeKey] = answers[q.storeKey] ?? answers[q.id];
+    }
+  }
+
+  return {
+    reply,
     datos_lead_update: datosUpdate,
     fin_entrevista: finEntrevista,
     debug: {
-      intent_detected: "AGENTE",
-      missing_fields: missingFields,
+      configId: config.id,
+      currentQuestionId: chatState.currentQuestionId,
+      missingRequiredIds: missingRequired,
       score_total: scoreTotal,
-      tier: scoreTier,
+      tier: tier,
     },
   };
-  
-  console.log("Processed response debug:", response.debug);
-  
-  return response;
 }
+
+// ============ MAIN HANDLER ============
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -411,13 +629,45 @@ serve(async (req) => {
   try {
     const { messages, type = "chat", leadData, collectedData = {} } = await req.json() as RequestBody;
     
-    console.log("Request type:", type);
-    console.log("Collected data:", JSON.stringify(collectedData));
-    
-    // Initialize Supabase client
+    console.log("[ai-chat] Request type:", type);
+
+    // Initialize Supabase client for settings
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // For conversational type, use config-driven approach
+    if (type === "conversational") {
+      // Load active config from Firestore
+      let config: ChatConfig = DEFAULT_CONFIG;
+      
+      try {
+        const { accessToken, projectId } = await initFirebaseAdmin();
+        const activeConfig = await loadActiveConfig(accessToken, projectId);
+        if (activeConfig && activeConfig.questions.length > 0) {
+          config = activeConfig;
+          console.log("[ai-chat] Using active config:", config.id);
+        } else {
+          console.log("[ai-chat] No active config found, using default");
+        }
+      } catch (err) {
+        console.error("[ai-chat] Failed to load config, using default:", err);
+      }
+
+      // Get the last user message
+      const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '__start__';
+
+      // Process with config-driven logic
+      const response = await handleConfigDrivenChat(lastUserMessage, collectedData, config);
+
+      return new Response(
+        JSON.stringify({ success: true, data: response }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // For other types (summarize, suggest_whatsapp), use AI
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     // Try to get custom Gemini API key
     let customGeminiKey: string | null = null;
@@ -429,12 +679,10 @@ serve(async (req) => {
         .maybeSingle();
       
       customGeminiKey = settings?.gemini_api_key || null;
-      console.log("Custom Gemini key configured:", !!customGeminiKey);
     } catch (err) {
-      console.log("Could not read settings:", err);
+      console.log("[ai-chat] Could not read settings:", err);
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const useCustomGemini = !!customGeminiKey;
     const useLovableGateway = !useCustomGemini && !!LOVABLE_API_KEY;
 
@@ -443,26 +691,14 @@ serve(async (req) => {
         JSON.stringify({ 
           error: "AI service not configured",
           fallback: true,
-          message: "Servicio de IA no configurado."
         }), 
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Build system prompt
     let systemPrompt = "Eres un asistente de Ganaya.bet. Responde en español.";
 
-    if (type === "conversational") {
-      const collectedInfo = collectedData && Object.keys(collectedData).length > 0 
-        ? JSON.stringify(collectedData, null, 2) 
-        : "Ninguno aún";
-      systemPrompt = `${GANAYA_SYSTEM_PROMPT}
-
-DATOS YA RECOPILADOS DEL USUARIO:
-${collectedInfo}
-
-RECUERDA: Tu respuesta debe ser SOLO un objeto JSON válido.`;
-    } else if (type === "summarize" && leadData) {
+    if (type === "summarize" && leadData) {
       systemPrompt = `Analiza este lead de agente y genera un resumen.
 Datos: ${JSON.stringify(leadData)}
 
@@ -481,8 +717,6 @@ Mensaje profesional, máximo 200 caracteres.`;
     let rawContent = "";
 
     if (useCustomGemini) {
-      console.log("Using custom Gemini API");
-      
       const geminiMessages = [
         { role: "user", parts: [{ text: systemPrompt }] },
         ...messages.map(m => ({
@@ -498,25 +732,18 @@ Mensaje profesional, máximo 200 caracteres.`;
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: geminiMessages,
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1000,
-            },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 1000 },
           }),
         }
       );
 
       if (!geminiResponse.ok) {
-        const error = await geminiResponse.text();
-        console.error("Gemini API error:", error);
         throw new Error(`Gemini API error: ${geminiResponse.status}`);
       }
 
       const geminiData = await geminiResponse.json();
       rawContent = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
     } else {
-      console.log("Using Lovable AI Gateway");
-      
       const gatewayMessages = [
         { role: "system", content: systemPrompt },
         ...messages
@@ -529,7 +756,6 @@ Mensaje profesional, máximo 200 caracteres.`;
           "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         },
         body: JSON.stringify({
-          // Default model for Lovable AI
           model: "google/gemini-3-flash-preview",
           messages: gatewayMessages,
           temperature: 0.7,
@@ -539,16 +765,6 @@ Mensaje profesional, máximo 200 caracteres.`;
 
       if (!gatewayResponse.ok) {
         const errorText = await gatewayResponse.text();
-        console.error("Gateway API error:", gatewayResponse.status, errorText);
-
-        // Surface billing/rate-limit issues clearly to the client
-        if (gatewayResponse.status === 429) {
-          throw new Error("Gateway API error: 429 (rate_limited)");
-        }
-        if (gatewayResponse.status === 402) {
-          throw new Error("Gateway API error: 402 (payment_required)");
-        }
-
         throw new Error(`Gateway API error: ${gatewayResponse.status} :: ${errorText}`);
       }
 
@@ -556,30 +772,24 @@ Mensaje profesional, máximo 200 caracteres.`;
       rawContent = gatewayData.choices?.[0]?.message?.content || "";
     }
 
-    console.log("Raw AI content:", rawContent.substring(0, 300));
+    return new Response(
+      JSON.stringify({ content: rawContent }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
 
-    // For conversational type, process and validate
-    if (type === "conversational") {
-      const processed = processAIResponse(rawContent, collectedData);
-      return new Response(JSON.stringify(processed), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // For other types, return raw
-    return new Response(JSON.stringify({ content: rawContent }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
   } catch (error: unknown) {
-    console.error("Error in ai-chat:", error);
+    console.error("[ai-chat] Error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
       JSON.stringify({ 
+        success: false,
         error: message,
-        reply: "Lo siento, tuve un problema. ¿Podrías repetir?",
-        datos_lead_update: {},
-        fin_entrevista: false,
-        debug: { error: message, intent_detected: null, missing_fields: [], score_total: 0, tier: null }
+        data: {
+          reply: "Disculpá, tuve un problema técnico. ¿Podés repetir?",
+          datos_lead_update: {},
+          fin_entrevista: false,
+          debug: { error: message, configId: null, currentQuestionId: null, missingRequiredIds: [], score_total: 0, tier: null }
+        }
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

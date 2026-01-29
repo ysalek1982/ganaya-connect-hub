@@ -5,43 +5,64 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface AgentProfile {
-  name: string | null;
-  country: string | null;
-  whatsapp: string | null;
-  age18: boolean | null;
-  working_capital_usd: number | string | null;
-  hours_per_day: number | string | null;
-  sales_or_customer_service_exp: boolean | null;
-  casino_or_betting_exp: boolean | null;
-  has_local_payment_methods: boolean | null;
-  wants_to_start_now: boolean | null;
+// ============ TYPES ============
+
+interface QuestionOption {
+  value: string;
+  label: string;
+  points: number;
+}
+
+interface ScoringRule {
+  condition: string;
+  value?: string | number | boolean;
+  points: number;
+}
+
+interface ChatQuestion {
+  id: string;
+  label: string;
+  prompt: string;
+  type: "text" | "select" | "boolean" | "number";
+  required: boolean;
+  options?: QuestionOption[];
+  scoring?: { rules: ScoringRule[] };
+  storeKey?: string;
+  order: number;
+}
+
+interface ChatConfig {
+  id: string;
+  name: string;
+  isActive: boolean;
+  version: number;
+  thresholds: {
+    prometedorMin: number;
+    potencialMin: number;
+  };
+  questions: ChatQuestion[];
 }
 
 interface ScoreBreakdownItem {
   key: string;
   label: string;
-  value: boolean | string | number | null;
+  value: unknown;
   pointsAwarded: number;
   maxPoints: number;
 }
 
 interface SaveLeadRequest {
   mergedData: Record<string, unknown>;
-  debug: {
-    intent_detected: string | null;
-    missing_fields: string[];
-    score_total: number;
-    tier: string | null;
-  };
-  intent: "AGENTE" | "JUGADOR" | "SOPORTE" | null;
+  debug?: Record<string, unknown>;
+  intent: "AGENTE" | null;
   refCode: string | null;
   country: string | null;
   scoreTotal?: number;
   tier?: string | null;
 }
 
-// Firebase Admin SDK initialization via JWT signing
+// ============ FIREBASE ADMIN ============
+
 const initFirebaseAdmin = async () => {
   const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON");
   if (!serviceAccountJson) {
@@ -126,23 +147,12 @@ const initFirebaseAdmin = async () => {
   };
 };
 
-// Parse Firestore document
-function parseFirestoreDoc(doc: Record<string, unknown>): Record<string, unknown> | null {
-  if (!doc || !doc.fields) return null;
-  
-  const fields = doc.fields as Record<string, Record<string, unknown>>;
-  const result: Record<string, unknown> = {};
-  
-  for (const [key, value] of Object.entries(fields)) {
-    result[key] = parseFirestoreValue(value);
-  }
-  
-  return result;
-}
+// ============ FIRESTORE HELPERS ============
 
 function parseFirestoreValue(value: Record<string, unknown>): unknown {
   if (value.stringValue !== undefined) return value.stringValue;
   if (value.integerValue !== undefined) return parseInt(String(value.integerValue), 10);
+  if (value.doubleValue !== undefined) return value.doubleValue;
   if (value.booleanValue !== undefined) return value.booleanValue;
   if (value.nullValue !== undefined) return null;
   if (value.timestampValue !== undefined) return new Date(String(value.timestampValue));
@@ -199,217 +209,199 @@ function toFirestoreValue(value: unknown): Record<string, unknown> {
   return { nullValue: null };
 }
 
-// Extract and normalize agent profile from raw data
-function extractAgentProfile(rawData: Record<string, unknown>): AgentProfile {
-  // Normalize aliases
-  const name = rawData.name || rawData.nombre || null;
-  const country = rawData.country || rawData.pais || null;
-  
-  // Extract whatsapp
-  let whatsapp: string | null = null;
-  const contact = rawData.contact as Record<string, unknown> | undefined;
-  if (contact?.whatsapp) {
-    whatsapp = String(contact.whatsapp);
-  } else if (rawData.whatsapp) {
-    whatsapp = String(rawData.whatsapp);
-  } else if (rawData.telefono) {
-    whatsapp = String(rawData.telefono);
-  }
-  
-  // Normalize whatsapp to digits and + only
-  if (whatsapp) {
-    whatsapp = whatsapp.replace(/[^\d+]/g, '');
-  }
-  
-  // Age confirmation
-  const age18 = rawData.age18 ?? rawData.age_confirmed_18plus ?? rawData.mayor_18 ?? rawData.mayor_edad ?? null;
-  
-  // Capital
-  const rawCapital = rawData.working_capital_usd ?? rawData.capital_range ?? rawData.capital ?? rawData.banca ?? null;
-  const working_capital_usd: string | number | null = rawCapital !== null && typeof rawCapital !== 'object' 
-    ? (typeof rawCapital === 'string' || typeof rawCapital === 'number' ? rawCapital : null) 
-    : null;
-  
-  // Hours
-  const rawHours = rawData.hours_per_day ?? rawData.availability_hours ?? rawData.horas ?? null;
-  const hours_per_day: string | number | null = rawHours !== null && typeof rawHours !== 'object'
-    ? (typeof rawHours === 'string' || typeof rawHours === 'number' ? rawHours : null)
-    : null;
-  
-  // Payment methods
-  let has_local_payment_methods = rawData.has_local_payment_methods ?? null;
-  if (has_local_payment_methods === null && rawData.payment_methods_knowledge !== undefined) {
-    const level = String(rawData.payment_methods_knowledge).toLowerCase();
-    has_local_payment_methods = level !== 'ninguno' && level !== 'no';
-  }
-  
-  // Sales experience
-  let sales_or_customer_service_exp = rawData.sales_or_customer_service_exp ?? null;
-  if (sales_or_customer_service_exp === null && rawData.experience !== undefined) {
-    const exp = String(rawData.experience).toLowerCase();
-    if (exp.includes('venta') || exp.includes('atencion') || exp.includes('finanza')) {
-      sales_or_customer_service_exp = true;
+// ============ LOAD CONFIG ============
+
+async function loadConfig(
+  accessToken: string, 
+  projectId: string, 
+  configId?: string
+): Promise<ChatConfig | null> {
+  try {
+    // If specific configId provided, load that one
+    if (configId && configId !== 'default') {
+      const response = await fetch(
+        `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/chat_configs/${configId}`,
+        { headers: { "Authorization": `Bearer ${accessToken}` } }
+      );
+
+      if (response.ok) {
+        const doc = await response.json();
+        const fields = doc.fields as Record<string, Record<string, unknown>>;
+        const parsed: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(fields)) {
+          parsed[key] = parseFirestoreValue(value);
+        }
+
+        return {
+          id: configId,
+          name: String(parsed.name || 'Config'),
+          isActive: Boolean(parsed.isActive),
+          version: Number(parsed.version || 1),
+          thresholds: (parsed.thresholds as ChatConfig['thresholds']) || { prometedorMin: 70, potencialMin: 40 },
+          questions: ((parsed.questions as ChatQuestion[]) || []).sort((a, b) => a.order - b.order),
+        };
+      }
     }
-  }
-  
-  // Casino experience
-  let casino_or_betting_exp = rawData.casino_or_betting_exp ?? null;
-  if (casino_or_betting_exp === null && rawData.experience !== undefined) {
-    const exp = String(rawData.experience).toLowerCase();
-    if (exp.includes('casino') || exp.includes('apuesta') || exp.includes('plataforma') || exp.includes('juego')) {
-      casino_or_betting_exp = true;
+
+    // Otherwise load active config
+    const query = {
+      structuredQuery: {
+        from: [{ collectionId: "chat_configs" }],
+        where: {
+          fieldFilter: {
+            field: { fieldPath: "isActive" },
+            op: "EQUAL",
+            value: { booleanValue: true }
+          }
+        },
+        limit: 1
+      }
+    };
+
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`,
+      {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${accessToken}`, 
+          "Content-Type": "application/json" 
+        },
+        body: JSON.stringify(query),
+      }
+    );
+
+    if (!response.ok) return null;
+
+    const results = await response.json();
+    for (const result of results) {
+      if (result.document) {
+        const fields = result.document.fields as Record<string, Record<string, unknown>>;
+        const docName = result.document.name as string;
+        const docId = docName.split('/').pop() || '';
+        
+        const parsed: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(fields)) {
+          parsed[key] = parseFirestoreValue(value);
+        }
+
+        return {
+          id: docId,
+          name: String(parsed.name || 'Config'),
+          isActive: true,
+          version: Number(parsed.version || 1),
+          thresholds: (parsed.thresholds as ChatConfig['thresholds']) || { prometedorMin: 70, potencialMin: 40 },
+          questions: ((parsed.questions as ChatQuestion[]) || []).sort((a, b) => a.order - b.order),
+        };
+      }
     }
+
+    return null;
+  } catch (error) {
+    console.error("[save-chat-lead] Error loading config:", error);
+    return null;
   }
-  
-  // Wants to start now
-  const wants_to_start_now = rawData.wants_to_start_now ?? rawData.quiere_empezar ?? null;
-  
-  return {
-    name: name ? String(name) : null,
-    country: country ? String(country) : null,
-    whatsapp,
-    age18: age18 === true || age18 === 'true' || age18 === 'sí' || age18 === 'si' ? true : 
-           age18 === false || age18 === 'false' || age18 === 'no' ? false : null,
-    working_capital_usd,
-    hours_per_day,
-    sales_or_customer_service_exp: sales_or_customer_service_exp === true ? true :
-                                   sales_or_customer_service_exp === false ? false : null,
-    casino_or_betting_exp: casino_or_betting_exp === true ? true :
-                           casino_or_betting_exp === false ? false : null,
-    has_local_payment_methods: has_local_payment_methods === true ? true :
-                               has_local_payment_methods === false ? false : null,
-    wants_to_start_now: wants_to_start_now === true || wants_to_start_now === 'sí' || wants_to_start_now === 'si' ? true :
-                        wants_to_start_now === false || wants_to_start_now === 'no' ? false : null,
-  };
 }
 
-// Compute agent score
-function computeAgentScore(profile: AgentProfile): { score_total: number; score_tier: string; score_breakdown: ScoreBreakdownItem[] } {
+// ============ RECALCULATE SCORE ============
+
+function recalculateScore(
+  answers: Record<string, unknown>,
+  config: ChatConfig
+): { scoreTotal: number; tier: string; scoreBreakdown: ScoreBreakdownItem[] } {
   const breakdown: ScoreBreakdownItem[] = [];
   let total = 0;
 
-  // Helper to parse capital
-  const parseCapital = (value: number | string | null): number => {
-    if (value === null) return 0;
-    if (typeof value === 'number') return value;
-    const str = String(value).toLowerCase();
-    if (str.includes('500') || str.includes('+') || str.includes('más')) return 500;
-    if (str.includes('300')) return 300;
-    if (str.includes('100')) return 100;
-    return 0;
-  };
+  for (const question of config.questions) {
+    const answerValue = answers[question.id] ?? answers[question.storeKey || ''];
+    let pointsAwarded = 0;
+    let maxPoints = 0;
 
-  // Helper to parse hours
-  const parseHours = (value: number | string | null): number => {
-    if (value === null) return 0;
-    if (typeof value === 'number') return value;
-    const str = String(value).toLowerCase();
-    if (str.includes('6') || str.includes('+') || str.includes('más')) return 6;
-    if (str.includes('5')) return 5;
-    if (str.includes('4')) return 4;
-    if (str.includes('3')) return 3;
-    return 0;
-  };
+    if (question.type === 'select' && question.options) {
+      maxPoints = Math.max(...question.options.map(o => o.points), 0);
+      const selectedOption = question.options.find(o => 
+        o.value === answerValue || o.label === answerValue
+      );
+      if (selectedOption) {
+        pointsAwarded = selectedOption.points;
+      }
+    } else if (question.type === 'boolean' && question.scoring?.rules) {
+      for (const rule of question.scoring.rules) {
+        if (rule.condition === '==' && rule.value === true) {
+          maxPoints = rule.points;
+          if (answerValue === true) {
+            pointsAwarded = rule.points;
+          }
+        }
+      }
+    } else if (question.type === 'number' && question.scoring?.rules) {
+      const numValue = typeof answerValue === 'number' ? answerValue : parseFloat(String(answerValue || '0'));
+      maxPoints = Math.max(...question.scoring.rules.map(r => r.points), 0);
+      for (const rule of question.scoring.rules) {
+        const ruleValue = Number(rule.value);
+        let matched = false;
+        if (rule.condition === '>=' && numValue >= ruleValue) matched = true;
+        if (rule.condition === '>' && numValue > ruleValue) matched = true;
+        if (rule.condition === '<=' && numValue <= ruleValue) matched = true;
+        if (rule.condition === '<' && numValue < ruleValue) matched = true;
+        if (rule.condition === '==' && numValue === ruleValue) matched = true;
+        if (matched && rule.points > pointsAwarded) {
+          pointsAwarded = rule.points;
+        }
+      }
+    }
 
-  // 1. Working Capital (30 max)
-  const capitalValue = parseCapital(profile.working_capital_usd);
-  const capitalPoints = capitalValue >= 300 ? 30 : capitalValue >= 100 ? 15 : 0;
-  total += capitalPoints;
-  breakdown.push({
-    key: 'working_capital_usd',
-    label: 'Banca $300+',
-    value: profile.working_capital_usd,
-    pointsAwarded: capitalPoints,
-    maxPoints: 30,
-  });
+    if (maxPoints > 0 || pointsAwarded > 0) {
+      breakdown.push({
+        key: question.id,
+        label: question.label,
+        value: answerValue ?? null,
+        pointsAwarded,
+        maxPoints,
+      });
+    }
 
-  // 2. Hours per day (20 max)
-  const hoursValue = parseHours(profile.hours_per_day);
-  const hoursPoints = hoursValue >= 4 ? 20 : hoursValue >= 2 ? 10 : 0;
-  total += hoursPoints;
-  breakdown.push({
-    key: 'hours_per_day',
-    label: 'Horas/día (4+)',
-    value: profile.hours_per_day,
-    pointsAwarded: hoursPoints,
-    maxPoints: 20,
-  });
+    total += pointsAwarded;
+  }
 
-  // 3. Local payment methods (15 max)
-  const paymentPoints = profile.has_local_payment_methods === true ? 15 : 0;
-  total += paymentPoints;
-  breakdown.push({
-    key: 'has_local_payment_methods',
-    label: 'Métodos de cobro local',
-    value: profile.has_local_payment_methods,
-    pointsAwarded: paymentPoints,
-    maxPoints: 15,
-  });
+  const tier = total >= config.thresholds.prometedorMin 
+    ? "PROMETEDOR" 
+    : total >= config.thresholds.potencialMin 
+      ? "POTENCIAL" 
+      : "NOVATO";
 
-  // 4. Sales/customer service experience (15 max)
-  const salesPoints = profile.sales_or_customer_service_exp === true ? 15 : 0;
-  total += salesPoints;
-  breakdown.push({
-    key: 'sales_or_customer_service_exp',
-    label: 'Experiencia atención/ventas',
-    value: profile.sales_or_customer_service_exp,
-    pointsAwarded: salesPoints,
-    maxPoints: 15,
-  });
-
-  // 5. Casino/betting experience (10 max)
-  const casinoPoints = profile.casino_or_betting_exp === true ? 10 : 0;
-  total += casinoPoints;
-  breakdown.push({
-    key: 'casino_or_betting_exp',
-    label: 'Experiencia casinos/apuestas',
-    value: profile.casino_or_betting_exp,
-    pointsAwarded: casinoPoints,
-    maxPoints: 10,
-  });
-
-  // 6. Wants to start now (10 max)
-  const startPoints = profile.wants_to_start_now === true ? 10 : 0;
-  total += startPoints;
-  breakdown.push({
-    key: 'wants_to_start_now',
-    label: 'Quiere empezar ya',
-    value: profile.wants_to_start_now,
-    pointsAwarded: startPoints,
-    maxPoints: 10,
-  });
-
-  const score_tier = total >= 70 ? 'PROMETEDOR' : total >= 40 ? 'POTENCIAL' : 'NOVATO';
-
-  return { score_total: total, score_tier, score_breakdown: breakdown };
+  return { scoreTotal: total, tier, scoreBreakdown: breakdown };
 }
 
-// Get agent by refCode
-const getRefCodeDoc = async (
+// ============ ASSIGNMENT LOGIC ============
+
+async function getRefCodeDoc(
   accessToken: string,
   projectId: string,
   refCode: string
-): Promise<Record<string, unknown> | null> => {
+): Promise<Record<string, unknown> | null> {
   const response = await fetch(
     `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/refCodes/${refCode}`,
     { headers: { "Authorization": `Bearer ${accessToken}` } }
   );
 
   if (response.status === 404) return null;
-  if (!response.ok) {
-    console.error("[save-chat-lead] Failed to get refCode:", await response.text());
-    return null;
+  if (!response.ok) return null;
+
+  const doc = await response.json();
+  if (!doc.fields) return null;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(doc.fields as Record<string, Record<string, unknown>>)) {
+    result[key] = parseFirestoreValue(value);
   }
+  return result;
+}
 
-  return parseFirestoreDoc(await response.json());
-};
-
-// Query for active agents by country
-const getAgentByCountry = async (
+async function getAgentByCountry(
   accessToken: string,
   projectId: string,
   country: string
-): Promise<{ uid: string; lineLeaderId: string | null } | null> => {
+): Promise<{ uid: string; lineLeaderId: string | null } | null> {
   const query = {
     structuredQuery: {
       from: [{ collectionId: "users" }],
@@ -435,29 +427,29 @@ const getAgentByCountry = async (
     }
   );
 
-  if (!response.ok) {
-    console.error("[save-chat-lead] Country query failed:", await response.text());
-    return getAnyActiveAgent(accessToken, projectId);
-  }
+  if (!response.ok) return getAnyActiveAgent(accessToken, projectId);
 
   const results = await response.json();
   for (const result of results) {
     if (result.document) {
-      const parsed = parseFirestoreDoc(result.document);
-      if (parsed && (parsed.role === 'AGENT' || parsed.role === 'LINE_LEADER')) {
+      const fields = result.document.fields as Record<string, Record<string, unknown>>;
+      const parsed: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(fields)) {
+        parsed[key] = parseFirestoreValue(value);
+      }
+      if (parsed.role === 'AGENT' || parsed.role === 'LINE_LEADER') {
         return { uid: String(parsed.uid || ''), lineLeaderId: parsed.lineLeaderId ? String(parsed.lineLeaderId) : null };
       }
     }
   }
 
   return getAnyActiveAgent(accessToken, projectId);
-};
+}
 
-// Get any active agent (fallback)
-const getAnyActiveAgent = async (
+async function getAnyActiveAgent(
   accessToken: string,
   projectId: string
-): Promise<{ uid: string; lineLeaderId: string | null } | null> => {
+): Promise<{ uid: string; lineLeaderId: string | null } | null> {
   const query = {
     structuredQuery: {
       from: [{ collectionId: "users" }],
@@ -480,22 +472,27 @@ const getAnyActiveAgent = async (
   const results = await response.json();
   for (const result of results) {
     if (result.document) {
-      const parsed = parseFirestoreDoc(result.document);
-      if (parsed && (parsed.role === 'AGENT' || parsed.role === 'LINE_LEADER')) {
+      const fields = result.document.fields as Record<string, Record<string, unknown>>;
+      const parsed: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(fields)) {
+        parsed[key] = parseFirestoreValue(value);
+      }
+      if (parsed.role === 'AGENT' || parsed.role === 'LINE_LEADER') {
         return { uid: String(parsed.uid || ''), lineLeaderId: parsed.lineLeaderId ? String(parsed.lineLeaderId) : null };
       }
     }
   }
 
   return null;
-};
+}
 
-// Create lead document
-const createLeadDocument = async (
+// ============ CREATE LEAD ============
+
+async function createLeadDocument(
   accessToken: string,
   projectId: string,
   leadData: Record<string, unknown>
-): Promise<string> => {
+): Promise<string> {
   const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(leadData)) {
     fields[key] = toFirestoreValue(value);
@@ -518,7 +515,9 @@ const createLeadDocument = async (
   const doc = await response.json();
   const name = doc.name as string;
   return name.split('/').pop() || '';
-};
+}
+
+// ============ MAIN HANDLER ============
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -531,19 +530,46 @@ serve(async (req) => {
 
     console.log("[save-chat-lead] Processing lead:", { intent, refCode, country });
 
-    // Extract and score agent profile
-    const agentProfile = extractAgentProfile(mergedData);
-    const { score_total, score_tier, score_breakdown } = computeAgentScore(agentProfile);
-
-    console.log("[save-chat-lead] Computed score:", { score_total, score_tier });
-
     // Initialize Firebase Admin
     const { accessToken, projectId } = await initFirebaseAdmin();
 
+    // Extract answers from mergedData
+    const answers = (mergedData.answers || mergedData) as Record<string, unknown>;
+    const chatConfigId = mergedData.chatConfigId as string | undefined;
+    const chatConfigVersion = mergedData.chatConfigVersion as number | undefined;
+
+    // Load config for recalculating score
+    const config = await loadConfig(accessToken, projectId, chatConfigId);
+    
+    let scoreTotal: number;
+    let tier: string;
+    let scoreBreakdown: ScoreBreakdownItem[];
+
+    if (config && config.questions.length > 0) {
+      // Recalculate score server-side using config
+      const recalculated = recalculateScore(answers, config);
+      scoreTotal = recalculated.scoreTotal;
+      tier = recalculated.tier;
+      scoreBreakdown = recalculated.scoreBreakdown;
+      console.log("[save-chat-lead] Recalculated score from config:", { scoreTotal, tier });
+    } else {
+      // Use values from frontend if no config available
+      scoreTotal = (mergedData.scoreTotal as number) || (body.scoreTotal as number) || 0;
+      tier = (mergedData.tier as string) || body.tier || 'NOVATO';
+      scoreBreakdown = (mergedData.scoreBreakdown as ScoreBreakdownItem[]) || [];
+      console.log("[save-chat-lead] Using frontend score (no config):", { scoreTotal, tier });
+    }
+
+    // Extract applicant info
+    const name = answers.name || mergedData.name || mergedData.nombre || 'Sin nombre';
+    const applicantCountry = answers.country || mergedData.country || mergedData.pais || country || 'No especificado';
+    const whatsapp = answers.whatsapp || mergedData.whatsapp || mergedData.telefono || '';
+    const age18 = answers.age18 ?? mergedData.age18 ?? null;
+
+    // Assignment logic
     let assignedAgentId: string | null = null;
     let assignedLineLeaderId: string | null = null;
 
-    // Try to assign by refCode
     if (refCode) {
       const refCodeDoc = await getRefCodeDoc(accessToken, projectId, refCode);
       if (refCodeDoc && refCodeDoc.active !== false) {
@@ -552,9 +578,8 @@ serve(async (req) => {
       }
     }
 
-    // Fallback: assign by country
-    if (!assignedAgentId && (country || agentProfile.country)) {
-      const agent = await getAgentByCountry(accessToken, projectId, String(country || agentProfile.country));
+    if (!assignedAgentId && applicantCountry) {
+      const agent = await getAgentByCountry(accessToken, projectId, String(applicantCountry));
       if (agent) {
         assignedAgentId = agent.uid;
         assignedLineLeaderId = agent.lineLeaderId;
@@ -564,20 +589,27 @@ serve(async (req) => {
     // Build lead document
     const leadDoc = {
       createdAt: new Date(),
-      name: agentProfile.name || 'Sin nombre',
-      country: agentProfile.country || country || 'No especificado',
-      contact: {
-        whatsapp: agentProfile.whatsapp || '',
-      },
+      type: 'AGENT_RECRUITMENT',
+      name: String(name),
+      country: String(applicantCountry),
+      contact: { whatsapp: String(whatsapp) },
       intent: intent || 'AGENTE',
       refCode: refCode || null,
       assignedAgentId,
       assignedLineLeaderId,
       status: assignedAgentId ? 'ASIGNADO' : 'NUEVO',
-      scoreTotal: score_total,
-      tier: score_tier,
-      scoreBreakdown: score_breakdown,
-      agentProfile,
+      scoreTotal,
+      tier,
+      scoreBreakdown,
+      chatConfigId: chatConfigId || null,
+      chatConfigVersion: chatConfigVersion || null,
+      answers,
+      applicant: {
+        name: String(name),
+        whatsapp: String(whatsapp),
+        country: String(applicantCountry),
+        age18: age18,
+      },
       rawJson: mergedData,
       origen: 'chat_ia',
     };
@@ -587,7 +619,15 @@ serve(async (req) => {
     console.log("[save-chat-lead] Lead created with ID:", leadId);
 
     return new Response(
-      JSON.stringify({ success: true, leadId, assignedAgentId, assignedLineLeaderId, score_total, score_tier }),
+      JSON.stringify({ 
+        success: true, 
+        leadId, 
+        assignedAgentId, 
+        assignedLineLeaderId, 
+        scoreTotal, 
+        tier,
+        scoreBreakdown,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
