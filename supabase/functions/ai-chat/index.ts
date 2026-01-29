@@ -21,10 +21,8 @@ interface RequestBody {
 interface DebugInfo {
   intent_detected: string | null;
   missing_fields: string[];
-  score_rules: number;
-  score_ai: number;
   score_total: number;
-  tier: "NOVATO" | "POTENCIAL" | "APROBABLE" | null;
+  tier: "NOVATO" | "POTENCIAL" | "PROMETEDOR" | null;
   error?: string;
 }
 
@@ -35,130 +33,140 @@ interface ConversationalResponse {
   debug: DebugInfo;
 }
 
-// Required fields for each intent before fin_entrevista can be true
-const REQUIRED_FIELDS = {
-  JUGADOR: ["country", "contact", "player_needs", "age_confirmed_18plus"],
-  AGENTE: ["country", "contact", "experience", "payment_methods_knowledge", "capital_range", "availability_hours", "age_confirmed_18plus"],
-};
+// Required fields for AGENTE before fin_entrevista can be true
+// Using the new canonical agent_profile fields
+const REQUIRED_AGENT_FIELDS = [
+  "name",
+  "country", 
+  "whatsapp",
+  "age18",
+  "working_capital_usd",
+  "hours_per_day",
+  "has_local_payment_methods",
+  "wants_to_start_now"
+];
 
-// Scoring rules (0-60 points) - Updated for local currency focus
-const SCORING_RULES = {
-  payment_methods_knowledge: { ninguno: 0, basico: 10, intermedio: 20, avanzado: 25 },
-  capital_range: { "0-100": 0, "100-300": 5, "300-500": 10, "500+": 15 },
-  experience: { ninguna: 0, ventas: 3, finanzas: 5, casinos: 7, multiple: 10 },
-  availability_hours: { "1-2": 3, "3-5": 7, "6+": 10 },
-};
+// Updated system prompt focused on agent recruitment with NEW fields
+const GANAYA_SYSTEM_PROMPT = `Eres el asistente de reclutamiento de Ganaya.bet.
 
-const GANAYA_SYSTEM_PROMPT = `Eres el asistente conversacional oficial de Ganaya.bet.
-
-Tu función es captar, clasificar y convertir usuarios que llegan a la landing page.
+Tu ÚNICO objetivo es reclutar AGENTES (cajeros) para la red de pagos de Ganaya.bet.
+NO atiendes jugadores ni solicitudes de soporte en este flujo.
 
 Idioma: Español neutro latinoamericano.
-Tono: Humano, claro, confiable, directo.
-Nunca suenes robótico ni corporativo.
+Tono: Profesional pero amigable, directo, motivador.
 
-IMPORTANTE - ENFOQUE EN MONEDA LOCAL:
-- Ganaya opera con CAJEROS LOCALES que procesan pagos en MONEDA LOCAL de cada país.
-- Los métodos de pago incluyen: transferencia bancaria, billeteras electrónicas (Mercado Pago, Nequi, Yape, etc.), depósitos.
-- NO menciones USDT, Binance ni criptomonedas como método principal.
-- Si el usuario pregunta por crypto, responde que también pueden orientarlo, pero la operación principal es en moneda local con cajeros.
+ENFOQUE: MONEDA LOCAL
+- Los agentes procesan pagos en MONEDA LOCAL de cada país.
+- Métodos: transferencia bancaria, billeteras electrónicas (Mercado Pago, Nequi, Yape, etc.), efectivo.
+- NO menciones USDT, Binance ni criptomonedas como requisito ni foco del negocio.
 
-OBJETIVO PRINCIPAL:
-Detectar la intención del usuario y guiarlo por el flujo correcto:
-- JUGADOR (quiere jugar, recargar, retirar, crear cuenta)
-- AGENTE (quiere trabajar como cajero, vender fichas, ganar comisiones)
-- SOPORTE (dudas generales)
-
-REGLAS IMPORTANTES:
+REGLAS:
 - Haz solo UNA pregunta por mensaje.
-- No repitas preguntas ya respondidas.
-- Justifica cada pregunta de forma natural.
-- No prometas ganancias ni condiciones ilegales.
-- Siempre confirma que el usuario es mayor de 18 años ANTES de cerrar.
-- NUNCA muestres puntajes, scores ni evaluaciones al usuario.
-- SIEMPRE presenta las opciones con números (1, 2, 3) o letras (a, b, c) para que el usuario pueda responder fácilmente.
-- Ejemplo: "¿Cuántas horas al día podrías dedicar? 1) 1-2 horas 2) 3-5 horas 3) 6 o más"
+- Presenta opciones numeradas (1, 2, 3) para respuestas fáciles.
+- NUNCA muestres puntajes ni scores al usuario.
+- Confirma que es mayor de 18 ANTES de cerrar.
 
-**FORMATO DE RESPUESTA OBLIGATORIO - SOLO JSON:**
-Tu respuesta DEBE ser ÚNICAMENTE un objeto JSON válido. NO incluyas texto antes ni después del JSON.
-NO uses markdown, NO uses \`\`\`json, SOLO el objeto JSON puro.
+**FORMATO DE RESPUESTA - SOLO JSON:**
+Tu respuesta DEBE ser ÚNICAMENTE un objeto JSON válido. Sin markdown, sin texto extra.
 
 {
-  "reply": "Mensaje visible para el usuario (string)",
+  "reply": "Mensaje para el usuario",
   "datos_lead_update": {
-    "intent": "JUGADOR | AGENTE | SOPORTE (solo cuando lo detectes)",
-    "country": "país del usuario",
-    "contact": { "whatsapp": "número" } o { "telegram": "@usuario" },
-    "name": "nombre del usuario",
-    "age_confirmed_18plus": true/false,
-    
-    // Solo para JUGADOR:
-    "player_needs": { "need": "crear_cuenta | recargar | retirar | bonos | otro" },
-    "preferred_payment": "transferencia | billetera | deposito | otro",
-    
-    // Solo para AGENTE:
-    "experience": "ninguna | ventas | finanzas | casinos | multiple",
-    "payment_methods_knowledge": "ninguno | basico | intermedio | avanzado",
-    "capital_range": "0-100 | 100-300 | 300-500 | 500+",
-    "availability_hours": "1-2 | 3-5 | 6+",
-    "score_ai": 0-40 (tu evaluación cualitativa: claridad, motivación, profesionalismo)
+    "name": "nombre completo",
+    "country": "país",
+    "whatsapp": "número con código de país",
+    "age18": true/false,
+    "working_capital_usd": "0-100 | 100-300 | 300-500 | 500+",
+    "hours_per_day": "1-2 | 3-5 | 6+",
+    "sales_or_customer_service_exp": true/false/null,
+    "casino_or_betting_exp": true/false/null,
+    "has_local_payment_methods": true/false,
+    "wants_to_start_now": true/false
   },
   "fin_entrevista": false,
   "debug": {
-    "intent_detected": "JUGADOR | AGENTE | SOPORTE | null",
-    "missing_fields": ["lista de campos que aún faltan"],
-    "score_rules": 0,
-    "score_ai": 0,
+    "intent_detected": "AGENTE",
+    "missing_fields": ["lista de campos que faltan"],
     "score_total": 0,
-    "tier": "NOVATO | POTENCIAL | APROBABLE | null"
+    "tier": "NOVATO | POTENCIAL | PROMETEDOR"
   }
 }
 
-DETECCIÓN DE INTENCIÓN:
-- Si menciona jugar, apostar, slots, recargar, retirar, casino, bonos → intent = JUGADOR
-- Si menciona trabajar, ser cajero, vender fichas, comisiones, agente → intent = AGENTE
-- Si pregunta sin claridad → pide aclaración breve
+FLUJO DE PREGUNTAS (en este orden):
 
-FLUJO JUGADOR (campos requeridos: country, contact, player_needs.need, age_confirmed_18plus):
-1. Pregunta qué necesita (crear cuenta / recargar / retirar / bonos)
-2. Pregunta país
-3. Pregunta: "¿Cómo prefieres recargar/retirar? 1) Transferencia bancaria 2) Billetera electrónica 3) Depósito 4) Otro"
-4. Solicita WhatsApp o Telegram
-5. Confirma +18
-6. Solo marca fin_entrevista=true cuando tengas TODOS los campos requeridos
+1. "¡Hola! Soy el asistente de reclutamiento de Ganaya.bet. ¿Cuál es tu nombre completo?"
+   → Guarda en: name
 
-FLUJO AGENTE (campos requeridos: country, contact, experience, payment_methods_knowledge, capital_range, availability_hours, age_confirmed_18plus):
-1. Pregunta experiencia (casinos, ventas, recargas, finanzas, ninguna)
-2. Pregunta conocimiento de métodos de pago locales (ninguno, básico, intermedio, avanzado)
-3. Pregunta rango de capital para operar ($0-100, $100-300, $300-500, $500+)
-4. Pregunta horas diarias disponibles (1-2, 3-5, 6+)
-5. Solicita nombre, país y WhatsApp/Telegram
-6. Confirma +18
-7. Calcula score_ai (0-40) basado en: claridad en respuestas, motivación demostrada, profesionalismo
-8. Solo marca fin_entrevista=true cuando tengas TODOS los campos requeridos
+2. "¿En qué país te encuentras?"
+   → Guarda en: country
 
-SCORING (interno, NUNCA mostrar al usuario):
-- score_rules: payment_methods(0-25) + capital(0-15) + experiencia(0-10) + disponibilidad(0-10) = 0-60
-- score_ai: tu evaluación cualitativa 0-40
-- score_total: score_rules + score_ai = 0-100
-- tier: NOVATO (<60), POTENCIAL (60-79), APROBABLE (>=80)
+3. "¿Tienes experiencia en ventas, atención al cliente o trabajos similares?
+   1) Sí, tengo experiencia
+   2) No, pero quiero aprender"
+   → Guarda en: sales_or_customer_service_exp (true/false)
 
-CIERRE:
-- Jugador: "¡Perfecto! Te conecto con un cajero asignado que te ayudará por WhatsApp. Podrás recargar y retirar en tu moneda local."
-- Agente: "¡Excelente! Tu perfil fue registrado y será evaluado por nuestro equipo. Te contactaremos pronto."
+4. "¿Has trabajado antes con casinos, apuestas deportivas o plataformas de juegos?
+   1) Sí
+   2) No"
+   → Guarda en: casino_or_betting_exp (true/false)
 
-RECUERDA: Responde SOLO con JSON válido, sin texto adicional.`;
+5. "¿Conoces los métodos de pago locales de tu país (transferencias, billeteras como Mercado Pago, Nequi, Yape)?
+   1) Sí, los manejo bien
+   2) Conozco algunos
+   3) No los conozco"
+   → Guarda en: has_local_payment_methods (true si opción 1 o 2, false si 3)
 
-// Extract JSON from potentially malformed response, or create one from plain text
+6. "Para operar como agente necesitas capital de trabajo (para cubrir recargas). ¿Con qué rango podrías empezar?
+   1) Menos de $100 USD
+   2) Entre $100 y $300 USD
+   3) Entre $300 y $500 USD
+   4) Más de $500 USD"
+   → Guarda en: working_capital_usd ("0-100", "100-300", "300-500", "500+")
+
+7. "¿Cuántas horas al día podrías dedicar?
+   1) 1-2 horas
+   2) 3-5 horas
+   3) 6 horas o más"
+   → Guarda en: hours_per_day ("1-2", "3-5", "6+")
+
+8. "¿Estás listo para empezar en los próximos días?
+   1) Sí, quiero empezar cuanto antes
+   2) Aún estoy evaluando"
+   → Guarda en: wants_to_start_now (true/false)
+
+9. "¿Cuál es tu número de WhatsApp? (incluye código de país, ej: +52 55 1234 5678)"
+   → Guarda en: whatsapp
+
+10. "Por último, ¿confirmas que eres mayor de 18 años?
+    1) Sí, soy mayor de 18
+    2) No"
+    → Guarda en: age18 (true/false)
+
+Cuando tengas TODOS los campos requeridos (name, country, whatsapp, age18, working_capital_usd, hours_per_day, has_local_payment_methods, wants_to_start_now), marca fin_entrevista=true y responde:
+
+"¡Excelente! Tu perfil fue registrado y será evaluado por nuestro equipo. Te contactaremos pronto por WhatsApp."
+
+SCORING (interno, NO mostrar):
+- working_capital_usd >= 300 → +30 pts
+- hours_per_day >= 4h → +20 pts (2-4h → +10 pts)
+- has_local_payment_methods → +15 pts
+- sales_or_customer_service_exp → +15 pts
+- casino_or_betting_exp → +10 pts
+- wants_to_start_now → +10 pts
+Total posible: 100 pts
+
+Tiers:
+- PROMETEDOR: ≥70 pts
+- POTENCIAL: 40-69 pts
+- NOVATO: <40 pts
+
+RECUERDA: Responde SOLO con JSON válido.`;
+
+// Extract JSON from potentially malformed response
 function extractJSON(text: string): Record<string, unknown> | null {
-  // Remove markdown code blocks
   let cleaned = text.trim();
+  cleaned = cleaned.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
   
-  // Remove ```json or ``` markers
-  cleaned = cleaned.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '');
-  cleaned = cleaned.trim();
-  
-  // Try to find JSON object boundaries
   const firstBrace = cleaned.indexOf('{');
   const lastBrace = cleaned.lastIndexOf('}');
   
@@ -171,15 +179,13 @@ function extractJSON(text: string): Record<string, unknown> | null {
     }
   }
   
-  // Direct parse attempt
   try {
     return JSON.parse(cleaned);
   } catch (e) {
     console.error("Direct JSON parse failed:", e);
   }
   
-  // FALLBACK: If AI responded with plain text instead of JSON, wrap it as a reply
-  // This prevents "problema técnico" when AI forgets to use JSON format
+  // Fallback: wrap plain text as reply
   if (cleaned.length > 10 && !cleaned.startsWith('{')) {
     console.log("Creating JSON wrapper for plain text response");
     return {
@@ -187,10 +193,8 @@ function extractJSON(text: string): Record<string, unknown> | null {
       datos_lead_update: {},
       fin_entrevista: false,
       debug: {
-        intent_detected: null,
+        intent_detected: "AGENTE",
         missing_fields: [],
-        score_rules: 0,
-        score_ai: 0,
         score_total: 0,
         tier: null,
         wrapped_plain_text: true
@@ -199,87 +203,6 @@ function extractJSON(text: string): Record<string, unknown> | null {
   }
   
   return null;
-}
-
-// Calculate rules-based score - Updated for local currency focus
-function calculateRulesScore(data: Record<string, unknown>): number {
-  let score = 0;
-  
-  // Payment methods knowledge (0-25)
-  const paymentLevel = String(data.payment_methods_knowledge || '').toLowerCase();
-  if (paymentLevel.includes('avanzado')) score += 25;
-  else if (paymentLevel.includes('intermedio')) score += 20;
-  else if (paymentLevel.includes('basico') || paymentLevel.includes('básico')) score += 10;
-  
-  // Capital range (0-15)
-  const capital = String(data.capital_range || '');
-  if (capital.includes('500+') || capital.includes('500 o más')) score += 15;
-  else if (capital.includes('300-500') || capital.includes('300')) score += 10;
-  else if (capital.includes('100-300')) score += 5;
-  
-  // Experience (0-10)
-  const experience = String(data.experience || '').toLowerCase();
-  if (experience.includes('multiple') || experience.includes('múltiple') || experience.includes('varias')) score += 10;
-  else if (experience.includes('casino')) score += 7;
-  else if (experience.includes('finanza')) score += 5;
-  else if (experience.includes('venta')) score += 3;
-  
-  // Availability (0-10)
-  const hours = String(data.availability_hours || '');
-  if (hours.includes('6') || hours.includes('más') || hours.includes('full')) score += 10;
-  else if (hours.includes('3') || hours.includes('4') || hours.includes('5')) score += 7;
-  else if (hours.includes('1') || hours.includes('2')) score += 3;
-  
-  return Math.min(score, 60);
-}
-
-// Validate required fields
-function validateRequiredFields(intent: string, data: Record<string, unknown>): string[] {
-  const missing: string[] = [];
-  const required = REQUIRED_FIELDS[intent as keyof typeof REQUIRED_FIELDS] || [];
-  
-  for (const field of required) {
-    if (field === "contact") {
-      const contact = data.contact as Record<string, unknown> | undefined;
-      if (!contact || (!contact.whatsapp && !contact.telegram)) {
-        missing.push("contact (whatsapp o telegram)");
-      }
-    } else if (field === "player_needs") {
-      const playerNeeds = data.player_needs as Record<string, unknown> | undefined;
-      if (!playerNeeds || !playerNeeds.need) {
-        missing.push("player_needs.need");
-      }
-    } else if (!data[field]) {
-      missing.push(field);
-    }
-  }
-  
-  return missing;
-}
-
-// Get tier from score
-function getTier(score: number): "NOVATO" | "POTENCIAL" | "APROBABLE" {
-  if (score >= 80) return "APROBABLE";
-  if (score >= 60) return "POTENCIAL";
-  return "NOVATO";
-}
-
-// Create fallback response
-function createFallbackResponse(errorMsg: string): ConversationalResponse {
-  return {
-    reply: "Tuve un problema técnico, ¿podrías repetir tu última respuesta por favor?",
-    datos_lead_update: {},
-    fin_entrevista: false,
-    debug: {
-      intent_detected: null,
-      missing_fields: [],
-      score_rules: 0,
-      score_ai: 0,
-      score_total: 0,
-      tier: null,
-      error: errorMsg,
-    },
-  };
 }
 
 // Normalize field aliases to canonical names
@@ -296,24 +219,137 @@ function normalizeFieldAliases(data: Record<string, unknown>): Record<string, un
     normalized.name = normalized.nombre;
   }
   
-  // telefono/whatsapp -> contact.whatsapp
-  if (!normalized.contact) {
-    const whatsapp = normalized.whatsapp || normalized.telefono;
-    if (whatsapp) {
-      normalized.contact = { whatsapp: String(whatsapp) };
+  // Various contact aliases -> whatsapp
+  if (!normalized.whatsapp) {
+    if (normalized.telefono) normalized.whatsapp = normalized.telefono;
+    const contact = normalized.contact as Record<string, unknown> | undefined;
+    if (contact?.whatsapp) normalized.whatsapp = contact.whatsapp;
+  }
+  
+  // mayor_18/mayor_edad/age_confirmed_18plus -> age18
+  if (normalized.age18 === undefined) {
+    if (normalized.age_confirmed_18plus !== undefined) {
+      normalized.age18 = normalized.age_confirmed_18plus;
+    } else if (normalized.mayor_18 !== undefined) {
+      normalized.age18 = normalized.mayor_18;
+    } else if (normalized.mayor_edad !== undefined) {
+      normalized.age18 = normalized.mayor_edad;
     }
   }
   
-  // mayor_18/mayor_edad -> age_confirmed_18plus
-  if (!normalized.age_confirmed_18plus) {
-    if (normalized.mayor_18 !== undefined) {
-      normalized.age_confirmed_18plus = Boolean(normalized.mayor_18);
-    } else if (normalized.mayor_edad !== undefined) {
-      normalized.age_confirmed_18plus = Boolean(normalized.mayor_edad);
+  // capital aliases -> working_capital_usd
+  if (normalized.working_capital_usd === undefined) {
+    if (normalized.capital_range !== undefined) {
+      normalized.working_capital_usd = normalized.capital_range;
+    } else if (normalized.capital !== undefined) {
+      normalized.working_capital_usd = normalized.capital;
+    } else if (normalized.banca !== undefined) {
+      normalized.working_capital_usd = normalized.banca;
     }
+  }
+  
+  // hours aliases -> hours_per_day
+  if (normalized.hours_per_day === undefined) {
+    if (normalized.availability_hours !== undefined) {
+      normalized.hours_per_day = normalized.availability_hours;
+    } else if (normalized.horas !== undefined) {
+      normalized.hours_per_day = normalized.horas;
+    }
+  }
+  
+  // experience aliases
+  if (normalized.experience !== undefined) {
+    const exp = String(normalized.experience).toLowerCase();
+    if (normalized.sales_or_customer_service_exp === undefined) {
+      if (exp.includes('venta') || exp.includes('atencion') || exp.includes('finanza')) {
+        normalized.sales_or_customer_service_exp = true;
+      }
+    }
+    if (normalized.casino_or_betting_exp === undefined) {
+      if (exp.includes('casino') || exp.includes('apuesta') || exp.includes('plataforma') || exp.includes('juego')) {
+        normalized.casino_or_betting_exp = true;
+      }
+    }
+  }
+  
+  // payment_methods_knowledge -> has_local_payment_methods
+  if (normalized.has_local_payment_methods === undefined && normalized.payment_methods_knowledge !== undefined) {
+    const level = String(normalized.payment_methods_knowledge).toLowerCase();
+    normalized.has_local_payment_methods = level !== 'ninguno' && level !== 'no';
+  }
+  
+  // quiere_empezar -> wants_to_start_now
+  if (normalized.wants_to_start_now === undefined && normalized.quiere_empezar !== undefined) {
+    normalized.wants_to_start_now = normalized.quiere_empezar;
   }
   
   return normalized;
+}
+
+// Calculate score (matches agent-scoring.ts logic)
+function calculateScore(data: Record<string, unknown>): { total: number; tier: "NOVATO" | "POTENCIAL" | "PROMETEDOR" } {
+  let total = 0;
+  
+  // working_capital_usd >= 300 => +30
+  const capital = String(data.working_capital_usd || '');
+  if (capital.includes('500') || capital.includes('+') || capital.includes('más')) total += 30;
+  else if (capital.includes('300')) total += 30;
+  else if (capital.includes('100')) total += 15;
+  
+  // hours_per_day >= 4 => +20 (>=2 => +10)
+  const hours = String(data.hours_per_day || '');
+  if (hours.includes('6') || hours.includes('+') || hours.includes('más')) total += 20;
+  else if (hours.includes('3') || hours.includes('4') || hours.includes('5')) total += 10;
+  
+  // has_local_payment_methods => +15
+  if (data.has_local_payment_methods === true) total += 15;
+  
+  // sales_or_customer_service_exp => +15
+  if (data.sales_or_customer_service_exp === true) total += 15;
+  
+  // casino_or_betting_exp => +10
+  if (data.casino_or_betting_exp === true) total += 10;
+  
+  // wants_to_start_now => +10
+  if (data.wants_to_start_now === true) total += 10;
+  
+  const tier = total >= 70 ? "PROMETEDOR" : total >= 40 ? "POTENCIAL" : "NOVATO";
+  
+  return { total, tier };
+}
+
+// Validate required fields
+function validateRequiredFields(data: Record<string, unknown>): string[] {
+  const missing: string[] = [];
+  
+  for (const field of REQUIRED_AGENT_FIELDS) {
+    if (field === "whatsapp") {
+      const contact = data.contact as Record<string, unknown> | undefined;
+      if (!data.whatsapp && !contact?.whatsapp) {
+        missing.push("whatsapp");
+      }
+    } else if (data[field] === undefined || data[field] === null) {
+      missing.push(field);
+    }
+  }
+  
+  return missing;
+}
+
+// Create fallback response
+function createFallbackResponse(errorMsg: string): ConversationalResponse {
+  return {
+    reply: "Tuve un problema técnico, ¿podrías repetir tu última respuesta por favor?",
+    datos_lead_update: {},
+    fin_entrevista: false,
+    debug: {
+      intent_detected: "AGENTE",
+      missing_fields: [],
+      score_total: 0,
+      tier: null,
+      error: errorMsg,
+    },
+  };
 }
 
 // Process and validate AI response
@@ -321,11 +357,10 @@ function processAIResponse(rawContent: string, collectedData: Record<string, unk
   const parsed = extractJSON(rawContent);
   
   if (!parsed) {
-    console.error("Failed to extract JSON from:", rawContent);
+    console.error("Failed to extract JSON from:", rawContent.substring(0, 200));
     return createFallbackResponse("invalid_json_extraction");
   }
   
-  // Validate required response fields
   if (typeof parsed.reply !== 'string' || !parsed.reply) {
     console.error("Missing or invalid 'reply' field");
     return createFallbackResponse("missing_reply_field");
@@ -335,27 +370,15 @@ function processAIResponse(rawContent: string, collectedData: Record<string, unk
   const datosUpdate = (parsed.datos_lead_update || {}) as Record<string, unknown>;
   const rawMergedData = { ...collectedData, ...datosUpdate };
   
-  // Normalize field aliases before validation
+  // Normalize field aliases
   const mergedData = normalizeFieldAliases(rawMergedData);
   
-  // Get intent
-  const intent = String(datosUpdate.intent || mergedData.intent || '').toUpperCase();
+  // Calculate scores
+  const { total: scoreTotal, tier: scoreTier } = calculateScore(mergedData);
   
-  // Calculate scores for agents
-  let scoreRules = 0;
-  let scoreAI = 0;
-  let scoreTier: "NOVATO" | "POTENCIAL" | "APROBABLE" | null = null;
-  
-  if (intent === "AGENTE") {
-    scoreRules = calculateRulesScore(mergedData);
-    scoreAI = Math.min(Math.max(Number(datosUpdate.score_ai) || 0, 0), 40);
-    const scoreTotal = scoreRules + scoreAI;
-    scoreTier = getTier(scoreTotal);
-  }
-  
-  // Validate required fields before allowing fin_entrevista
+  // Validate required fields
   let finEntrevista = Boolean(parsed.fin_entrevista);
-  const missingFields = intent ? validateRequiredFields(intent, mergedData) : [];
+  const missingFields = validateRequiredFields(mergedData);
   
   // Don't allow fin_entrevista if fields are missing
   if (finEntrevista && missingFields.length > 0) {
@@ -363,20 +386,19 @@ function processAIResponse(rawContent: string, collectedData: Record<string, unk
     finEntrevista = false;
   }
   
-  // Build validated response
   const response: ConversationalResponse = {
     reply: String(parsed.reply),
     datos_lead_update: datosUpdate,
     fin_entrevista: finEntrevista,
     debug: {
-      intent_detected: intent || null,
+      intent_detected: "AGENTE",
       missing_fields: missingFields,
-      score_rules: scoreRules,
-      score_ai: scoreAI,
-      score_total: scoreRules + scoreAI,
+      score_total: scoreTotal,
       tier: scoreTier,
     },
   };
+  
+  console.log("Processed response debug:", response.debug);
   
   return response;
 }
@@ -392,12 +414,12 @@ serve(async (req) => {
     console.log("Request type:", type);
     console.log("Collected data:", JSON.stringify(collectedData));
     
-    // Initialize Supabase client to read settings
+    // Initialize Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    // Try to get custom Gemini API key from settings
+    // Try to get custom Gemini API key
     let customGeminiKey: string | null = null;
     try {
       const { data: settings } = await supabase
@@ -409,16 +431,14 @@ serve(async (req) => {
       customGeminiKey = settings?.gemini_api_key || null;
       console.log("Custom Gemini key configured:", !!customGeminiKey);
     } catch (err) {
-      console.log("Could not read settings, using default:", err);
+      console.log("Could not read settings:", err);
     }
 
-    // Determine which API to use
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     const useCustomGemini = !!customGeminiKey;
     const useLovableGateway = !useCustomGemini && !!LOVABLE_API_KEY;
 
     if (!useCustomGemini && !useLovableGateway) {
-      console.error("No AI API configured");
       return new Response(
         JSON.stringify({ 
           error: "AI service not configured",
@@ -429,8 +449,8 @@ serve(async (req) => {
       );
     }
 
-    // Build system prompt based on request type
-    let systemPrompt = "Eres un asistente de Ganaya.bet. Responde en español, sé amable y conciso.";
+    // Build system prompt
+    let systemPrompt = "Eres un asistente de Ganaya.bet. Responde en español.";
 
     if (type === "conversational") {
       const collectedInfo = collectedData && Object.keys(collectedData).length > 0 
@@ -441,22 +461,21 @@ serve(async (req) => {
 DATOS YA RECOPILADOS DEL USUARIO:
 ${collectedInfo}
 
-RECUERDA: Tu respuesta debe ser SOLO un objeto JSON válido, sin texto adicional antes ni después.`;
+RECUERDA: Tu respuesta debe ser SOLO un objeto JSON válido.`;
     } else if (type === "summarize" && leadData) {
-      systemPrompt = `Eres un asistente de ventas de Ganaya.bet. Analiza los datos de este lead y genera un resumen conciso.
-Datos del lead: ${JSON.stringify(leadData)}
+      systemPrompt = `Analiza este lead de agente y genera un resumen.
+Datos: ${JSON.stringify(leadData)}
 
-Responde con un JSON estructurado:
+Responde con JSON:
 {
-  "resumen": "resumen de 2-3 oraciones sobre el perfil",
-  "objeciones": ["lista de posibles objeciones detectadas"],
+  "resumen": "resumen de 2-3 oraciones",
   "recomendacion": "siguiente paso sugerido",
-  "mensaje_whatsapp": "mensaje corto para enviar por WhatsApp"
+  "mensaje_whatsapp": "mensaje corto para WhatsApp"
 }`;
     } else if (type === "suggest_whatsapp" && leadData) {
-      systemPrompt = `Genera un mensaje de WhatsApp personalizado para este lead.
+      systemPrompt = `Genera un mensaje de WhatsApp para este lead de agente.
 Datos: ${JSON.stringify(leadData)}
-Mensaje amigable, profesional, máximo 200 caracteres.`;
+Mensaje profesional, máximo 200 caracteres.`;
     }
 
     let rawContent = "";
@@ -472,7 +491,7 @@ Mensaje amigable, profesional, máximo 200 caracteres.`;
         }))
       ];
 
-      const response = await fetch(
+      const geminiResponse = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${customGeminiKey}`,
         {
           method: "POST",
@@ -481,114 +500,78 @@ Mensaje amigable, profesional, máximo 200 caracteres.`;
             contents: geminiMessages,
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 1024,
+              maxOutputTokens: 1000,
             },
           }),
         }
       );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Gemini API error:", response.status, errorText);
-        
-        if (response.status === 429) {
-          return new Response(
-            JSON.stringify({ error: "Límite de solicitudes excedido." }), 
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        
-        // Fall through to Lovable Gateway
-        if (!useLovableGateway) {
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              data: createFallbackResponse("gemini_api_error") 
-            }), 
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      } else {
-        const data = await response.json();
-        rawContent = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (!geminiResponse.ok) {
+        const error = await geminiResponse.text();
+        console.error("Gemini API error:", error);
+        throw new Error(`Gemini API error: ${geminiResponse.status}`);
       }
-    }
 
-    // Use Lovable AI Gateway if needed
-    if (!rawContent && useLovableGateway) {
+      const geminiData = await geminiResponse.json();
+      rawContent = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } else {
       console.log("Using Lovable AI Gateway");
       
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const gatewayMessages = [
+        { role: "system", content: systemPrompt },
+        ...messages
+      ];
+
+      const gatewayResponse = await fetch("https://ai.lovable.dev/v2/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...messages,
-          ],
-          stream: false,
+          messages: gatewayMessages,
+          temperature: 0.7,
+          max_tokens: 1000,
         }),
       });
 
-      if (!response.ok) {
-        if (response.status === 429) {
-          return new Response(
-            JSON.stringify({ error: "Límite de solicitudes excedido." }), 
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        if (response.status === 402) {
-          return new Response(
-            JSON.stringify({ error: "Créditos de IA agotados." }), 
-            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        const errorText = await response.text();
-        console.error("Lovable Gateway error:", response.status, errorText);
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            data: createFallbackResponse("lovable_gateway_error") 
-          }), 
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (!gatewayResponse.ok) {
+        const error = await gatewayResponse.text();
+        console.error("Gateway API error:", error);
+        throw new Error(`Gateway API error: ${gatewayResponse.status}`);
       }
 
-      const data = await response.json();
-      rawContent = data.choices?.[0]?.message?.content || "";
+      const gatewayData = await gatewayResponse.json();
+      rawContent = gatewayData.choices?.[0]?.message?.content || "";
     }
 
-    console.log("Raw AI content:", rawContent.substring(0, 500));
+    console.log("Raw AI content:", rawContent.substring(0, 300));
 
-    // Process based on type
+    // For conversational type, process and validate
     if (type === "conversational") {
       const processed = processAIResponse(rawContent, collectedData);
-      console.log("Processed response debug:", processed.debug);
-      
-      return new Response(
-        JSON.stringify({ success: true, data: processed }), 
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } else {
-      // Simple response for other types
-      return new Response(
-        JSON.stringify({ success: true, content: rawContent }), 
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify(processed), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-  } catch (error) {
-    console.error("AI Chat error:", error);
+    // For other types, return raw
+    return new Response(JSON.stringify({ content: rawContent }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error: unknown) {
+    console.error("Error in ai-chat:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        data: createFallbackResponse(String(error)) 
-      }), 
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        error: message,
+        reply: "Lo siento, tuve un problema. ¿Podrías repetir?",
+        datos_lead_update: {},
+        fin_entrevista: false,
+        debug: { error: message, intent_detected: null, missing_fields: [], score_total: 0, tier: null }
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

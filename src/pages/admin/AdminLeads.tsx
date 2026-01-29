@@ -391,37 +391,7 @@ const AdminLeads = () => {
 
       {selectedLead && (
         <LeadDetailModal
-          lead={{
-            id: selectedLead.id,
-            nombre: selectedLead.name,
-            whatsapp: selectedLead.contact.whatsapp || '',
-            pais: selectedLead.country,
-            ciudad: selectedLead.city,
-            email: selectedLead.contact.email,
-            estado: selectedLead.status.toLowerCase() as any,
-            tipo: selectedLead.intent === 'AGENTE' ? 'agente' : 'cliente',
-            score: selectedLead.scoreTotal,
-            etiqueta: selectedLead.tier === 'APROBABLE' ? 'AGENTE_POTENCIAL_ALTO' : 
-                     selectedLead.tier === 'POTENCIAL' ? 'AGENTE_POTENCIAL_MEDIO' : 
-                     selectedLead.tier === 'NOVATO' ? 'AGENTE_POTENCIAL_BAJO' : 'CLIENTE',
-            ref_code: selectedLead.refCode,
-            asignado_agente_id: selectedLead.assignedAgentId,
-            created_at: selectedLead.createdAt.toISOString(),
-            binance_verificada: null,
-            banca_300: null,
-            exp_casinos: null,
-            exp_atencion: null,
-            prefiere_usdt: null,
-            aposto_antes: null,
-            p2p_nivel: null,
-            horas_dia: null,
-            edad: null,
-            origen: selectedLead.origen,
-            utm_source: null,
-            utm_medium: null,
-            utm_campaign: null,
-            quiere_empezar: null,
-          }}
+          lead={selectedLead}
           onClose={() => setSelectedLead(null)}
           getAgentName={getAgentName}
         />

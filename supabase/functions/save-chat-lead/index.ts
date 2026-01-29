@@ -5,15 +5,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface AgentProfile {
+  name: string | null;
+  country: string | null;
+  whatsapp: string | null;
+  age18: boolean | null;
+  working_capital_usd: number | string | null;
+  hours_per_day: number | string | null;
+  sales_or_customer_service_exp: boolean | null;
+  casino_or_betting_exp: boolean | null;
+  has_local_payment_methods: boolean | null;
+  wants_to_start_now: boolean | null;
+}
+
+interface ScoreBreakdownItem {
+  key: string;
+  label: string;
+  value: boolean | string | number | null;
+  pointsAwarded: number;
+  maxPoints: number;
+}
+
 interface SaveLeadRequest {
   mergedData: Record<string, unknown>;
   debug: {
     intent_detected: string | null;
     missing_fields: string[];
-    score_rules: number;
-    score_ai: number;
     score_total: number;
-    tier: "NOVATO" | "POTENCIAL" | "APROBABLE" | null;
+    tier: string | null;
   };
   intent: "AGENTE" | "JUGADOR" | "SOPORTE" | null;
   refCode: string | null;
@@ -107,7 +126,7 @@ const initFirebaseAdmin = async () => {
   };
 };
 
-// Parse Firestore document to plain object
+// Parse Firestore document
 function parseFirestoreDoc(doc: Record<string, unknown>): Record<string, unknown> | null {
   if (!doc || !doc.fields) return null;
   
@@ -144,7 +163,6 @@ function parseFirestoreValue(value: Record<string, unknown>): unknown {
   return null;
 }
 
-// Convert value to Firestore format
 function toFirestoreValue(value: unknown): Record<string, unknown> {
   if (value === null || value === undefined) {
     return { nullValue: null };
@@ -181,7 +199,192 @@ function toFirestoreValue(value: unknown): Record<string, unknown> {
   return { nullValue: null };
 }
 
-// Get agent by refCode from refCodes collection
+// Extract and normalize agent profile from raw data
+function extractAgentProfile(rawData: Record<string, unknown>): AgentProfile {
+  // Normalize aliases
+  const name = rawData.name || rawData.nombre || null;
+  const country = rawData.country || rawData.pais || null;
+  
+  // Extract whatsapp
+  let whatsapp: string | null = null;
+  const contact = rawData.contact as Record<string, unknown> | undefined;
+  if (contact?.whatsapp) {
+    whatsapp = String(contact.whatsapp);
+  } else if (rawData.whatsapp) {
+    whatsapp = String(rawData.whatsapp);
+  } else if (rawData.telefono) {
+    whatsapp = String(rawData.telefono);
+  }
+  
+  // Normalize whatsapp to digits and + only
+  if (whatsapp) {
+    whatsapp = whatsapp.replace(/[^\d+]/g, '');
+  }
+  
+  // Age confirmation
+  const age18 = rawData.age18 ?? rawData.age_confirmed_18plus ?? rawData.mayor_18 ?? rawData.mayor_edad ?? null;
+  
+  // Capital
+  const rawCapital = rawData.working_capital_usd ?? rawData.capital_range ?? rawData.capital ?? rawData.banca ?? null;
+  const working_capital_usd: string | number | null = rawCapital !== null && typeof rawCapital !== 'object' 
+    ? (typeof rawCapital === 'string' || typeof rawCapital === 'number' ? rawCapital : null) 
+    : null;
+  
+  // Hours
+  const rawHours = rawData.hours_per_day ?? rawData.availability_hours ?? rawData.horas ?? null;
+  const hours_per_day: string | number | null = rawHours !== null && typeof rawHours !== 'object'
+    ? (typeof rawHours === 'string' || typeof rawHours === 'number' ? rawHours : null)
+    : null;
+  
+  // Payment methods
+  let has_local_payment_methods = rawData.has_local_payment_methods ?? null;
+  if (has_local_payment_methods === null && rawData.payment_methods_knowledge !== undefined) {
+    const level = String(rawData.payment_methods_knowledge).toLowerCase();
+    has_local_payment_methods = level !== 'ninguno' && level !== 'no';
+  }
+  
+  // Sales experience
+  let sales_or_customer_service_exp = rawData.sales_or_customer_service_exp ?? null;
+  if (sales_or_customer_service_exp === null && rawData.experience !== undefined) {
+    const exp = String(rawData.experience).toLowerCase();
+    if (exp.includes('venta') || exp.includes('atencion') || exp.includes('finanza')) {
+      sales_or_customer_service_exp = true;
+    }
+  }
+  
+  // Casino experience
+  let casino_or_betting_exp = rawData.casino_or_betting_exp ?? null;
+  if (casino_or_betting_exp === null && rawData.experience !== undefined) {
+    const exp = String(rawData.experience).toLowerCase();
+    if (exp.includes('casino') || exp.includes('apuesta') || exp.includes('plataforma') || exp.includes('juego')) {
+      casino_or_betting_exp = true;
+    }
+  }
+  
+  // Wants to start now
+  const wants_to_start_now = rawData.wants_to_start_now ?? rawData.quiere_empezar ?? null;
+  
+  return {
+    name: name ? String(name) : null,
+    country: country ? String(country) : null,
+    whatsapp,
+    age18: age18 === true || age18 === 'true' || age18 === 'sí' || age18 === 'si' ? true : 
+           age18 === false || age18 === 'false' || age18 === 'no' ? false : null,
+    working_capital_usd,
+    hours_per_day,
+    sales_or_customer_service_exp: sales_or_customer_service_exp === true ? true :
+                                   sales_or_customer_service_exp === false ? false : null,
+    casino_or_betting_exp: casino_or_betting_exp === true ? true :
+                           casino_or_betting_exp === false ? false : null,
+    has_local_payment_methods: has_local_payment_methods === true ? true :
+                               has_local_payment_methods === false ? false : null,
+    wants_to_start_now: wants_to_start_now === true || wants_to_start_now === 'sí' || wants_to_start_now === 'si' ? true :
+                        wants_to_start_now === false || wants_to_start_now === 'no' ? false : null,
+  };
+}
+
+// Compute agent score
+function computeAgentScore(profile: AgentProfile): { score_total: number; score_tier: string; score_breakdown: ScoreBreakdownItem[] } {
+  const breakdown: ScoreBreakdownItem[] = [];
+  let total = 0;
+
+  // Helper to parse capital
+  const parseCapital = (value: number | string | null): number => {
+    if (value === null) return 0;
+    if (typeof value === 'number') return value;
+    const str = String(value).toLowerCase();
+    if (str.includes('500') || str.includes('+') || str.includes('más')) return 500;
+    if (str.includes('300')) return 300;
+    if (str.includes('100')) return 100;
+    return 0;
+  };
+
+  // Helper to parse hours
+  const parseHours = (value: number | string | null): number => {
+    if (value === null) return 0;
+    if (typeof value === 'number') return value;
+    const str = String(value).toLowerCase();
+    if (str.includes('6') || str.includes('+') || str.includes('más')) return 6;
+    if (str.includes('5')) return 5;
+    if (str.includes('4')) return 4;
+    if (str.includes('3')) return 3;
+    return 0;
+  };
+
+  // 1. Working Capital (30 max)
+  const capitalValue = parseCapital(profile.working_capital_usd);
+  const capitalPoints = capitalValue >= 300 ? 30 : capitalValue >= 100 ? 15 : 0;
+  total += capitalPoints;
+  breakdown.push({
+    key: 'working_capital_usd',
+    label: 'Banca $300+',
+    value: profile.working_capital_usd,
+    pointsAwarded: capitalPoints,
+    maxPoints: 30,
+  });
+
+  // 2. Hours per day (20 max)
+  const hoursValue = parseHours(profile.hours_per_day);
+  const hoursPoints = hoursValue >= 4 ? 20 : hoursValue >= 2 ? 10 : 0;
+  total += hoursPoints;
+  breakdown.push({
+    key: 'hours_per_day',
+    label: 'Horas/día (4+)',
+    value: profile.hours_per_day,
+    pointsAwarded: hoursPoints,
+    maxPoints: 20,
+  });
+
+  // 3. Local payment methods (15 max)
+  const paymentPoints = profile.has_local_payment_methods === true ? 15 : 0;
+  total += paymentPoints;
+  breakdown.push({
+    key: 'has_local_payment_methods',
+    label: 'Métodos de cobro local',
+    value: profile.has_local_payment_methods,
+    pointsAwarded: paymentPoints,
+    maxPoints: 15,
+  });
+
+  // 4. Sales/customer service experience (15 max)
+  const salesPoints = profile.sales_or_customer_service_exp === true ? 15 : 0;
+  total += salesPoints;
+  breakdown.push({
+    key: 'sales_or_customer_service_exp',
+    label: 'Experiencia atención/ventas',
+    value: profile.sales_or_customer_service_exp,
+    pointsAwarded: salesPoints,
+    maxPoints: 15,
+  });
+
+  // 5. Casino/betting experience (10 max)
+  const casinoPoints = profile.casino_or_betting_exp === true ? 10 : 0;
+  total += casinoPoints;
+  breakdown.push({
+    key: 'casino_or_betting_exp',
+    label: 'Experiencia casinos/apuestas',
+    value: profile.casino_or_betting_exp,
+    pointsAwarded: casinoPoints,
+    maxPoints: 10,
+  });
+
+  // 6. Wants to start now (10 max)
+  const startPoints = profile.wants_to_start_now === true ? 10 : 0;
+  total += startPoints;
+  breakdown.push({
+    key: 'wants_to_start_now',
+    label: 'Quiere empezar ya',
+    value: profile.wants_to_start_now,
+    pointsAwarded: startPoints,
+    maxPoints: 10,
+  });
+
+  const score_tier = total >= 70 ? 'PROMETEDOR' : total >= 40 ? 'POTENCIAL' : 'NOVATO';
+
+  return { score_total: total, score_tier, score_breakdown: breakdown };
+}
+
+// Get agent by refCode
 const getRefCodeDoc = async (
   accessToken: string,
   projectId: string,
@@ -189,32 +392,24 @@ const getRefCodeDoc = async (
 ): Promise<Record<string, unknown> | null> => {
   const response = await fetch(
     `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/refCodes/${refCode}`,
-    {
-      headers: { "Authorization": `Bearer ${accessToken}` },
-    }
+    { headers: { "Authorization": `Bearer ${accessToken}` } }
   );
 
-  if (response.status === 404) {
-    return null;
-  }
-
+  if (response.status === 404) return null;
   if (!response.ok) {
     console.error("[save-chat-lead] Failed to get refCode:", await response.text());
     return null;
   }
 
-  const doc = await response.json();
-  return parseFirestoreDoc(doc);
+  return parseFirestoreDoc(await response.json());
 };
 
-// Query for active agents by country (simplified query without orderBy to avoid index requirement)
+// Query for active agents by country
 const getAgentByCountry = async (
   accessToken: string,
   projectId: string,
   country: string
 ): Promise<{ uid: string; lineLeaderId: string | null } | null> => {
-  // Simple query: role = AGENT/LINE_LEADER, isActive = true, country matches
-  // Using IN operator for role
   const query = {
     structuredQuery: {
       from: [{ collectionId: "users" }],
@@ -235,10 +430,7 @@ const getAgentByCountry = async (
     `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`,
     {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify(query),
     }
   );
@@ -249,25 +441,19 @@ const getAgentByCountry = async (
   }
 
   const results = await response.json();
-  
-  // Filter client-side for role = AGENT or LINE_LEADER
   for (const result of results) {
     if (result.document) {
       const parsed = parseFirestoreDoc(result.document);
       if (parsed && (parsed.role === 'AGENT' || parsed.role === 'LINE_LEADER')) {
-        return {
-          uid: String(parsed.uid || ''),
-          lineLeaderId: parsed.lineLeaderId ? String(parsed.lineLeaderId) : null,
-        };
+        return { uid: String(parsed.uid || ''), lineLeaderId: parsed.lineLeaderId ? String(parsed.lineLeaderId) : null };
       }
     }
   }
 
-  // Fallback to any active agent
   return getAnyActiveAgent(accessToken, projectId);
 };
 
-// Get any active agent (fallback) - simplified without orderBy
+// Get any active agent (fallback)
 const getAnyActiveAgent = async (
   accessToken: string,
   projectId: string
@@ -275,13 +461,7 @@ const getAnyActiveAgent = async (
   const query = {
     structuredQuery: {
       from: [{ collectionId: "users" }],
-      where: {
-        fieldFilter: { 
-          field: { fieldPath: "isActive" }, 
-          op: "EQUAL", 
-          value: { booleanValue: true } 
-        },
-      },
+      where: { fieldFilter: { field: { fieldPath: "isActive" }, op: "EQUAL", value: { booleanValue: true } } },
       limit: 20,
     },
   };
@@ -290,30 +470,19 @@ const getAnyActiveAgent = async (
     `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`,
     {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify(query),
     }
   );
 
-  if (!response.ok) {
-    console.error("[save-chat-lead] Fallback query failed:", await response.text());
-    return null;
-  }
+  if (!response.ok) return null;
 
   const results = await response.json();
-  
-  // Filter client-side for role = AGENT or LINE_LEADER
   for (const result of results) {
     if (result.document) {
       const parsed = parseFirestoreDoc(result.document);
       if (parsed && (parsed.role === 'AGENT' || parsed.role === 'LINE_LEADER')) {
-        return {
-          uid: String(parsed.uid || ''),
-          lineLeaderId: parsed.lineLeaderId ? String(parsed.lineLeaderId) : null,
-        };
+        return { uid: String(parsed.uid || ''), lineLeaderId: parsed.lineLeaderId ? String(parsed.lineLeaderId) : null };
       }
     }
   }
@@ -321,14 +490,13 @@ const getAnyActiveAgent = async (
   return null;
 };
 
-// Create lead document in Firestore
+// Create lead document
 const createLeadDocument = async (
   accessToken: string,
   projectId: string,
   leadData: Record<string, unknown>
 ): Promise<string> => {
   const fields: Record<string, unknown> = {};
-  
   for (const [key, value] of Object.entries(leadData)) {
     fields[key] = toFirestoreValue(value);
   }
@@ -337,25 +505,19 @@ const createLeadDocument = async (
     `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/leads`,
     {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({ fields }),
     }
   );
 
   if (!response.ok) {
     const error = await response.text();
-    console.error("[save-chat-lead] Create lead failed:", error);
     throw new Error(`Failed to create lead: ${error}`);
   }
 
   const doc = await response.json();
-  // Extract document ID from name: projects/.../documents/leads/DOCID
   const name = doc.name as string;
-  const parts = name.split('/');
-  return parts[parts.length - 1];
+  return name.split('/').pop() || '';
 };
 
 serve(async (req) => {
@@ -365,67 +527,57 @@ serve(async (req) => {
 
   try {
     const body = await req.json() as SaveLeadRequest;
-    const { mergedData, debug, intent, refCode, country, scoreTotal, tier } = body;
+    const { mergedData, intent, refCode, country } = body;
 
-    console.log("[save-chat-lead] Processing lead:", { intent, refCode, country, scoreTotal, tier });
-    console.log("[save-chat-lead] Merged data keys:", Object.keys(mergedData || {}));
+    console.log("[save-chat-lead] Processing lead:", { intent, refCode, country });
+
+    // Extract and score agent profile
+    const agentProfile = extractAgentProfile(mergedData);
+    const { score_total, score_tier, score_breakdown } = computeAgentScore(agentProfile);
+
+    console.log("[save-chat-lead] Computed score:", { score_total, score_tier });
 
     // Initialize Firebase Admin
     const { accessToken, projectId } = await initFirebaseAdmin();
-    console.log("[save-chat-lead] Firebase Admin initialized");
 
     let assignedAgentId: string | null = null;
     let assignedLineLeaderId: string | null = null;
 
-    // Step 1: Try to assign by refCode
+    // Try to assign by refCode
     if (refCode) {
-      console.log("[save-chat-lead] Looking up refCode:", refCode);
       const refCodeDoc = await getRefCodeDoc(accessToken, projectId, refCode);
-      
       if (refCodeDoc && refCodeDoc.active !== false) {
         assignedAgentId = refCodeDoc.agentUid ? String(refCodeDoc.agentUid) : null;
         assignedLineLeaderId = refCodeDoc.lineLeaderId ? String(refCodeDoc.lineLeaderId) : null;
-        console.log("[save-chat-lead] Assigned via refCode:", { assignedAgentId, assignedLineLeaderId });
       }
     }
 
-    // Step 2: If no refCode assignment, try by country
-    if (!assignedAgentId && country) {
-      console.log("[save-chat-lead] Looking up agent by country:", country);
-      const agent = await getAgentByCountry(accessToken, projectId, country);
-      
+    // Fallback: assign by country
+    if (!assignedAgentId && (country || agentProfile.country)) {
+      const agent = await getAgentByCountry(accessToken, projectId, String(country || agentProfile.country));
       if (agent) {
         assignedAgentId = agent.uid;
         assignedLineLeaderId = agent.lineLeaderId;
-        console.log("[save-chat-lead] Assigned via country:", { assignedAgentId, assignedLineLeaderId });
       }
     }
 
-    // Extract contact info
-    const contactData = mergedData.contact as Record<string, unknown> | undefined;
-    const contact = {
-      whatsapp: contactData?.whatsapp ? String(contactData.whatsapp) : 
-                (mergedData.whatsapp ? String(mergedData.whatsapp) : 
-                (mergedData.telefono ? String(mergedData.telefono) : '')),
-      email: mergedData.email ? String(mergedData.email) : undefined,
-      telegram: contactData?.telegram ? String(contactData.telegram) : 
-                (mergedData.telegram ? String(mergedData.telegram) : undefined),
-    };
-
-    // Build the lead document
+    // Build lead document
     const leadDoc = {
       createdAt: new Date(),
-      name: String(mergedData.name || mergedData.nombre || 'Sin nombre'),
-      country: String(country || mergedData.country || mergedData.pais || 'No especificado'),
-      city: mergedData.city || mergedData.ciudad || null,
-      contact,
-      intent: intent || null,
+      name: agentProfile.name || 'Sin nombre',
+      country: agentProfile.country || country || 'No especificado',
+      contact: {
+        whatsapp: agentProfile.whatsapp || '',
+      },
+      intent: intent || 'AGENTE',
       refCode: refCode || null,
       assignedAgentId,
       assignedLineLeaderId,
       status: assignedAgentId ? 'ASIGNADO' : 'NUEVO',
-      scoreTotal: scoreTotal ?? (debug?.score_total || 0),
-      tier: tier || debug?.tier || null,
+      scoreTotal: score_total,
+      tier: score_tier,
+      scoreBreakdown: score_breakdown,
+      agentProfile,
       rawJson: mergedData,
       origen: 'chat_ia',
     };
@@ -435,12 +587,7 @@ serve(async (req) => {
     console.log("[save-chat-lead] Lead created with ID:", leadId);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        leadId,
-        assignedAgentId,
-        assignedLineLeaderId,
-      }),
+      JSON.stringify({ success: true, leadId, assignedAgentId, assignedLineLeaderId, score_total, score_tier }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
