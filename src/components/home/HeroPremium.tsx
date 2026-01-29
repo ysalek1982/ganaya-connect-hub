@@ -12,7 +12,7 @@ interface HeroPremiumProps {
 
 export const HeroPremium = ({ onOpenChat }: HeroPremiumProps) => {
   return (
-    <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-16 pb-20">
+    <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-24 md:pt-28 pb-20">
       {/* Background image with overlay */}
       <div className="absolute inset-0">
         <img 
