@@ -232,7 +232,6 @@ const AdminAgentesNew = () => {
             <SelectItem value="all">Todos los países</SelectItem>
             <SelectItem value="Paraguay">Paraguay</SelectItem>
             <SelectItem value="Argentina">Argentina</SelectItem>
-            <SelectItem value="Bolivia">Bolivia</SelectItem>
             <SelectItem value="Colombia">Colombia</SelectItem>
           </SelectContent>
         </Select>
@@ -416,10 +415,8 @@ const AdminAgentesNew = () => {
                   <SelectContent>
                     <SelectItem value="Paraguay">Paraguay</SelectItem>
                     <SelectItem value="Argentina">Argentina</SelectItem>
-                    <SelectItem value="Bolivia">Bolivia</SelectItem>
                     <SelectItem value="Colombia">Colombia</SelectItem>
                     <SelectItem value="Ecuador">Ecuador</SelectItem>
-                    <SelectItem value="Perú">Perú</SelectItem>
                     <SelectItem value="Chile">Chile</SelectItem>
                     <SelectItem value="México">México</SelectItem>
                     <SelectItem value="USA">USA</SelectItem>

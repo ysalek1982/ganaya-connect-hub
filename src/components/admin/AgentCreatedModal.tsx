@@ -22,7 +22,6 @@ const COUNTRIES = [
   { code: 'PY', name: 'Paraguay' },
   { code: 'CO', name: 'Colombia' },
   { code: 'EC', name: 'Ecuador' },
-  { code: 'PE', name: 'Perú' },
   { code: 'MX', name: 'México' },
   { code: 'US', name: 'USA' },
 ];

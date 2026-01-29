@@ -14,10 +14,8 @@ const countries = [
   { code: 'CL', name: 'Chile', flag: '🇨🇱', prefix: '56' },
   { code: 'AR', name: 'Argentina', flag: '🇦🇷', prefix: '54' },
   { code: 'PY', name: 'Paraguay', flag: '🇵🇾', prefix: '595' },
-  { code: 'BO', name: 'Bolivia', flag: '🇧🇴', prefix: '591' },
   { code: 'CO', name: 'Colombia', flag: '🇨🇴', prefix: '57' },
   { code: 'EC', name: 'Ecuador', flag: '🇪🇨', prefix: '593' },
-  { code: 'PE', name: 'Perú', flag: '🇵🇪', prefix: '51' },
   { code: 'MX', name: 'México', flag: '🇲🇽', prefix: '52' },
   { code: 'US', name: 'USA', flag: '🇺🇸', prefix: '1' },
 ];
@@ -41,7 +39,7 @@ const validateWhatsApp = (phone: string): { valid: boolean; error?: string; norm
   // Check if starts with a known country prefix
   const hasValidPrefix = countries.some(c => digits.startsWith(c.prefix));
   if (!hasValidPrefix && digits.length >= 10) {
-    return { valid: false, error: 'Incluye el código de país (ej: 591 para Bolivia)', normalized: digits };
+    return { valid: false, error: 'Incluye el código de país (ej: 54 para Argentina)', normalized: digits };
   }
   
   return { valid: true, normalized: digits };
@@ -206,7 +204,7 @@ const AppProfile = () => {
               <p className="text-xs text-destructive">{whatsappValidation.error}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Incluye el código de país sin el + (ej: 591 Bolivia, 54 Argentina, 56 Chile)
+              Incluye el código de país sin el + (ej: 54 Argentina, 56 Chile, 57 Colombia)
             </p>
           </div>
 
