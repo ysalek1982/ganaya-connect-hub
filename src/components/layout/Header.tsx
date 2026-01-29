@@ -8,11 +8,10 @@ const WHATSAPP_NUMBER = '59176356972';
 const GANAYA_URL = 'https://ganaya.bet/es/sport';
 
 const navLinks = [
-  { href: '/#lobbies', label: 'Juegos' },
-  { href: '/#promos', label: 'Promociones' },
-  { href: '/#por-que', label: 'Beneficios' },
+  { href: '/#como-funciona', label: 'Cómo funciona' },
+  { href: '/tutoriales', label: 'Tutoriales' },
   { href: '/#faq', label: 'Ayuda' },
-  { href: '/agente', label: 'Ser agente' },
+  { href: '/agente', label: 'Ser Cajero' },
 ];
 
 export const Header = () => {
