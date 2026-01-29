@@ -101,5 +101,11 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read, write: if isAdmin();
     }
+    
+    // Chat configs (admin only) - for configurable chat questions
+    match /chat_configs/{configId} {
+      // Only admins can read and write chat configurations
+      allow read, write: if isAdmin();
+    }
   }
 }
