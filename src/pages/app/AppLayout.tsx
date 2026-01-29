@@ -9,7 +9,9 @@ import {
   FileText, 
   LogOut, 
   Menu,
-  X
+  X,
+  User,
+  BookOpen
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -44,8 +46,10 @@ const AppLayout = () => {
   const getNavItems = () => {
     const items = [
       { path: '/app', icon: LayoutDashboard, label: 'Dashboard', exact: true },
+      { path: '/app/profile', icon: User, label: 'Mi Perfil' },
       { path: '/app/referrals', icon: LinkIcon, label: 'Mis Links' },
       { path: '/app/leads', icon: Users, label: 'Mis Leads' },
+      { path: '/app/tutorials', icon: BookOpen, label: 'Tutoriales' },
     ];
 
     // Show subagents if admin, line_leader, or agent with permission

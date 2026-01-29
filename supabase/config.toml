@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.ensure-profile]
 verify_jwt = false
+
+[functions.agent-by-ref]
+verify_jwt = false
