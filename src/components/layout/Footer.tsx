@@ -44,13 +44,13 @@ export const Footer = () => {
                   Ganaya<span className="text-primary">.bet</span>
                 </span>
                 <span className="text-[10px] text-muted-foreground uppercase tracking-widest">
-                  Apuestas Premium LATAM
+                  Programa Agentes
                 </span>
               </div>
             </Link>
             <p className="text-muted-foreground text-sm max-w-sm mb-6 leading-relaxed">
-              Apuestas deportivas y casino en vivo con soporte personalizado 24/7. 
-              Tu agente local te guía en recargas y retiros a tu banco.
+              Programa de agentes con comisiones hasta 40%. 
+              Opera desde tu móvil con soporte y capacitación continua.
             </p>
             <div className="flex items-center gap-3">
               <a
@@ -78,10 +78,10 @@ export const Footer = () => {
             </h4>
             <ul className="space-y-3">
               {[
-                { href: '/#lobbies', label: 'Juegos' },
-                { href: '/#por-que', label: 'Por qué elegirnos' },
-                { href: '/#faq', label: 'Preguntas frecuentes' },
-                { href: '/agente', label: 'Ser agente', external: false },
+                { href: '#oportunidad', label: 'Oportunidad' },
+                { href: '#como-funciona', label: 'Cómo funciona' },
+                { href: '#comisiones', label: 'Comisiones' },
+                { href: '#requisitos', label: 'Requisitos' },
               ].map((link) => (
                 <li key={link.href}>
                   <a 
