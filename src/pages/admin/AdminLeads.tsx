@@ -114,9 +114,7 @@ const AdminLeads = () => {
 
     const matchesPais = filterPais === 'all' || lead.country === filterPais;
     const matchesEstado = filterEstado === 'all' || lead.status === filterEstado;
-    const matchesIntent = filterIntent === 'all' || 
-      (filterIntent === 'agente' && lead.intent === 'AGENTE') ||
-      (filterIntent === 'cliente' && lead.intent === 'JUGADOR');
+    const matchesIntent = filterIntent === 'all' || filterIntent === 'agente'; // All leads are now agents
     const matchesTier = filterTier === 'all' || lead.tier === filterTier;
     const matchesAgente = filterAgente === 'all' || lead.assignedAgentId === filterAgente;
 
@@ -166,7 +164,9 @@ const AdminLeads = () => {
     const colors: Record<LeadStatus, string> = {
       NUEVO: 'bg-green-500/20 text-green-400 border-green-500/30',
       CONTACTADO: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-      ASIGNADO: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      APROBADO: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      RECHAZADO: 'bg-red-500/20 text-red-400 border-red-500/30',
+      ONBOARDED: 'bg-primary/20 text-primary border-primary/30',
       CERRADO: 'bg-muted text-muted-foreground border-muted',
       DESCARTADO: 'bg-red-500/20 text-red-400 border-red-500/30',
     };
@@ -175,7 +175,7 @@ const AdminLeads = () => {
 
   const tierBadge = (tier: LeadTier | null) => {
     const colors: Record<LeadTier, string> = {
-      APROBABLE: 'bg-primary/20 text-primary border-primary/30',
+      PROMETEDOR: 'bg-primary/20 text-primary border-primary/30',
       POTENCIAL: 'bg-gold/20 text-gold border-gold/30',
       NOVATO: 'bg-orange-400/20 text-orange-400 border-orange-400/30',
     };
@@ -370,7 +370,7 @@ const AdminLeads = () => {
                             <Check className="w-4 h-4 text-primary" />
                           </Button>
                         )}
-                        {isAdmin && lead.intent === 'AGENTE' && lead.tier === 'APROBABLE' && lead.status !== 'CERRADO' && (
+                        {isAdmin && lead.tier === 'PROMETEDOR' && lead.status !== 'ONBOARDED' && (
                           <Button
                             size="sm"
                             variant="ghost"

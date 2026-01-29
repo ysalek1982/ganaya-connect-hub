@@ -35,7 +35,7 @@ const AppLeads = () => {
         name: newLead.nombre,
         country: newLead.pais,
         contact: { whatsapp: newLead.whatsapp },
-        intent: 'JUGADOR',
+        intent: 'AGENTE',
         refCode: userData?.refCode || null,
         scoreTotal: 0,
         tier: null,
@@ -78,7 +78,9 @@ const AppLeads = () => {
     const colors: Record<LeadStatus, string> = {
       'NUEVO': 'bg-primary/20 text-primary border-primary/30',
       'CONTACTADO': 'bg-gold/20 text-gold border-gold/30',
-      'ASIGNADO': 'bg-accent/20 text-accent border-accent/30',
+      'APROBADO': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      'RECHAZADO': 'bg-red-500/20 text-red-400 border-red-500/30',
+      'ONBOARDED': 'bg-primary/20 text-primary border-primary/30',
       'CERRADO': 'bg-muted text-muted-foreground',
       'DESCARTADO': 'bg-destructive/20 text-destructive border-destructive/30',
     };

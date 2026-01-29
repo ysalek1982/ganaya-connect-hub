@@ -181,10 +181,10 @@ export const useSaveChatLead = () => {
       name: string;
       country: string;
       contact: { whatsapp?: string; email?: string; telegram?: string };
-      intent: 'JUGADOR' | 'AGENTE' | 'SOPORTE' | null;
+      intent: 'AGENTE';
       refCode?: string | null;
       scoreTotal?: number;
-      tier?: 'NOVATO' | 'POTENCIAL' | 'APROBABLE' | null;
+      tier?: 'NOVATO' | 'POTENCIAL' | 'PROMETEDOR' | null;
       rawJson: Record<string, unknown>;
     }) => {
       // First, add the lead to Firestore
@@ -233,5 +233,3 @@ export const useSaveChatLead = () => {
     },
   });
 };
-
-export default useFirebaseLeads;

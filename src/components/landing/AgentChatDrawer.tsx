@@ -33,7 +33,7 @@ interface DebugInfo {
   score_rules: number;
   score_ai: number;
   score_total: number;
-  tier: 'NOVATO' | 'POTENCIAL' | 'APROBABLE' | null;
+  tier: 'NOVATO' | 'POTENCIAL' | 'PROMETEDOR' | null;
   error?: string;
 }
 
@@ -197,8 +197,10 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       
       if (response.debug) {
         scoreTotal = response.debug.score_total;
-        if (response.debug.tier === 'APROBABLE') tier = 'APROBABLE';
-        else if (response.debug.tier === 'POTENCIAL') tier = 'POTENCIAL';
+        const tierVal = response.debug.tier;
+        if (tierVal === 'PROMETEDOR') tier = 'PROMETEDOR';
+        else if (tierVal === 'POTENCIAL') tier = 'POTENCIAL';
+        else tier = 'NOVATO';
       }
 
       const refCode = getRefCode();

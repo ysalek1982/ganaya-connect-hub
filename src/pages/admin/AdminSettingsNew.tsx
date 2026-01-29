@@ -23,24 +23,23 @@ interface Settings {
   scoring_rules: ScoringRules | null;
 }
 
+// New agent-focused scoring rules (no Binance/P2P in public scoring)
 interface ScoringRules {
-  binance: { verificada: number };
-  p2p: { basico: number; medio: number; avanzado: number };
-  horas: { '1-2': number; '3-5': number; '6+': number };
-  banca_300: number;
-  exp_casinos: number;
-  exp_atencion: number;
-  quiere_empezar: number;
+  working_capital: { '0-100': number; '100-300': number; '300-500': number; '500+': number };
+  hours_per_day: { '1-2': number; '3-5': number; '6+': number };
+  has_local_payment_methods: number;
+  sales_exp: number;
+  casino_exp: number;
+  wants_to_start: number;
 }
 
 const defaultScoringRules: ScoringRules = {
-  binance: { verificada: 30 },
-  p2p: { basico: 5, medio: 10, avanzado: 15 },
-  horas: { '1-2': 5, '3-5': 10, '6+': 20 },
-  banca_300: 20,
-  exp_casinos: 10,
-  exp_atencion: 10,
-  quiere_empezar: 5,
+  working_capital: { '0-100': 0, '100-300': 15, '300-500': 30, '500+': 30 },
+  hours_per_day: { '1-2': 5, '3-5': 10, '6+': 20 },
+  has_local_payment_methods: 15,
+  sales_exp: 15,
+  casino_exp: 10,
+  wants_to_start: 10,
 };
 
 const allCountries = [
@@ -327,51 +326,47 @@ const AdminSettingsNew = () => {
           <div className="glass-card rounded-xl p-6">
             <h2 className="font-semibold text-lg mb-4">Reglas de Scoring (0-100)</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              Configura los puntos asignados a cada criterio para calcular el score de agentes potenciales.
+              Configura los puntos asignados a cada criterio para evaluar agentes potenciales.
             </p>
 
             <div className="space-y-6">
-              {/* Binance */}
+              {/* Working Capital */}
               <div className="p-4 rounded-lg bg-muted/50">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-base">Binance Verificada</Label>
-                  <Input
-                    type="number"
-                    value={scoringRules.binance.verificada}
-                    onChange={(e) => updateScoringRule('binance.verificada', parseInt(e.target.value) || 0)}
-                    className="w-20 text-center"
-                  />
-                </div>
-              </div>
-
-              {/* P2P Level */}
-              <div className="p-4 rounded-lg bg-muted/50">
-                <Label className="text-base mb-3 block">Nivel P2P</Label>
-                <div className="grid grid-cols-3 gap-4">
+                <Label className="text-base mb-3 block">Capital Operativo (USD)</Label>
+                <div className="grid grid-cols-4 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-sm text-muted-foreground">Básico</Label>
+                    <Label className="text-sm text-muted-foreground">$0-100</Label>
                     <Input
                       type="number"
-                      value={scoringRules.p2p.basico}
-                      onChange={(e) => updateScoringRule('p2p.basico', parseInt(e.target.value) || 0)}
+                      value={scoringRules.working_capital?.['0-100'] ?? 0}
+                      onChange={(e) => updateScoringRule('working_capital.0-100', parseInt(e.target.value) || 0)}
                       className="text-center"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm text-muted-foreground">Medio</Label>
+                    <Label className="text-sm text-muted-foreground">$100-300</Label>
                     <Input
                       type="number"
-                      value={scoringRules.p2p.medio}
-                      onChange={(e) => updateScoringRule('p2p.medio', parseInt(e.target.value) || 0)}
+                      value={scoringRules.working_capital?.['100-300'] ?? 15}
+                      onChange={(e) => updateScoringRule('working_capital.100-300', parseInt(e.target.value) || 0)}
                       className="text-center"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm text-muted-foreground">Avanzado</Label>
+                    <Label className="text-sm text-muted-foreground">$300-500</Label>
                     <Input
                       type="number"
-                      value={scoringRules.p2p.avanzado}
-                      onChange={(e) => updateScoringRule('p2p.avanzado', parseInt(e.target.value) || 0)}
+                      value={scoringRules.working_capital?.['300-500'] ?? 30}
+                      onChange={(e) => updateScoringRule('working_capital.300-500', parseInt(e.target.value) || 0)}
+                      className="text-center"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm text-muted-foreground">$500+</Label>
+                    <Input
+                      type="number"
+                      value={scoringRules.working_capital?.['500+'] ?? 30}
+                      onChange={(e) => updateScoringRule('working_capital.500+', parseInt(e.target.value) || 0)}
                       className="text-center"
                     />
                   </div>
@@ -386,8 +381,8 @@ const AdminSettingsNew = () => {
                     <Label className="text-sm text-muted-foreground">1-2 horas</Label>
                     <Input
                       type="number"
-                      value={scoringRules.horas['1-2']}
-                      onChange={(e) => updateScoringRule('horas.1-2', parseInt(e.target.value) || 0)}
+                      value={scoringRules.hours_per_day?.['1-2'] ?? 5}
+                      onChange={(e) => updateScoringRule('hours_per_day.1-2', parseInt(e.target.value) || 0)}
                       className="text-center"
                     />
                   </div>
@@ -395,8 +390,8 @@ const AdminSettingsNew = () => {
                     <Label className="text-sm text-muted-foreground">3-5 horas</Label>
                     <Input
                       type="number"
-                      value={scoringRules.horas['3-5']}
-                      onChange={(e) => updateScoringRule('horas.3-5', parseInt(e.target.value) || 0)}
+                      value={scoringRules.hours_per_day?.['3-5'] ?? 10}
+                      onChange={(e) => updateScoringRule('hours_per_day.3-5', parseInt(e.target.value) || 0)}
                       className="text-center"
                     />
                   </div>
@@ -404,8 +399,8 @@ const AdminSettingsNew = () => {
                     <Label className="text-sm text-muted-foreground">6+ horas</Label>
                     <Input
                       type="number"
-                      value={scoringRules.horas['6+']}
-                      onChange={(e) => updateScoringRule('horas.6+', parseInt(e.target.value) || 0)}
+                      value={scoringRules.hours_per_day?.['6+'] ?? 20}
+                      onChange={(e) => updateScoringRule('hours_per_day.6+', parseInt(e.target.value) || 0)}
                       className="text-center"
                     />
                   </div>
@@ -415,11 +410,20 @@ const AdminSettingsNew = () => {
               {/* Other criteria */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                  <Label className="text-sm">Banca $300+</Label>
+                  <Label className="text-sm">Métodos cobro local</Label>
                   <Input
                     type="number"
-                    value={scoringRules.banca_300}
-                    onChange={(e) => updateScoringRule('banca_300', parseInt(e.target.value) || 0)}
+                    value={scoringRules.has_local_payment_methods ?? 15}
+                    onChange={(e) => updateScoringRule('has_local_payment_methods', parseInt(e.target.value) || 0)}
+                    className="text-center"
+                  />
+                </div>
+                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+                  <Label className="text-sm">Exp. Ventas</Label>
+                  <Input
+                    type="number"
+                    value={scoringRules.sales_exp ?? 15}
+                    onChange={(e) => updateScoringRule('sales_exp', parseInt(e.target.value) || 0)}
                     className="text-center"
                   />
                 </div>
@@ -427,17 +431,8 @@ const AdminSettingsNew = () => {
                   <Label className="text-sm">Exp. Casinos</Label>
                   <Input
                     type="number"
-                    value={scoringRules.exp_casinos}
-                    onChange={(e) => updateScoringRule('exp_casinos', parseInt(e.target.value) || 0)}
-                    className="text-center"
-                  />
-                </div>
-                <div className="p-4 rounded-lg bg-muted/50 space-y-2">
-                  <Label className="text-sm">Exp. Atención</Label>
-                  <Input
-                    type="number"
-                    value={scoringRules.exp_atencion}
-                    onChange={(e) => updateScoringRule('exp_atencion', parseInt(e.target.value) || 0)}
+                    value={scoringRules.casino_exp ?? 10}
+                    onChange={(e) => updateScoringRule('casino_exp', parseInt(e.target.value) || 0)}
                     className="text-center"
                   />
                 </div>
@@ -445,8 +440,8 @@ const AdminSettingsNew = () => {
                   <Label className="text-sm">Quiere Empezar</Label>
                   <Input
                     type="number"
-                    value={scoringRules.quiere_empezar}
-                    onChange={(e) => updateScoringRule('quiere_empezar', parseInt(e.target.value) || 0)}
+                    value={scoringRules.wants_to_start ?? 10}
+                    onChange={(e) => updateScoringRule('wants_to_start', parseInt(e.target.value) || 0)}
                     className="text-center"
                   />
                 </div>
