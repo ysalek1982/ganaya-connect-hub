@@ -35,8 +35,9 @@ const AgentCreatedModal = ({ isOpen, onClose, agentData }: AgentCreatedModalProp
 
   const { email, tempPassword, refCode } = agentData;
   
-  // Build referral URL dynamically using current origin
-  const referralUrl = `${window.location.origin}/?ref=${refCode}`;
+  // Build referral URL using PUBLIC_SITE_URL or fallback to origin
+  const baseUrl = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
+  const referralUrl = `${baseUrl}/?ref=${refCode}`;
 
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text);
@@ -46,7 +47,7 @@ const AgentCreatedModal = ({ isOpen, onClose, agentData }: AgentCreatedModalProp
   };
 
   const getCountryLink = (countryCode: string) => {
-    return `${window.location.origin}/?ref=${refCode}&country=${countryCode}`;
+    return `${baseUrl}/?ref=${refCode}&country=${countryCode}`;
   };
 
   return (
