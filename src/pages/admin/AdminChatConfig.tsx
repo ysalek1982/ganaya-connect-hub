@@ -473,7 +473,7 @@ const AdminChatConfig = () => {
         idToken,
       });
 
-      const loadedConfigs: ChatConfig[] = (res.configs || []).map((data: any) => ({
+      let loadedConfigs: ChatConfig[] = (res.configs || []).map((data: any) => ({
         id: data.id,
         name: data.name || 'Sin nombre',
         isActive: !!data.isActive,
@@ -484,6 +484,40 @@ const AdminChatConfig = () => {
         createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
         updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
       }));
+
+      // AUTO-SEED: If no configs exist, create default and activate it
+      if (loadedConfigs.length === 0) {
+        console.log('[AdminChatConfig] No configs found, seeding default...');
+        const seedConfig: ChatConfig = {
+          ...defaultConfig,
+          id: 'default',
+          name: 'Configuración por Defecto',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        
+        try {
+          // Create default config
+          await invokeBootstrapAdmin<{ success: boolean }>({
+            action: 'chat_configs_upsert' satisfies BootstrapAdminAction,
+            idToken,
+            config: seedConfig,
+          });
+          
+          // Activate it
+          await invokeBootstrapAdmin<{ success: boolean }>({
+            action: 'chat_configs_activate' satisfies BootstrapAdminAction,
+            idToken,
+            id: 'default',
+          });
+          
+          loadedConfigs = [seedConfig];
+          toast.success('Configuración por defecto creada y activada');
+        } catch (seedError) {
+          console.error('Error seeding default config:', seedError);
+        }
+      }
 
       setConfigs(loadedConfigs);
       

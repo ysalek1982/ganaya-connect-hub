@@ -398,6 +398,42 @@ serve(async (req) => {
         );
       }
 
+      // --- Settings CRUD (secure Gemini key storage in Firestore) ---
+      if (action === 'settings_get') {
+        const settingsDoc = await firestoreGetDoc(accessToken, projectId, 'settings/ai');
+        const parsed = settingsDoc ? parseFirestoreDoc(settingsDoc) : null;
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            settings: parsed || { gemini_api_key: null }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (action === 'settings_upsert') {
+        const settings = (body?.settings || {}) as Record<string, unknown>;
+        const now = new Date();
+        
+        const payload = {
+          ...settings,
+          updatedAt: now,
+        };
+
+        const exists = await checkDocExists(accessToken, projectId, 'settings', 'ai');
+        if (!exists) {
+          await createFirestoreDoc(accessToken, projectId, 'settings', 'ai', { ...payload, createdAt: now });
+        } else {
+          await firestorePatchDoc(accessToken, projectId, 'settings/ai', payload);
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       // --- Chat configs CRUD ---
       if (action === 'chat_configs_list') {
         const results = await firestoreRunQuery(accessToken, projectId, {

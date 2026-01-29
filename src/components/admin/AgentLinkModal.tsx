@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { getReferralUrl } from '@/lib/siteUrl';
 
 interface AgentLinkModalProps {
   isOpen: boolean;
@@ -16,8 +17,7 @@ interface AgentLinkModalProps {
 const AgentLinkModal = ({ isOpen, onClose, agentName, refCode }: AgentLinkModalProps) => {
   const [copied, setCopied] = useState(false);
   
-  const baseUrl = window.location.origin;
-  const fullLink = `${baseUrl}/?ref=${refCode}`;
+  const fullLink = getReferralUrl(refCode);
 
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(fullLink);

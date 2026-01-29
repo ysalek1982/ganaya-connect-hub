@@ -7,8 +7,12 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
     function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return getUserData().role;
     }
     
     function isAdmin() {
@@ -21,6 +25,14 @@ service cloud.firestore {
     
     function isAgent() {
       return isAuthenticated() && getUserRole() == 'AGENT';
+    }
+    
+    // An agent with canRecruitSubagents also has "leader" privileges for their network
+    function isEffectiveLeader() {
+      return isAuthenticated() && (
+        getUserRole() == 'LINE_LEADER' || 
+        (getUserRole() == 'AGENT' && getUserData().canRecruitSubagents == true)
+      );
     }
     
     function isAdminOrLineLeader() {
@@ -38,6 +50,10 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'LINE_LEADER']
       );
       
+      // Effective leaders can read their subagents
+      allow read: if isAuthenticated() && 
+        resource.data.lineLeaderId == request.auth.uid;
+      
       // Users can update their own non-critical fields
       allow update: if isAuthenticated() && 
         request.auth.uid == userId &&
@@ -47,8 +63,8 @@ service cloud.firestore {
       // Admin can update any user (for editing/deactivating agents)
       allow update: if isAdmin();
       
-      // Line Leaders can update agents in their network
-      allow update: if isLineLeader() && 
+      // Line Leaders and effective leaders can update agents in their network
+      allow update: if isEffectiveLeader() && 
         resource.data.lineLeaderId == request.auth.uid &&
         !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(['role', 'refCode', 'lineLeaderId']);
@@ -67,6 +83,8 @@ service cloud.firestore {
         isAdmin() ||
         // Line leaders can see leads assigned to their network
         (isLineLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
+        // Effective leaders (agents with canRecruitSubagents) can see their network leads
+        (isEffectiveLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
         // Agents can see their assigned leads
         (isAgent() && resource.data.assignedAgentId == request.auth.uid)
       );
@@ -75,6 +93,7 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (
         isAdmin() ||
         (isLineLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
+        (isEffectiveLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
         (isAgent() && resource.data.assignedAgentId == request.auth.uid)
       );
       
@@ -88,6 +107,21 @@ service cloud.firestore {
       allow read: if true;
       // Write only via Cloud Functions
       allow write: if false;
+    }
+    
+    // Referral Links collection - agents can manage their campaign links
+    match /referralLinks/{linkId} {
+      // Public read (only contains whatsapp override, contact label, message template - no secrets)
+      allow read: if true;
+      
+      // Agents and admins can create links for themselves
+      allow create: if isAuthenticated() && 
+        (isAdmin() || isAgent() || isLineLeader()) && 
+        request.resource.data.agentUid == request.auth.uid;
+      
+      // Agents can update/delete their own links, admins can update any
+      allow update, delete: if isAuthenticated() && 
+        (isAdmin() || resource.data.agentUid == request.auth.uid);
     }
     
     // Chat logs (if needed)
