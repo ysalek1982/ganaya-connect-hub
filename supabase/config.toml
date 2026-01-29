@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.save-chat-lead]
 verify_jwt = false
+
+[functions.convert-lead-to-agent]
+verify_jwt = false

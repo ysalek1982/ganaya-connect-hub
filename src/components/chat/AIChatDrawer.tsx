@@ -34,7 +34,7 @@ interface DebugInfo {
   score_rules: number;
   score_ai: number;
   score_total: number;
-  tier: 'NOVATO' | 'POTENCIAL' | 'APROBABLE' | null;
+  tier: 'NOVATO' | 'POTENCIAL' | 'PROMETEDOR' | null;
   error?: string;
 }
 
@@ -201,8 +201,8 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
       
       if (intent === 'AGENTE' && response.debug) {
         scoreTotal = response.debug.score_total;
-        if (response.debug.tier === 'APROBABLE') {
-          tier = 'APROBABLE';
+        if (response.debug.tier === 'PROMETEDOR') {
+          tier = 'PROMETEDOR';
         } else if (response.debug.tier === 'POTENCIAL') {
           tier = 'POTENCIAL';
         } else {

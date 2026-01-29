@@ -60,9 +60,10 @@ export interface Tutorial {
   updatedAt?: Date;
 }
 
-export type LeadStatus = 'NUEVO' | 'CONTACTADO' | 'ASIGNADO' | 'CERRADO' | 'DESCARTADO';
-export type LeadTier = 'NOVATO' | 'POTENCIAL' | 'APROBABLE';
-export type LeadIntent = 'JUGADOR' | 'AGENTE' | 'SOPORTE';
+// Lead statuses - production workflow
+export type LeadStatus = 'NUEVO' | 'CONTACTADO' | 'APROBADO' | 'RECHAZADO' | 'ONBOARDED' | 'CERRADO' | 'DESCARTADO';
+export type LeadTier = 'NOVATO' | 'POTENCIAL' | 'PROMETEDOR';
+export type LeadIntent = 'AGENTE'; // Only agent recruitment now
 
 export interface LeadContact {
   whatsapp?: string;
@@ -118,7 +119,9 @@ export const mapLeadStatus = (status: string | null): LeadStatus => {
   const mapping: Record<string, LeadStatus> = {
     'nuevo': 'NUEVO',
     'contactado': 'CONTACTADO',
-    'asignado': 'ASIGNADO',
+    'aprobado': 'APROBADO',
+    'rechazado': 'RECHAZADO',
+    'onboarded': 'ONBOARDED',
     'cerrado': 'CERRADO',
     'descartado': 'DESCARTADO',
   };
@@ -130,7 +133,9 @@ export const displayLeadStatus = (status: LeadStatus): string => {
   const mapping: Record<LeadStatus, string> = {
     'NUEVO': 'nuevo',
     'CONTACTADO': 'contactado',
-    'ASIGNADO': 'asignado',
+    'APROBADO': 'aprobado',
+    'RECHAZADO': 'rechazado',
+    'ONBOARDED': 'onboarded',
     'CERRADO': 'cerrado',
     'DESCARTADO': 'descartado',
   };
