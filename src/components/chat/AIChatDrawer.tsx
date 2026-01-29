@@ -12,10 +12,16 @@ import type { FirebaseLead, LeadTier, LeadIntent, LeadStatus } from '@/lib/fireb
 
 const WHATSAPP_NUMBER = '59176356972';
 
+interface SuggestionChip {
+  label: string;
+  value: string;
+}
+
 interface Message {
   id: string;
   role: 'bot' | 'user';
   content: string;
+  suggestions?: SuggestionChip[];
 }
 
 interface AIChatDrawerProps {
@@ -51,6 +57,31 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasInitialized = useRef(false);
   const { getRefCode } = useRefCode();
+
+  // Extract numbered options from bot message for suggestion chips
+  const extractSuggestions = (text: string): SuggestionChip[] => {
+    const suggestions: SuggestionChip[] = [];
+    
+    // Match patterns like "1) option" or "1. option" or "1 option"
+    const patterns = [
+      /(\d+)\)\s*([^\n\d]+?)(?=\d+\)|$|\n)/g,
+      /(\d+)\.\s*([^\n\d]+?)(?=\d+\.|$|\n)/g,
+    ];
+    
+    for (const pattern of patterns) {
+      const matches = text.matchAll(pattern);
+      for (const match of matches) {
+        const num = match[1];
+        const label = match[2].trim().substring(0, 40); // Limit label length
+        if (label.length > 2) {
+          suggestions.push({ label: `${num}) ${label}`, value: num });
+        }
+      }
+      if (suggestions.length > 0) break;
+    }
+    
+    return suggestions.slice(0, 5); // Max 5 suggestions
+  };
 
   // Initialize chat with greeting
   useEffect(() => {
@@ -126,10 +157,14 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
           setDetectedIntent(intentFromDebug as LeadIntent);
         }
 
+        // Extract suggestions from the reply
+        const suggestions = extractSuggestions(response.reply);
+        
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'bot',
           content: response.reply,
+          suggestions: suggestions.length > 0 ? suggestions : undefined,
         };
         setMessages(prev => [...prev, botMessage]);
 
@@ -313,12 +348,12 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((msg) => (
+              {messages.map((msg, index) => (
                 <motion.div
                   key={msg.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                 >
                   <div className={`max-w-[85%] ${msg.role === 'user' ? 'order-1' : ''}`}>
                     <div className={`rounded-2xl px-4 py-3 ${
@@ -329,6 +364,29 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
                       <p className="whitespace-pre-line text-sm">{msg.content}</p>
                     </div>
                   </div>
+                  
+                  {/* Suggestion chips - show only for the last bot message */}
+                  {msg.role === 'bot' && msg.suggestions && msg.suggestions.length > 0 && 
+                   index === messages.length - 1 && !isLoading && !isComplete && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="flex flex-wrap gap-2 mt-2 max-w-[90%]"
+                    >
+                      {msg.suggestions.map((chip, chipIndex) => (
+                        <Button
+                          key={chipIndex}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleQuickAction(chip.value)}
+                          className="text-xs bg-background/80 hover:bg-primary/10 hover:border-primary border-border/50 transition-all"
+                        >
+                          {chip.label}
+                        </Button>
+                      ))}
+                    </motion.div>
+                  )}
                 </motion.div>
               ))}
 
