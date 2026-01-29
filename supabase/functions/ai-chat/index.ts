@@ -522,7 +522,7 @@ Mensaje profesional, máximo 200 caracteres.`;
         ...messages
       ];
 
-      const gatewayResponse = await fetch("https://ai.lovable.dev/v2/chat/completions", {
+      const gatewayResponse = await fetch("https://lovable.dev/ai/v2/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
