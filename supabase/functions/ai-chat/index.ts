@@ -149,7 +149,7 @@ CIERRE:
 
 RECUERDA: Responde SOLO con JSON válido, sin texto adicional.`;
 
-// Extract JSON from potentially malformed response
+// Extract JSON from potentially malformed response, or create one from plain text
 function extractJSON(text: string): Record<string, unknown> | null {
   // Remove markdown code blocks
   let cleaned = text.trim();
@@ -176,6 +176,26 @@ function extractJSON(text: string): Record<string, unknown> | null {
     return JSON.parse(cleaned);
   } catch (e) {
     console.error("Direct JSON parse failed:", e);
+  }
+  
+  // FALLBACK: If AI responded with plain text instead of JSON, wrap it as a reply
+  // This prevents "problema técnico" when AI forgets to use JSON format
+  if (cleaned.length > 10 && !cleaned.startsWith('{')) {
+    console.log("Creating JSON wrapper for plain text response");
+    return {
+      reply: cleaned,
+      datos_lead_update: {},
+      fin_entrevista: false,
+      debug: {
+        intent_detected: null,
+        missing_fields: [],
+        score_rules: 0,
+        score_ai: 0,
+        score_total: 0,
+        tier: null,
+        wrapped_plain_text: true
+      }
+    };
   }
   
   return null;
