@@ -141,7 +141,11 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
                 <Calendar className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Fecha registro</p>
-                  <p className="font-medium">{format(lead.createdAt, 'dd/MM/yyyy HH:mm')}</p>
+                  <p className="font-medium">
+                    {lead.createdAt instanceof Date && !isNaN(lead.createdAt.getTime())
+                      ? format(lead.createdAt, 'dd/MM/yyyy HH:mm')
+                      : '-'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
