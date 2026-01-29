@@ -1,9 +1,10 @@
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, MessageCircle, Mail, X } from 'lucide-react';
+import { Copy, Check, MessageCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { getLoginUrl, getReferralUrl } from '@/lib/siteUrl';
 
 interface SubagentCreatedModalProps {
   open: boolean;
@@ -22,8 +23,8 @@ const SubagentCreatedModal = ({ open, onClose, data }: SubagentCreatedModalProps
   
   if (!data) return null;
 
-  const loginUrl = `${window.location.origin}/login`;
-  const referralUrl = data.referralUrl || `${window.location.origin}/?ref=${data.refCode}`;
+  const loginUrl = getLoginUrl();
+  const referralUrl = data.referralUrl || getReferralUrl(data.refCode);
 
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text);

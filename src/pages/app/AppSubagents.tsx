@@ -12,6 +12,7 @@ import { useSubagents, useCreateSubagent, CreateSubagentResult } from '@/hooks/u
 import { useFirebaseLeadCounts } from '@/hooks/useFirebaseLeads';
 import SubagentCreatedModal from '@/components/app/SubagentCreatedModal';
 import { toast } from 'sonner';
+import { getReferralUrl, getPublicSiteUrl } from '@/lib/siteUrl';
 
 const COUNTRIES = [
   'Paraguay', 'Argentina', 'Chile', 'Colombia', 'Ecuador', 
@@ -75,7 +76,7 @@ const AppSubagents = () => {
   };
 
   const copyLink = (refCode: string) => {
-    const link = `${window.location.origin}/?ref=${refCode}`;
+    const link = getReferralUrl(refCode);
     navigator.clipboard.writeText(link);
     toast.success('Link copiado');
   };
@@ -222,7 +223,7 @@ const AppSubagents = () => {
                         <Button 
                           size="sm" 
                           variant="ghost" 
-                          onClick={() => window.open(`/?ref=${agent.refCode}`, '_blank')}
+                          onClick={() => window.open(getReferralUrl(agent.refCode!), '_blank')}
                           title="Abrir link"
                         >
                           <ExternalLink className="w-4 h-4" />

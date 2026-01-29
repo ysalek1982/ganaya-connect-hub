@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -273,6 +272,33 @@ async function loadActiveConfig(accessToken: string, projectId: string): Promise
     return null;
   } catch (error) {
     console.error("[ai-chat] Error loading config:", error);
+    return null;
+  }
+}
+
+// ============ LOAD GEMINI API KEY FROM FIRESTORE ============
+
+async function loadGeminiApiKey(accessToken: string, projectId: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/settings/ai`,
+      { headers: { "Authorization": `Bearer ${accessToken}` } }
+    );
+
+    if (!response.ok) {
+      console.log("[ai-chat] No Firestore settings/ai found");
+      return null;
+    }
+
+    const doc = await response.json();
+    if (doc.fields?.gemini_api_key?.stringValue) {
+      console.log("[ai-chat] Loaded Gemini API key from Firestore");
+      return doc.fields.gemini_api_key.stringValue;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("[ai-chat] Error loading Gemini API key:", error);
     return null;
   }
 }
@@ -631,27 +657,31 @@ serve(async (req) => {
     
     console.log("[ai-chat] Request type:", type);
 
-    // Initialize Supabase client for settings
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Initialize Firebase Admin for config and settings
+    let firebaseAccessToken: string | null = null;
+    let firebaseProjectId: string | null = null;
+    
+    try {
+      const firebase = await initFirebaseAdmin();
+      firebaseAccessToken = firebase.accessToken;
+      firebaseProjectId = firebase.projectId;
+    } catch (err) {
+      console.error("[ai-chat] Firebase Admin init failed:", err);
+    }
 
     // For conversational type, use config-driven approach
     if (type === "conversational") {
       // Load active config from Firestore
       let config: ChatConfig = DEFAULT_CONFIG;
       
-      try {
-        const { accessToken, projectId } = await initFirebaseAdmin();
-        const activeConfig = await loadActiveConfig(accessToken, projectId);
+      if (firebaseAccessToken && firebaseProjectId) {
+        const activeConfig = await loadActiveConfig(firebaseAccessToken, firebaseProjectId);
         if (activeConfig && activeConfig.questions.length > 0) {
           config = activeConfig;
           console.log("[ai-chat] Using active config:", config.id);
         } else {
           console.log("[ai-chat] No active config found, using default");
         }
-      } catch (err) {
-        console.error("[ai-chat] Failed to load config, using default:", err);
       }
 
       // Get the last user message
@@ -667,29 +697,25 @@ serve(async (req) => {
     }
 
     // For other types (summarize, suggest_whatsapp), use AI
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Priority: 1. Firestore settings/ai, 2. ENV GEMINI_API_KEY, 3. Lovable Gateway
+    let geminiApiKey: string | null = null;
     
-    // Try to get custom Gemini API key
-    let customGeminiKey: string | null = null;
-    try {
-      const { data: settings } = await supabase
-        .from("settings")
-        .select("gemini_api_key")
-        .limit(1)
-        .maybeSingle();
-      
-      customGeminiKey = settings?.gemini_api_key || null;
-    } catch (err) {
-      console.log("[ai-chat] Could not read settings:", err);
+    if (firebaseAccessToken && firebaseProjectId) {
+      geminiApiKey = await loadGeminiApiKey(firebaseAccessToken, firebaseProjectId);
+    }
+    
+    if (!geminiApiKey) {
+      geminiApiKey = Deno.env.get("GEMINI_API_KEY") || null;
     }
 
-    const useCustomGemini = !!customGeminiKey;
-    const useLovableGateway = !useCustomGemini && !!LOVABLE_API_KEY;
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const useGemini = !!geminiApiKey;
+    const useLovableGateway = !useGemini && !!LOVABLE_API_KEY;
 
-    if (!useCustomGemini && !useLovableGateway) {
+    if (!useGemini && !useLovableGateway) {
       return new Response(
         JSON.stringify({ 
-          error: "AI service not configured",
+          error: "IA no configurada. Configure la API Key de Gemini en Admin > Configuración.",
           fallback: true,
         }), 
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -716,7 +742,7 @@ Mensaje profesional, máximo 200 caracteres.`;
 
     let rawContent = "";
 
-    if (useCustomGemini) {
+    if (useGemini) {
       const geminiMessages = [
         { role: "user", parts: [{ text: systemPrompt }] },
         ...messages.map(m => ({
@@ -726,7 +752,7 @@ Mensaje profesional, máximo 200 caracteres.`;
       ];
 
       const geminiResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${customGeminiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
