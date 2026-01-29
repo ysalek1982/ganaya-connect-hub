@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.agent-by-ref]
 verify_jwt = false
+
+[functions.youtube-metadata]
+verify_jwt = false

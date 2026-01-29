@@ -51,7 +51,7 @@ const AdminLayout = () => {
     { path: '/admin/agentes', icon: UserCheck, label: 'Agentes' },
     { path: '/admin/red', icon: Network, label: 'Red' },
     { path: '/admin/asignacion', icon: Shuffle, label: 'Asignación' },
-    { path: '/admin/cms', icon: FileText, label: 'CMS' },
+    { path: '/admin/tutoriales', icon: FileText, label: 'Tutoriales' },
     { path: '/admin/settings', icon: Settings, label: 'Settings' },
   ];
 

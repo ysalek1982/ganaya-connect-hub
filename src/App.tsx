@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Agente from "./pages/Agente";
+import Tutoriales from "./pages/Tutoriales";
 import NotFound from "./pages/NotFound";
 // Admin
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -16,6 +17,7 @@ import AdminNetwork from "./pages/admin/AdminNetwork";
 import AdminAsignacion from "./pages/admin/AdminAsignacion";
 import AdminCMS from "./pages/admin/AdminCMS";
 import AdminCMSPromos from "./pages/admin/AdminCMSPromos";
+import AdminTutorials from "./pages/admin/AdminTutorials";
 import AdminSettingsNew from "./pages/admin/AdminSettingsNew";
 // Agent Portal
 import AppLogin from "./pages/app/AppLogin";
@@ -40,6 +42,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/agente" element={<Agente />} />
+          <Route path="/tutoriales" element={<Tutoriales />} />
           
           {/* Agent Portal */}
           <Route path="/login" element={<AppLogin />} />
@@ -63,6 +66,7 @@ const App = () => (
             <Route path="agentes" element={<AdminAgentesNew />} />
             <Route path="red" element={<AdminNetwork />} />
             <Route path="asignacion" element={<AdminAsignacion />} />
+            <Route path="tutoriales" element={<AdminTutorials />} />
             <Route path="cms" element={<AdminCMS />} />
             <Route path="cms-promos" element={<AdminCMSPromos />} />
             <Route path="settings" element={<AdminSettingsNew />} />
