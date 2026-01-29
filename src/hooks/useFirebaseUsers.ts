@@ -194,7 +194,7 @@ export const useFirebaseUsers = () => {
     },
   });
 
-  // Create agent
+  // Create agent - using fetch directly to properly handle error responses
   const createAgent = async (data: {
     name: string;
     email: string;
@@ -205,27 +205,41 @@ export const useFirebaseUsers = () => {
     canRecruitSubagents?: boolean;
   }): Promise<CreateAgentResult> => {
     try {
-      const { data: response, error } = await supabase.functions.invoke('create-agent-user', {
-        body: data,
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-agent-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+          'apikey': supabaseKey,
+        },
+        body: JSON.stringify(data),
       });
 
-      if (error) {
-        return { success: false, error: error.message };
+      const responseData = await response.json();
+      
+      if (!response.ok) {
+        // Extract error message from response body
+        return { success: false, error: responseData.error || 'Error al crear agente' };
       }
-      if (response?.error) {
-        return { success: false, error: response.error };
+
+      if (responseData?.error) {
+        return { success: false, error: responseData.error };
       }
 
       queryClient.invalidateQueries({ queryKey: ['firebase-agents'] });
       return { 
         success: true, 
-        uid: response.uid,
-        email: response.email,
-        tempPassword: response.tempPassword,
-        refCode: response.refCode,
+        uid: responseData.uid,
+        email: responseData.email,
+        tempPassword: responseData.tempPassword,
+        refCode: responseData.refCode,
       };
     } catch (err: any) {
-      return { success: false, error: err.message };
+      const message = err.message || 'Error desconocido al crear agente';
+      return { success: false, error: message };
     }
   };
 
