@@ -519,6 +519,15 @@ function buildQuestionPrompt(question: ChatQuestion): string {
   return prompt.trim();
 }
 
+// ============ RESTRICTED COUNTRIES ============
+
+const RESTRICTED_COUNTRIES = ['bolivia', 'perú', 'peru', 'brasil', 'brazil'];
+
+function isRestrictedCountry(value: string): boolean {
+  const normalized = value.toLowerCase().trim();
+  return RESTRICTED_COUNTRIES.some(c => normalized === c || normalized.includes(c));
+}
+
 // ============ CONFIG-DRIVEN CHAT HANDLER ============
 
 async function handleConfigDrivenChat(
@@ -550,6 +559,29 @@ async function handleConfigDrivenChat(
     const currentQ = sortedQuestions.find(q => q.id === chatState!.currentQuestionId);
     if (currentQ) {
       const { value, storeKeyValue } = parseUserAnswer(userMessage, currentQ);
+      
+      // Check for restricted country if this is a country question
+      const isCountryQuestion = currentQ.id === 'country' || currentQ.id === 'pais' || currentQ.storeKey === 'country' || currentQ.storeKey === 'pais';
+      if (isCountryQuestion && typeof value === 'string' && isRestrictedCountry(value)) {
+        return {
+          reply: `⚠️ Lo sentimos, actualmente Ganaya.bet no opera en ${value}.\n\nPor el momento solo tenemos presencia en: Paraguay, Argentina, Chile, Colombia, Ecuador, México y USA.\n\n¡Esperamos poder estar disponibles en tu país pronto! 🙏`,
+          datos_lead_update: {
+            answers,
+            _chatState: chatState,
+            restricted_country: true,
+            attempted_country: value,
+          },
+          fin_entrevista: true,
+          debug: {
+            configId: config.id,
+            currentQuestionId: chatState.currentQuestionId,
+            missingRequiredIds: [],
+            score_total: 0,
+            tier: null,
+            error: 'restricted_country',
+          },
+        };
+      }
       
       if (value !== null && value !== undefined) {
         answers[currentQ.id] = value;
