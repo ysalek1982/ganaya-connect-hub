@@ -63,10 +63,26 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
     };
   };
 
+  // Ensure user profile exists via Edge Function
+  const ensureProfile = async (user: User): Promise<void> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('ensure-profile', {
+        body: { uid: user.uid, email: user.email },
+      });
+      
+      if (error) {
+        console.warn('[useFirebaseAuth] ensure-profile error:', error);
+      } else if (data?.created) {
+        console.log('[useFirebaseAuth] Profile created with role:', data.role);
+      }
+    } catch (e) {
+      console.warn('[useFirebaseAuth] ensure-profile call failed:', e);
+    }
+  };
+
   // Fetch user data from Firestore (non-blocking)
   const fetchUserData = async (user: User): Promise<FirebaseUser> => {
     const email = user.email || '';
-    const isAdminEmail = email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
     
     try {
       const userDocRef = doc(db, 'users', user.uid);
@@ -92,32 +108,36 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
         };
       }
       
-      // Document doesn't exist - bootstrap admin if needed
-      if (isAdminEmail) {
-        console.log('[useFirebaseAuth] Admin document not found, bootstrapping...');
-        try {
-          await supabase.functions.invoke('bootstrap-admin', {
-            body: { uid: user.uid, email, name: 'Administrator' },
-          });
-          console.log('[useFirebaseAuth] Admin bootstrap complete');
-        } catch (bootstrapError) {
-          console.warn('[useFirebaseAuth] Bootstrap failed:', bootstrapError);
-        }
+      // Document doesn't exist - call ensure-profile to create it
+      console.log('[useFirebaseAuth] User document not found, calling ensure-profile...');
+      await ensureProfile(user);
+      
+      // Retry fetch after ensure-profile
+      const retryDoc = await getDoc(userDocRef);
+      if (retryDoc.exists()) {
+        const data = retryDoc.data();
+        return {
+          uid: user.uid,
+          name: data.name || '',
+          email: data.email || user.email || '',
+          role: data.role as UserRole || 'AGENT',
+          country: data.country || '',
+          isActive: data.isActive ?? true,
+          lineLeaderId: data.lineLeaderId || null,
+          canRecruitSubagents: data.canRecruitSubagents ?? false,
+          refCode: data.refCode || null,
+          referralUrl: data.referralUrl || null,
+          whatsapp: data.whatsapp || null,
+          city: data.city || null,
+          needsPasswordReset: data.needsPasswordReset ?? false,
+          createdAt: data.createdAt?.toDate() || new Date(),
+        };
       }
     } catch (error) {
       console.warn('[useFirebaseAuth] Firestore read failed, using fallback:', error);
       
-      // Try to bootstrap admin on permission error
-      if (isAdminEmail) {
-        try {
-          await supabase.functions.invoke('bootstrap-admin', {
-            body: { uid: user.uid, email, name: 'Administrator' },
-          });
-          console.log('[useFirebaseAuth] Admin bootstrap complete after error');
-        } catch (bootstrapError) {
-          console.warn('[useFirebaseAuth] Bootstrap failed:', bootstrapError);
-        }
-      }
+      // Try to create profile on permission error
+      await ensureProfile(user);
     }
     
     return buildFallbackUserData(user);
