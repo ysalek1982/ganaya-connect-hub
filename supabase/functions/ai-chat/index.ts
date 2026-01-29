@@ -282,6 +282,40 @@ function createFallbackResponse(errorMsg: string): ConversationalResponse {
   };
 }
 
+// Normalize field aliases to canonical names
+function normalizeFieldAliases(data: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...data };
+  
+  // pais -> country
+  if (normalized.pais && !normalized.country) {
+    normalized.country = normalized.pais;
+  }
+  
+  // nombre -> name
+  if (normalized.nombre && !normalized.name) {
+    normalized.name = normalized.nombre;
+  }
+  
+  // telefono/whatsapp -> contact.whatsapp
+  if (!normalized.contact) {
+    const whatsapp = normalized.whatsapp || normalized.telefono;
+    if (whatsapp) {
+      normalized.contact = { whatsapp: String(whatsapp) };
+    }
+  }
+  
+  // mayor_18/mayor_edad -> age_confirmed_18plus
+  if (!normalized.age_confirmed_18plus) {
+    if (normalized.mayor_18 !== undefined) {
+      normalized.age_confirmed_18plus = Boolean(normalized.mayor_18);
+    } else if (normalized.mayor_edad !== undefined) {
+      normalized.age_confirmed_18plus = Boolean(normalized.mayor_edad);
+    }
+  }
+  
+  return normalized;
+}
+
 // Process and validate AI response
 function processAIResponse(rawContent: string, collectedData: Record<string, unknown>): ConversationalResponse {
   const parsed = extractJSON(rawContent);
@@ -299,7 +333,10 @@ function processAIResponse(rawContent: string, collectedData: Record<string, unk
   
   // Merge with collected data
   const datosUpdate = (parsed.datos_lead_update || {}) as Record<string, unknown>;
-  const mergedData = { ...collectedData, ...datosUpdate };
+  const rawMergedData = { ...collectedData, ...datosUpdate };
+  
+  // Normalize field aliases before validation
+  const mergedData = normalizeFieldAliases(rawMergedData);
   
   // Get intent
   const intent = String(datosUpdate.intent || mergedData.intent || '').toUpperCase();

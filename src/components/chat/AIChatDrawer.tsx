@@ -4,11 +4,9 @@ import { X, Send, Bot, Loader2, MessageCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { useRefCode } from '@/hooks/useRefCode';
-import type { FirebaseLead, LeadTier, LeadIntent, LeadStatus } from '@/lib/firebase-types';
+import type { LeadTier, LeadIntent } from '@/lib/firebase-types';
 
 const WHATSAPP_NUMBER = '59176356972';
 
@@ -147,9 +145,12 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
 
       if (data?.success && data?.data) {
         const response = data.data as ConversationalData;
+        
+        // CRITICAL: Merge data IMMEDIATELY before any state updates
+        const mergedData = { ...collectedData, ...response.datos_lead_update };
 
         if (response.datos_lead_update && Object.keys(response.datos_lead_update).length > 0) {
-          setCollectedData(prev => ({ ...prev, ...response.datos_lead_update }));
+          setCollectedData(mergedData);
         }
 
         const intentFromDebug = response.debug?.intent_detected;
@@ -170,7 +171,8 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
 
         if (response.fin_entrevista) {
           setIsComplete(true);
-          await saveLead(response);
+          // Pass the MERGED data, not the stale collectedData
+          await saveLead(mergedData, response);
         }
       }
     } catch (error) {
@@ -189,9 +191,8 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
     }
   };
 
-  const saveLead = async (response: ConversationalData) => {
+  const saveLead = async (mergedData: Record<string, unknown>, response: ConversationalData) => {
     try {
-      const data = collectedData;
       const intent = detectedIntent || response.debug?.intent_detected as LeadIntent;
       
       // Map tier from debug
@@ -210,55 +211,52 @@ const AIChatDrawer = ({ open, onOpenChange, initialMessage }: AIChatDrawerProps)
       }
 
       const refCode = getRefCode();
-      const country = String(data.pais || data.country || 'No especificado');
-      const name = String(data.nombre || data.name || 'Sin nombre');
+      const country = String(mergedData.pais || mergedData.country || 'No especificado');
 
-      // Call assign-lead edge function for agent assignment
-      let assignedAgentId: string | null = null;
-      let assignedLineLeaderId: string | null = null;
-      
-      try {
-        const { data: assignData, error: assignError } = await supabase.functions.invoke('assign-lead', {
-          body: { refCode, country },
-        });
-        
-        if (!assignError && assignData?.success) {
-          assignedAgentId = assignData.assignedAgentId;
-          assignedLineLeaderId = assignData.assignedLineLeaderId;
-        }
-      } catch (e) {
-        console.error('Error in assign-lead:', e);
+      // Call save-chat-lead edge function (server-side save to Firestore)
+      const { data: saveResult, error: saveError } = await supabase.functions.invoke('save-chat-lead', {
+        body: {
+          mergedData,
+          debug: response.debug,
+          intent,
+          refCode,
+          country,
+          scoreTotal,
+          tier,
+        },
+      });
+
+      if (saveError) {
+        throw new Error(saveError.message || 'Error al guardar');
       }
 
-      // Build lead for Firestore
-      const leadData: Omit<FirebaseLead, 'id' | 'createdAt'> & { createdAt: ReturnType<typeof serverTimestamp> } = {
-        createdAt: serverTimestamp() as any,
-        intent: intent || null,
-        country,
-        city: data.ciudad ? String(data.ciudad) : null,
-        refCode: refCode || null,
-        assignedAgentId,
-        assignedLineLeaderId,
-        status: assignedAgentId ? 'ASIGNADO' : 'NUEVO' as LeadStatus,
-        scoreTotal,
-        tier: tier || null,
-        contact: {
-          whatsapp: String(data.whatsapp || data.telefono || ''),
-          email: data.email ? String(data.email) : undefined,
-          telegram: data.telegram ? String(data.telegram) : undefined,
-        },
-        rawJson: data,
-        name,
-        origen: 'chat_ia',
-      };
+      if (!saveResult?.success) {
+        throw new Error(saveResult?.error || 'No se pudo guardar el lead');
+      }
 
-      // Save to Firestore
-      const leadsRef = collection(db, 'leads');
-      await addDoc(leadsRef, leadData);
-      
-      console.log('Lead saved to Firestore with agent:', assignedAgentId);
+      console.log('[Chat] Lead saved:', saveResult);
+      toast.success('¡Datos registrados correctamente!');
+
     } catch (error) {
-      console.error('Error saving lead to Firestore:', error);
+      console.error('[Chat] Error saving lead:', error);
+      
+      // Save to localStorage as fallback
+      try {
+        const pendingQueue = JSON.parse(localStorage.getItem('pendingLeadQueue') || '[]');
+        pendingQueue.push({
+          mergedData,
+          debug: response.debug,
+          intent: detectedIntent,
+          refCode: getRefCode(),
+          country: String(mergedData.pais || mergedData.country || ''),
+          timestamp: Date.now(),
+        });
+        localStorage.setItem('pendingLeadQueue', JSON.stringify(pendingQueue));
+        toast.warning('No se pudo guardar el lead. Reintentaremos más tarde.');
+      } catch (localError) {
+        console.error('[Chat] LocalStorage fallback also failed:', localError);
+        toast.error('Error al guardar los datos. Por favor, intenta de nuevo.');
+      }
     }
   };
 

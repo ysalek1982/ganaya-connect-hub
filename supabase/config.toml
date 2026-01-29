@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.youtube-metadata]
 verify_jwt = false
+
+[functions.save-chat-lead]
+verify_jwt = false
