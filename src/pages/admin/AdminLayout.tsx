@@ -5,13 +5,13 @@ import {
   LayoutDashboard, 
   Users, 
   UserCheck, 
-  FileText, 
   Settings, 
   LogOut, 
   Menu,
   X,
   Shuffle,
-  Network
+  Network,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -51,7 +51,7 @@ const AdminLayout = () => {
     { path: '/admin/agentes', icon: UserCheck, label: 'Agentes' },
     { path: '/admin/red', icon: Network, label: 'Red' },
     { path: '/admin/asignacion', icon: Shuffle, label: 'Asignación' },
-    { path: '/admin/tutoriales', icon: FileText, label: 'Tutoriales' },
+    { path: '/admin/chat-config', icon: MessageSquare, label: 'Chat Config' },
     { path: '/admin/settings', icon: Settings, label: 'Settings' },
   ];
 
