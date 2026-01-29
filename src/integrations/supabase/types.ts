@@ -573,6 +573,11 @@ export type Database = {
         Returns: string
       }
       get_agent_load: { Args: { agent_id: string }; Returns: number }
+      get_line_leader_agent_ids: {
+        Args: { p_line_leader_id: string }
+        Returns: string[]
+      }
+      get_user_agent_id: { Args: { p_user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
