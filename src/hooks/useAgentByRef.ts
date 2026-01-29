@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import type { PublicAgentInfo } from '@/lib/firebase-types';
 
 interface UseAgentByRefOptions {
@@ -18,14 +17,14 @@ export const useAgentByRef = ({ refCode, campaignId }: UseAgentByRefOptions) => 
         params.append('cid', campaignId);
       }
 
-      const { data, error } = await supabase.functions.invoke('agent-by-ref', {
-        body: null,
-        method: 'GET',
-      });
-
-      // Since invoke doesn't support query params well, we'll use direct fetch
+      // Use direct fetch to edge function with query params
       const baseUrl = import.meta.env.VITE_SUPABASE_URL;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      if (!baseUrl || !anonKey) {
+        console.error('Missing Supabase configuration');
+        return null;
+      }
       
       const response = await fetch(
         `${baseUrl}/functions/v1/agent-by-ref?${params.toString()}`,
@@ -38,16 +37,23 @@ export const useAgentByRef = ({ refCode, campaignId }: UseAgentByRefOptions) => 
       );
 
       if (!response.ok) {
-        console.error('Error fetching agent by ref:', response.statusText);
+        console.error('Error fetching agent by ref:', response.status, response.statusText);
         return null;
       }
 
       const result = await response.json();
+      
+      if (result.error) {
+        console.warn('Agent lookup error:', result.error);
+        return null;
+      }
+      
       return result.agentInfo || null;
     },
     enabled: !!refCode,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    retry: 1,
+    retry: 2,
+    retryDelay: 1000,
   });
 };
 
