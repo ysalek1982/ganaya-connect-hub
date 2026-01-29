@@ -1,17 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { MessageSquare, User, MapPin, Phone, Mail, Calendar, Target, Award } from 'lucide-react';
+import { MessageSquare, User, MapPin, Phone, Mail, Calendar, Target, Award, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { Database } from '@/integrations/supabase/types';
-
-type Lead = Database['public']['Tables']['leads']['Row'];
+import { Progress } from '@/components/ui/progress';
+import type { FirebaseLead } from '@/lib/firebase-types';
+import { getTierColor, getTierText } from '@/lib/agent-scoring';
 
 interface LeadDetailModalProps {
-  lead: Lead | null;
+  lead: FirebaseLead | null;
   onClose: () => void;
   getAgentName: (id: string | null) => string;
 }
@@ -29,12 +29,20 @@ interface ChatLog {
   created_at: string;
 }
 
+interface ScoreBreakdownItem {
+  key: string;
+  label: string;
+  value: boolean | string | number | null;
+  pointsAwarded: number;
+  maxPoints: number;
+}
+
 const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) => {
   // Fetch chat logs for this lead
   const { data: chatLogs } = useQuery({
     queryKey: ['chat-logs', lead?.id],
     queryFn: async () => {
-      if (!lead) return null;
+      if (!lead?.id) return null;
       const { data, error } = await supabase
         .from('chat_logs')
         .select('*')
@@ -43,20 +51,47 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
       if (error) throw error;
       return data as unknown as ChatLog[];
     },
-    enabled: !!lead,
+    enabled: !!lead?.id,
   });
 
   if (!lead) return null;
 
-  const tierBadge = (etiqueta: string | null, score: number | null) => {
-    const colors: Record<string, string> = {
-      'AGENTE_POTENCIAL_ALTO': 'bg-primary/20 text-primary border-primary/30',
-      'AGENTE_POTENCIAL_MEDIO': 'bg-gold/20 text-gold border-gold/30',
-      'AGENTE_POTENCIAL_BAJO': 'bg-orange-400/20 text-orange-400 border-orange-400/30',
-      'CLIENTE': 'bg-muted text-muted-foreground border-muted',
-      'NO_PRIORITARIO': 'bg-muted text-muted-foreground border-muted',
-    };
-    return colors[etiqueta || ''] || 'bg-muted text-muted-foreground border-muted';
+  // Extract score breakdown from rawJson if available
+  const rawJson = lead.rawJson || {};
+  const scoreBreakdown: ScoreBreakdownItem[] = (rawJson.scoreBreakdown as ScoreBreakdownItem[]) || 
+    ((lead as unknown as Record<string, unknown>).scoreBreakdown as ScoreBreakdownItem[]) || [];
+  
+  // Get agent profile for display
+  const agentProfile = rawJson.agentProfile as Record<string, unknown> || rawJson;
+  
+  // Compute score from breakdown if not directly available
+  const scoreTotal = lead.scoreTotal || scoreBreakdown.reduce((sum, item) => sum + item.pointsAwarded, 0);
+  const tier = lead.tier || (lead.rawJson?.tier as string) || 'NOVATO';
+
+  // Format value for display
+  const formatValue = (value: boolean | string | number | null): React.ReactNode => {
+    if (value === null || value === undefined) {
+      return (
+        <span className="flex items-center gap-1 text-muted-foreground">
+          <HelpCircle className="w-4 h-4" />
+          No informado
+        </span>
+      );
+    }
+    if (typeof value === 'boolean') {
+      return value ? (
+        <span className="flex items-center gap-1 text-primary">
+          <CheckCircle className="w-4 h-4" />
+          Sí
+        </span>
+      ) : (
+        <span className="flex items-center gap-1 text-destructive">
+          <XCircle className="w-4 h-4" />
+          No
+        </span>
+      );
+    }
+    return <span className="font-medium">{String(value)}</span>;
   };
 
   return (
@@ -65,9 +100,9 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <User className="w-5 h-5" />
-            {lead.nombre}
-            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${tierBadge(lead.etiqueta, lead.score)}`}>
-              {lead.tipo === 'agente' ? lead.etiqueta?.replace(/_/g, ' ') : lead.tipo}
+            {lead.name}
+            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getTierColor(tier)}`}>
+              {getTierText(tier)}
             </span>
           </DialogTitle>
         </DialogHeader>
@@ -85,112 +120,147 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
                 <Phone className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">WhatsApp</p>
-                  <p className="font-medium">{lead.whatsapp}</p>
+                  <p className="font-medium">{lead.contact?.whatsapp || '-'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="font-medium">{lead.email || '-'}</p>
+                  <p className="font-medium">{lead.contact?.email || '-'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Ubicación</p>
-                  <p className="font-medium">{lead.pais}{lead.ciudad ? `, ${lead.ciudad}` : ''}</p>
+                  <p className="font-medium">{lead.country}{lead.city ? `, ${lead.city}` : ''}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Fecha registro</p>
-                  <p className="font-medium">{format(new Date(lead.created_at), 'dd/MM/yyyy HH:mm')}</p>
+                  <p className="font-medium">{format(lead.createdAt, 'dd/MM/yyyy HH:mm')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <Target className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Intent</p>
-                  <p className="font-medium capitalize">{lead.tipo}</p>
+                  <p className="font-medium capitalize">{lead.intent || 'Agente'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Agente Asignado</p>
-                  <p className="font-medium">{getAgentName(lead.asignado_agente_id)}</p>
+                  <p className="font-medium">{getAgentName(lead.assignedAgentId)}</p>
                 </div>
               </div>
             </div>
 
-            {lead.ref_code && (
+            {lead.refCode && (
               <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
                 <p className="text-xs text-muted-foreground">Ref Code</p>
-                <p className="font-mono font-bold text-primary">{lead.ref_code}</p>
+                <p className="font-mono font-bold text-primary">{lead.refCode}</p>
               </div>
             )}
 
             <div className="flex gap-2 pt-4">
-              <Button variant="whatsapp" size="sm" asChild>
-                <a href={`https://wa.me/${lead.whatsapp.replace(/\D/g, '')}`} target="_blank">
-                  Abrir WhatsApp
-                </a>
-              </Button>
+              {lead.contact?.whatsapp && (
+                <Button variant="default" size="sm" asChild className="bg-primary hover:bg-primary/90">
+                  <a href={`https://wa.me/${lead.contact.whatsapp.replace(/\D/g, '')}`} target="_blank">
+                    Abrir WhatsApp
+                  </a>
+                </Button>
+              )}
             </div>
           </TabsContent>
 
           <TabsContent value="scoring" className="space-y-4 mt-4">
-            {lead.tipo === 'agente' ? (
-              <>
-                <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-primary/20 to-gold/20 border border-primary/30">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-6 h-6 text-primary" />
-                    <span className="text-lg font-bold">Score Total</span>
-                  </div>
-                  <span className="text-3xl font-display font-bold text-primary">{lead.score || 0}</span>
-                </div>
-
-                <div className="space-y-3">
-                  <h4 className="font-semibold">Desglose de Criterios</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">Binance verificada</p>
-                      <p className="font-medium">{lead.binance_verificada ? '✅ Sí (+30)' : '❌ No'}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">Banca $300+</p>
-                      <p className="font-medium">{lead.banca_300 ? '✅ Sí (+20)' : '❌ No'}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">Nivel P2P</p>
-                      <p className="font-medium capitalize">{lead.p2p_nivel || '-'}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">Horas/día</p>
-                      <p className="font-medium">{lead.horas_dia || '-'}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">Exp. Casinos</p>
-                      <p className="font-medium">{lead.exp_casinos ? '✅ Sí (+10)' : '❌ No'}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-muted/50">
-                      <p className="text-xs text-muted-foreground">Exp. Atención</p>
-                      <p className="font-medium">{lead.exp_atencion ? '✅ Sí (+10)' : '❌ No'}</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-muted/50 col-span-2">
-                      <p className="text-xs text-muted-foreground">Quiere empezar</p>
-                      <p className="font-medium">{lead.quiere_empezar ? '✅ Sí (+5)' : '❌ No'}</p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                El scoring solo aplica para leads de tipo agente
+            {/* Score Total */}
+            <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-r from-primary/20 to-gold/20 border border-primary/30">
+              <div className="flex items-center gap-2">
+                <Award className="w-6 h-6 text-primary" />
+                <span className="text-lg font-bold">Score Total</span>
               </div>
-            )}
+              <div className="text-right">
+                <span className="text-3xl font-display font-bold text-primary">{scoreTotal}</span>
+                <span className="text-muted-foreground">/100</span>
+              </div>
+            </div>
+
+            <Progress value={scoreTotal} className="h-3" />
+
+            {/* Score Breakdown */}
+            <div className="space-y-3">
+              <h4 className="font-semibold">Desglose de Criterios</h4>
+              
+              {scoreBreakdown.length > 0 ? (
+                <div className="space-y-2">
+                  {scoreBreakdown.map((item) => (
+                    <div 
+                      key={item.key}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{item.label}</p>
+                        <div className="text-sm mt-1">
+                          {formatValue(item.value)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-lg font-bold ${item.pointsAwarded > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+                          +{item.pointsAwarded}
+                        </span>
+                        <span className="text-sm text-muted-foreground">/{item.maxPoints}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // Fallback: Display from agentProfile or rawJson
+                <div className="grid grid-cols-1 gap-2">
+                  <ScoringItem 
+                    label="Banca $300+"
+                    value={agentProfile.working_capital_usd ?? agentProfile.capital_range}
+                    points={parseCapitalPoints(agentProfile.working_capital_usd ?? agentProfile.capital_range)}
+                    maxPoints={30}
+                  />
+                  <ScoringItem 
+                    label="Horas/día (4+)"
+                    value={agentProfile.hours_per_day ?? agentProfile.availability_hours}
+                    points={parseHoursPoints(agentProfile.hours_per_day ?? agentProfile.availability_hours)}
+                    maxPoints={20}
+                  />
+                  <ScoringItem 
+                    label="Métodos de cobro local"
+                    value={agentProfile.has_local_payment_methods ?? (agentProfile.payment_methods_knowledge !== 'ninguno' ? true : null)}
+                    points={agentProfile.has_local_payment_methods === true || (agentProfile.payment_methods_knowledge && agentProfile.payment_methods_knowledge !== 'ninguno') ? 15 : 0}
+                    maxPoints={15}
+                  />
+                  <ScoringItem 
+                    label="Experiencia atención/ventas"
+                    value={agentProfile.sales_or_customer_service_exp}
+                    points={agentProfile.sales_or_customer_service_exp === true ? 15 : 0}
+                    maxPoints={15}
+                  />
+                  <ScoringItem 
+                    label="Experiencia casinos/apuestas"
+                    value={agentProfile.casino_or_betting_exp}
+                    points={agentProfile.casino_or_betting_exp === true ? 10 : 0}
+                    maxPoints={10}
+                  />
+                  <ScoringItem 
+                    label="Quiere empezar ya"
+                    value={agentProfile.wants_to_start_now ?? agentProfile.quiere_empezar}
+                    points={agentProfile.wants_to_start_now === true || agentProfile.quiere_empezar === true ? 10 : 0}
+                    maxPoints={10}
+                  />
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="chat" className="mt-4">
@@ -248,5 +318,78 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
     </Dialog>
   );
 };
+
+// Helper component for scoring item
+const ScoringItem = ({ 
+  label, 
+  value, 
+  points, 
+  maxPoints 
+}: { 
+  label: string; 
+  value: unknown;
+  points: number; 
+  maxPoints: number;
+}) => {
+  const formatValue = (val: unknown): React.ReactNode => {
+    if (val === null || val === undefined) {
+      return (
+        <span className="flex items-center gap-1 text-muted-foreground">
+          <HelpCircle className="w-4 h-4" />
+          No informado
+        </span>
+      );
+    }
+    if (typeof val === 'boolean') {
+      return val ? (
+        <span className="flex items-center gap-1 text-primary">
+          <CheckCircle className="w-4 h-4" />
+          Sí
+        </span>
+      ) : (
+        <span className="flex items-center gap-1 text-destructive">
+          <XCircle className="w-4 h-4" />
+          No
+        </span>
+      );
+    }
+    return <span className="font-medium">{String(val)}</span>;
+  };
+
+  return (
+    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
+      <div className="flex-1">
+        <p className="font-medium">{label}</p>
+        <div className="text-sm mt-1">
+          {formatValue(value)}
+        </div>
+      </div>
+      <div className="text-right">
+        <span className={`text-lg font-bold ${points > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
+          +{points}
+        </span>
+        <span className="text-sm text-muted-foreground">/{maxPoints}</span>
+      </div>
+    </div>
+  );
+};
+
+// Helper functions
+function parseCapitalPoints(value: unknown): number {
+  if (!value) return 0;
+  const str = String(value).toLowerCase();
+  if (str.includes('500') || str.includes('+') || str.includes('más')) return 30;
+  if (str.includes('300')) return 30;
+  if (str.includes('100')) return 15;
+  return 0;
+}
+
+function parseHoursPoints(value: unknown): number {
+  if (!value) return 0;
+  const str = String(value).toLowerCase();
+  if (str.includes('6') || str.includes('+') || str.includes('más')) return 20;
+  if (str.includes('3') || str.includes('4') || str.includes('5')) return 10;
+  return 0;
+}
 
 export default LeadDetailModal;
