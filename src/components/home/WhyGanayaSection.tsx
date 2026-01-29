@@ -5,7 +5,7 @@ const benefits = [
   {
     icon: Banknote,
     title: 'Pagos en moneda local',
-    description: 'Recarga y retira en pesos, bolivianos, soles, dólares o tu moneda local. Sin complicaciones.',
+    description: 'Recarga y retira en pesos, dólares o tu moneda local. Sin complicaciones.',
   },
   {
     icon: MessageCircle,

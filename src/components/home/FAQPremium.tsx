@@ -38,7 +38,7 @@ const faqs = [
   },
   {
     question: '¿En qué países operan?',
-    answer: 'Actualmente tenemos cajeros en Chile, Argentina, Paraguay, Colombia, Ecuador, Perú, México y USA. Cada país tiene agentes locales que conocen las particularidades de su mercado y los métodos de pago disponibles.',
+    answer: 'Actualmente tenemos cajeros en Chile, Argentina, Paraguay, Colombia, Ecuador, México y USA. Cada país tiene agentes locales que conocen las particularidades de su mercado y los métodos de pago disponibles.',
   },
 ];
 

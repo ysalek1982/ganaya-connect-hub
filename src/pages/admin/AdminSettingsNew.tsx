@@ -31,7 +31,7 @@ interface GeneralSettings {
 }
 
 const allCountries = [
-  'Paraguay', 'Argentina', 'Bolivia', 'Colombia', 'Ecuador', 'Perú', 'Chile', 'México', 'USA', 'Brasil', 'Uruguay', 'Venezuela'
+  'Paraguay', 'Argentina', 'Colombia', 'Ecuador', 'Chile', 'México', 'USA', 'Uruguay', 'Venezuela'
 ];
 
 // Helper to call bootstrap-admin with admin actions

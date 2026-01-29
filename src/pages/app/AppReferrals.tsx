@@ -20,10 +20,8 @@ const countries = [
   { code: 'CL', name: 'Chile', flag: '🇨🇱' },
   { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
   { code: 'PY', name: 'Paraguay', flag: '🇵🇾' },
-  { code: 'BO', name: 'Bolivia', flag: '🇧🇴' },
   { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
   { code: 'EC', name: 'Ecuador', flag: '🇪🇨' },
-  { code: 'PE', name: 'Perú', flag: '🇵🇪' },
   { code: 'MX', name: 'México', flag: '🇲🇽' },
   { code: 'US', name: 'USA', flag: '🇺🇸' },
 ];

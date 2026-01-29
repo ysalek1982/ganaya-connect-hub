@@ -16,7 +16,7 @@ import { getReferralUrl, getPublicSiteUrl } from '@/lib/siteUrl';
 
 const COUNTRIES = [
   'Paraguay', 'Argentina', 'Chile', 'Colombia', 'Ecuador', 
-  'Perú', 'Bolivia', 'México', 'USA', 'España'
+  'México', 'USA', 'España'
 ];
 
 const AppSubagents = () => {
