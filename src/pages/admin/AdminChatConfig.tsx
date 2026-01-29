@@ -108,14 +108,14 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
   isActive: false,
   version: 1,
   thresholds: {
-    prometedorMin: 70,
-    potencialMin: 40,
+    prometedorMin: 50,
+    potencialMin: 30,
   },
   closing: {
-    successTitle: '¡Gracias por tu interés!',
-    successMessage: 'Hemos recibido tu postulación. Un reclutador te contactará pronto.',
-    nextSteps: 'Prepara tu capital inicial de $300 USD y documentos de identidad.',
-    ctaWhatsAppLabel: 'Contactar por WhatsApp',
+    successTitle: '¡Listo! Ya recibimos tu postulación 🙌',
+    successMessage: 'Gracias por postular. En breve revisaremos tus respuestas y te escribiremos por WhatsApp para coordinar los siguientes pasos.',
+    nextSteps: '📌 Mantén tu WhatsApp disponible.\n📌 Si calificas, te explicamos el proceso y te damos tu enlace de reclutamiento.',
+    ctaWhatsAppLabel: 'Entendido',
   },
   questions: [
     {
@@ -146,8 +146,12 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
       options: [
         { value: 'Paraguay', label: 'Paraguay', points: 0 },
         { value: 'Argentina', label: 'Argentina', points: 0 },
+        { value: 'Chile', label: 'Chile', points: 0 },
         { value: 'Colombia', label: 'Colombia', points: 0 },
         { value: 'Ecuador', label: 'Ecuador', points: 0 },
+        { value: 'México', label: 'México', points: 0 },
+        { value: 'USA', label: 'USA', points: 0 },
+        { value: 'España', label: 'España', points: 0 },
         { value: 'Otro', label: 'Otro país', points: 0 },
       ],
       order: 3,
@@ -165,21 +169,6 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
       order: 4,
     },
     {
-      id: 'working_capital',
-      label: 'Capital operativo',
-      prompt: '¿Con cuánto capital inicial (USD) podrías comenzar a operar?',
-      type: 'select',
-      required: true,
-      storeKey: 'working_capital_usd',
-      options: [
-        { value: '500+', label: '$500 o más', points: 30 },
-        { value: '300-500', label: '$300 - $500', points: 25 },
-        { value: '150-300', label: '$150 - $300', points: 15 },
-        { value: '0-150', label: 'Menos de $150', points: 0 },
-      ],
-      order: 5,
-    },
-    {
       id: 'hours_per_day',
       label: 'Horas disponibles',
       prompt: '¿Cuántas horas al día podrías dedicar?',
@@ -192,7 +181,7 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
         { value: '2-4', label: '2-4 horas', points: 10 },
         { value: '0-2', label: 'Menos de 2 horas', points: 5 },
       ],
-      order: 6,
+      order: 5,
     },
     {
       id: 'has_local_payment',
@@ -204,19 +193,20 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
       scoring: {
         rules: [{ condition: '==', value: true, points: 15 }],
       },
-      order: 7,
+      order: 6,
     },
     {
-      id: 'sales_experience',
-      label: 'Experiencia en ventas',
-      prompt: '¿Tienes experiencia en ventas o atención al cliente?',
-      type: 'boolean',
-      required: false,
-      storeKey: 'has_sales_experience',
-      scoring: {
-        rules: [{ condition: '==', value: true, points: 10 }],
-      },
-      order: 8,
+      id: 'knows_casino_players',
+      label: 'Red de contactos',
+      prompt: '¿Conoces personas que jueguen en casinos en línea?',
+      type: 'select',
+      required: true,
+      storeKey: 'knows_casino_players',
+      options: [
+        { value: 'yes', label: 'Sí', points: 15 },
+        { value: 'no', label: 'No', points: 0 },
+      ],
+      order: 7,
     },
     {
       id: 'wants_to_start',
@@ -228,7 +218,7 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
       scoring: {
         rules: [{ condition: '==', value: true, points: 10 }],
       },
-      order: 9,
+      order: 8,
     },
   ],
 };

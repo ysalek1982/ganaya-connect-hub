@@ -310,33 +310,18 @@ const DEFAULT_CONFIG: ChatConfig = {
   name: 'Default Config',
   isActive: true,
   version: 1,
-  thresholds: { prometedorMin: 70, potencialMin: 40 },
+  thresholds: { prometedorMin: 50, potencialMin: 30 },
   closing: {
-    successTitle: '¡Gracias por tu interés!',
-    successMessage: 'Tu postulación fue registrada correctamente.',
-    nextSteps: 'Un reclutador te contactará pronto por WhatsApp.',
-    ctaWhatsAppLabel: 'Contactar por WhatsApp'
+    successTitle: '¡Listo! Ya recibimos tu postulación 🙌',
+    successMessage: 'Gracias por postular. En breve revisaremos tus respuestas y te escribiremos por WhatsApp para coordinar los siguientes pasos.',
+    nextSteps: '📌 Mantén tu WhatsApp disponible.\n📌 Si calificas, te explicamos el proceso y te damos tu enlace de reclutamiento.',
+    ctaWhatsAppLabel: 'Entendido'
   },
   questions: [
     { id: 'name', label: 'Nombre', prompt: '¿Cuál es tu nombre completo?', type: 'text', required: true, storeKey: 'name', order: 1 },
     { id: 'country', label: 'País', prompt: '¿En qué país te encuentras?', type: 'text', required: true, storeKey: 'country', order: 2 },
     { id: 'whatsapp', label: 'WhatsApp', prompt: '¿Cuál es tu número de WhatsApp con código de país?', type: 'text', required: true, storeKey: 'whatsapp', order: 3 },
     { id: 'age18', label: 'Mayor de edad', prompt: '¿Eres mayor de 18 años?\n1) Sí\n2) No', type: 'boolean', required: true, storeKey: 'age18', order: 4 },
-    { 
-      id: 'working_capital', 
-      label: 'Capital operativo', 
-      prompt: '¿Con cuánto capital inicial (USD) podrías comenzar?\n1) $500 o más\n2) $300-$500\n3) $150-$300\n4) Menos de $150', 
-      type: 'select', 
-      required: true, 
-      storeKey: 'working_capital_usd',
-      options: [
-        { value: '500+', label: '$500 o más', points: 30 },
-        { value: '300-500', label: '$300-$500', points: 25 },
-        { value: '150-300', label: '$150-$300', points: 15 },
-        { value: '0-150', label: 'Menos de $150', points: 0 },
-      ],
-      order: 5 
-    },
     { 
       id: 'hours_per_day', 
       label: 'Horas disponibles', 
@@ -350,7 +335,7 @@ const DEFAULT_CONFIG: ChatConfig = {
         { value: '2-4', label: '2-4 horas', points: 10 },
         { value: '0-2', label: '<2 horas', points: 5 },
       ],
-      order: 6 
+      order: 5 
     },
     { 
       id: 'has_local_payment', 
@@ -360,6 +345,19 @@ const DEFAULT_CONFIG: ChatConfig = {
       required: true, 
       storeKey: 'has_local_payment_methods',
       scoring: { rules: [{ condition: '==', value: true, points: 15 }] },
+      order: 6 
+    },
+    { 
+      id: 'knows_casino_players', 
+      label: 'Red de contactos', 
+      prompt: '¿Conoces personas que jueguen en casinos en línea?\n1) Sí\n2) No', 
+      type: 'select', 
+      required: true, 
+      storeKey: 'knows_casino_players',
+      options: [
+        { value: 'yes', label: 'Sí', points: 15 },
+        { value: 'no', label: 'No', points: 0 },
+      ],
       order: 7 
     },
     { 
