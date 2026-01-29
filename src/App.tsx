@@ -21,8 +21,10 @@ import AdminSettingsNew from "./pages/admin/AdminSettingsNew";
 import AppLogin from "./pages/app/AppLogin";
 import AppLayout from "./pages/app/AppLayout";
 import AppDashboard from "./pages/app/AppDashboard";
+import AppProfile from "./pages/app/AppProfile";
 import AppReferrals from "./pages/app/AppReferrals";
 import AppLeads from "./pages/app/AppLeads";
+import AppTutorials from "./pages/app/AppTutorials";
 import AppSubagents from "./pages/app/AppSubagents";
 import AppAssets from "./pages/app/AppAssets";
 import AppChangePassword from "./pages/app/AppChangePassword";
@@ -45,8 +47,10 @@ const App = () => (
           <Route path="/app/change-password" element={<AppChangePassword />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<AppDashboard />} />
+            <Route path="profile" element={<AppProfile />} />
             <Route path="referrals" element={<AppReferrals />} />
             <Route path="leads" element={<AppLeads />} />
+            <Route path="tutorials" element={<AppTutorials />} />
             <Route path="subagents" element={<AppSubagents />} />
             <Route path="assets" element={<AppAssets />} />
           </Route>
