@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { MessageCircle, UserCheck, CreditCard, Gamepad2, Send, Star, Briefcase, TrendingUp } from 'lucide-react';
+import { MessageCircle, UserCheck, CreditCard, Gamepad2, Send, Star, Briefcase, TrendingUp, Banknote, Building } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const HowItWorksPremium = () => {
@@ -19,9 +19,9 @@ export const HowItWorksPremium = () => {
       bgColor: 'bg-gold/10',
     },
     {
-      icon: CreditCard,
+      icon: Banknote,
       title: 'Recargas/Retiras',
-      description: 'USDT vía Binance, rápido y seguro',
+      description: 'En tu moneda local, rápido y seguro',
       color: 'text-accent',
       bgColor: 'bg-accent/10',
     },
@@ -131,6 +131,30 @@ export const HowItWorksPremium = () => {
             {renderSteps(agentSteps)}
           </TabsContent>
         </Tabs>
+
+        {/* Payment methods trust */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-16 text-center"
+        >
+          <p className="text-sm text-muted-foreground mb-4">Métodos de pago disponibles</p>
+          <div className="flex flex-wrap items-center justify-center gap-6">
+            <div className="flex items-center gap-2 text-foreground/80">
+              <Building className="w-5 h-5 text-primary" />
+              <span className="text-sm">Transferencia bancaria</span>
+            </div>
+            <div className="flex items-center gap-2 text-foreground/80">
+              <Banknote className="w-5 h-5 text-gold" />
+              <span className="text-sm">Billeteras locales</span>
+            </div>
+            <div className="flex items-center gap-2 text-foreground/80">
+              <CreditCard className="w-5 h-5 text-accent" />
+              <span className="text-sm">Depósito</span>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

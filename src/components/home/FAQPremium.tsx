@@ -10,15 +10,23 @@ import {
 const faqs = [
   {
     question: '¿Qué es un cajero?',
-    answer: 'Un cajero es tu asistente personal para recargas y retiros. Te guía paso a paso por WhatsApp o Telegram para que tu experiencia sea simple y segura. Cada cajero opera en tu país y conoce las mejores formas de mover tu dinero.',
+    answer: 'Un cajero es tu asistente personal para recargas y retiros. Te guía paso a paso por WhatsApp o Telegram para que tu experiencia sea simple y segura. Cada cajero opera en tu país y conoce las mejores formas de mover tu dinero en moneda local.',
   },
   {
-    question: '¿Cómo recargo con USDT?',
-    answer: 'Es muy simple: 1) Contactas a tu cajero por WhatsApp, 2) Te indica la dirección de Binance para transferir, 3) Envías los USDT, 4) Tu saldo se acredita en minutos. Todo el proceso es guiado y seguro.',
+    question: '¿Cómo recargo en mi país?',
+    answer: 'Depende de tu ubicación. En la mayoría de países aceptamos transferencia bancaria, billeteras electrónicas locales (Mercado Pago, Nequi, Yape, etc.) y depósitos. Tu cajero te indicará las opciones disponibles según tu país. El proceso es simple: contactas, transfieres y tu saldo se acredita en minutos.',
+  },
+  {
+    question: '¿Cómo retiro en moneda local?',
+    answer: 'Contactas a tu cajero, le indicas el monto a retirar y él te envía el dinero a tu cuenta bancaria o billetera local. El proceso suele tomar entre 15 minutos y algunas horas según el método elegido.',
   },
   {
     question: '¿Cuánto tarda un retiro?',
-    answer: 'Los retiros con USDT se procesan en minutos una vez confirmados. Tu cajero te notifica cuando el dinero está en camino. Es mucho más rápido que métodos tradicionales.',
+    answer: 'Los retiros se procesan rápidamente una vez confirmados. Dependiendo del método y tu país, puede tomar desde 15 minutos hasta un par de horas. Tu cajero te notifica cuando el dinero está en camino.',
+  },
+  {
+    question: '¿Qué métodos de pago aceptan?',
+    answer: 'Aceptamos transferencia bancaria, billeteras electrónicas locales (Mercado Pago, Nequi, Yape, Plin, etc.), y otros métodos según tu país. Tu cajero te indicará las opciones específicas disponibles en tu ubicación.',
   },
   {
     question: '¿Cómo puedo ser cajero/agente?',
@@ -26,11 +34,11 @@ const faqs = [
   },
   {
     question: '¿Es seguro?',
-    answer: 'Absolutamente. Operamos con USDT (stablecoin) a través de Binance, la plataforma de criptomonedas más grande del mundo. Tus transacciones son privadas y verificables. Además, promovemos el juego responsable y solo aceptamos mayores de 18 años.',
+    answer: 'Absolutamente. Trabajamos con cajeros verificados que operan en tu país. Tus transacciones son privadas y verificables. Además, promovemos el juego responsable y solo aceptamos mayores de 18 años.',
   },
   {
     question: '¿En qué países operan?',
-    answer: 'Actualmente tenemos cajeros en Chile, Argentina, Paraguay, Colombia, Ecuador y USA. Cada país tiene agentes locales que conocen las particularidades de su mercado.',
+    answer: 'Actualmente tenemos cajeros en Chile, Argentina, Paraguay, Colombia, Ecuador, Perú, México y USA. Cada país tiene agentes locales que conocen las particularidades de su mercado y los métodos de pago disponibles.',
   },
 ];
 
