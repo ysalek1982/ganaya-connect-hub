@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
+import { auth } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -44,6 +44,19 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+
+type BootstrapAdminAction =
+  | 'chat_configs_list'
+  | 'chat_configs_upsert'
+  | 'chat_configs_delete'
+  | 'chat_configs_activate';
+
+const invokeBootstrapAdmin = async <T,>(payload: Record<string, unknown>): Promise<T> => {
+  const { data, error } = await supabase.functions.invoke('bootstrap-admin', { body: payload });
+  if (error) throw new Error(error.message);
+  if ((data as any)?.error) throw new Error((data as any).error);
+  return data as T;
+};
 
 interface QuestionOption {
   value: string;
@@ -445,25 +458,33 @@ const AdminChatConfig = () => {
     })
   );
 
-  // Load configs from Firestore
+  const getIdToken = async (): Promise<string> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Debes iniciar sesión');
+    return await user.getIdToken(true);
+  };
+
+  // Load configs via backend (avoids Firestore client permission issues)
   const loadConfigs = async () => {
     try {
-      const snapshot = await getDocs(collection(db, 'chat_configs'));
-      const loadedConfigs: ChatConfig[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        loadedConfigs.push({
-          id: doc.id,
-          name: data.name || 'Sin nombre',
-          isActive: data.isActive || false,
-          version: data.version || 1,
-          thresholds: data.thresholds || { prometedorMin: 70, potencialMin: 40 },
-          closing: data.closing || defaultConfig.closing,
-          questions: (data.questions || []).sort((a: ChatQuestion, b: ChatQuestion) => a.order - b.order),
-          createdAt: data.createdAt?.toDate?.() || new Date(),
-          updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        });
+      const idToken = await getIdToken();
+      const res = await invokeBootstrapAdmin<{ success: boolean; configs: any[] }>({
+        action: 'chat_configs_list' satisfies BootstrapAdminAction,
+        idToken,
       });
+
+      const loadedConfigs: ChatConfig[] = (res.configs || []).map((data: any) => ({
+        id: data.id,
+        name: data.name || 'Sin nombre',
+        isActive: !!data.isActive,
+        version: data.version || 1,
+        thresholds: data.thresholds || { prometedorMin: 70, potencialMin: 40 },
+        closing: data.closing || defaultConfig.closing,
+        questions: (data.questions || []).sort((a: ChatQuestion, b: ChatQuestion) => a.order - b.order),
+        createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+        updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+      }));
+
       setConfigs(loadedConfigs);
       
       // Auto-select active config or first one
@@ -475,7 +496,8 @@ const AdminChatConfig = () => {
       }
     } catch (error) {
       console.error('Error loading configs:', error);
-      toast.error('Error al cargar configuraciones');
+      const msg = error instanceof Error ? error.message : 'Error al cargar configuraciones';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -490,18 +512,25 @@ const AdminChatConfig = () => {
     
     setSaving(true);
     try {
-      const docRef = doc(db, 'chat_configs', selectedConfig.id);
-      await setDoc(docRef, {
+      const idToken = await getIdToken();
+      const configToSave: ChatConfig = {
         ...selectedConfig,
         questions: selectedConfig.questions.map((q, i) => ({ ...q, order: i + 1 })),
-        updatedAt: Timestamp.now(),
-      }, { merge: true });
+        updatedAt: new Date(),
+      };
+
+      await invokeBootstrapAdmin<{ success: boolean }>({
+        action: 'chat_configs_upsert' satisfies BootstrapAdminAction,
+        idToken,
+        config: configToSave,
+      });
       
       toast.success('Configuración guardada');
       loadConfigs();
     } catch (error) {
       console.error('Error saving config:', error);
-      toast.error('Error al guardar');
+      const msg = error instanceof Error ? error.message : 'Error al guardar';
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -509,19 +538,18 @@ const AdminChatConfig = () => {
 
   const handleActivate = async (configId: string) => {
     try {
-      // Deactivate all configs
-      for (const config of configs) {
-        if (config.isActive) {
-          await updateDoc(doc(db, 'chat_configs', config.id), { isActive: false });
-        }
-      }
-      // Activate selected
-      await updateDoc(doc(db, 'chat_configs', configId), { isActive: true });
+      const idToken = await getIdToken();
+      await invokeBootstrapAdmin<{ success: boolean }>({
+        action: 'chat_configs_activate' satisfies BootstrapAdminAction,
+        idToken,
+        id: configId,
+      });
       toast.success('Configuración activada');
       loadConfigs();
     } catch (error) {
       console.error('Error activating config:', error);
-      toast.error('Error al activar');
+      const msg = error instanceof Error ? error.message : 'Error al activar';
+      toast.error(msg);
     }
   };
 
@@ -537,16 +565,18 @@ const AdminChatConfig = () => {
     };
     
     try {
-      await setDoc(doc(db, 'chat_configs', newId), {
-        ...newConfig,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+      const idToken = await getIdToken();
+      await invokeBootstrapAdmin<{ success: boolean }>({
+        action: 'chat_configs_upsert' satisfies BootstrapAdminAction,
+        idToken,
+        config: newConfig,
       });
       toast.success('Configuración creada');
       loadConfigs();
     } catch (error) {
       console.error('Error creating config:', error);
-      toast.error('Error al crear');
+      const msg = error instanceof Error ? error.message : 'Error al crear';
+      toast.error(msg);
     }
   };
 
@@ -562,16 +592,18 @@ const AdminChatConfig = () => {
     };
     
     try {
-      await setDoc(doc(db, 'chat_configs', newId), {
-        ...newConfig,
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
+      const idToken = await getIdToken();
+      await invokeBootstrapAdmin<{ success: boolean }>({
+        action: 'chat_configs_upsert' satisfies BootstrapAdminAction,
+        idToken,
+        config: { ...newConfig, createdAt: new Date(), updatedAt: new Date() },
       });
       toast.success('Configuración duplicada');
       loadConfigs();
     } catch (error) {
       console.error('Error duplicating config:', error);
-      toast.error('Error al duplicar');
+      const msg = error instanceof Error ? error.message : 'Error al duplicar';
+      toast.error(msg);
     }
   };
 
@@ -579,7 +611,12 @@ const AdminChatConfig = () => {
     if (!confirm('¿Eliminar esta configuración?')) return;
     
     try {
-      await deleteDoc(doc(db, 'chat_configs', configId));
+      const idToken = await getIdToken();
+      await invokeBootstrapAdmin<{ success: boolean }>({
+        action: 'chat_configs_delete' satisfies BootstrapAdminAction,
+        idToken,
+        id: configId,
+      });
       toast.success('Configuración eliminada');
       if (selectedConfig?.id === configId) {
         setSelectedConfig(null);
@@ -587,7 +624,8 @@ const AdminChatConfig = () => {
       loadConfigs();
     } catch (error) {
       console.error('Error deleting config:', error);
-      toast.error('Error al eliminar');
+      const msg = error instanceof Error ? error.message : 'Error al eliminar';
+      toast.error(msg);
     }
   };
 

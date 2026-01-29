@@ -91,6 +91,211 @@ const initFirebaseAdmin = async () => {
   };
 };
 
+// -----------------------------
+// Firestore helpers (REST)
+// -----------------------------
+
+function parseFirestoreValue(value: Record<string, unknown>): unknown {
+  if (value.stringValue !== undefined) return value.stringValue;
+  if (value.integerValue !== undefined) return parseInt(String(value.integerValue), 10);
+  if (value.doubleValue !== undefined) return Number(value.doubleValue);
+  if (value.booleanValue !== undefined) return value.booleanValue;
+  if (value.nullValue !== undefined) return null;
+  if (value.timestampValue !== undefined) return new Date(String(value.timestampValue));
+  if (value.mapValue !== undefined) {
+    const fields = (value.mapValue as Record<string, unknown>).fields as Record<string, Record<string, unknown>>;
+    if (!fields) return {};
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(fields)) {
+      result[k] = parseFirestoreValue(v);
+    }
+    return result;
+  }
+  if (value.arrayValue !== undefined) {
+    const values = (value.arrayValue as Record<string, unknown>).values as Array<Record<string, unknown>>;
+    if (!values) return [];
+    return values.map(parseFirestoreValue);
+  }
+  return null;
+}
+
+function parseFirestoreDoc(doc: Record<string, unknown>): Record<string, unknown> | null {
+  if (!doc || !doc.fields) return null;
+  const fields = doc.fields as Record<string, Record<string, unknown>>;
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    result[key] = parseFirestoreValue(value);
+  }
+  return result;
+}
+
+function toFirestoreValue(value: unknown): Record<string, unknown> {
+  if (value === null || value === undefined) return { nullValue: null };
+  if (typeof value === 'string') return { stringValue: value };
+  if (typeof value === 'number') {
+    if (Number.isInteger(value)) return { integerValue: value.toString() };
+    return { doubleValue: value };
+  }
+  if (typeof value === 'boolean') return { booleanValue: value };
+  if (value instanceof Date) return { timestampValue: value.toISOString() };
+  if (Array.isArray(value)) {
+    return { arrayValue: { values: value.map(toFirestoreValue) } };
+  }
+  if (typeof value === 'object') {
+    const fields: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      fields[k] = toFirestoreValue(v);
+    }
+    return { mapValue: { fields } };
+  }
+  return { stringValue: String(value) };
+}
+
+const firestoreGetDoc = async (
+  accessToken: string,
+  projectId: string,
+  path: string,
+): Promise<Record<string, unknown> | null> => {
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${path}`,
+    { headers: { "Authorization": `Bearer ${accessToken}` } }
+  );
+
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    console.error('[bootstrap-admin] Firestore GET failed:', await response.text());
+    return null;
+  }
+
+  return await response.json();
+};
+
+const firestorePatchDoc = async (
+  accessToken: string,
+  projectId: string,
+  path: string,
+  data: Record<string, unknown>
+): Promise<void> => {
+  const fields = Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toFirestoreValue(v)]));
+
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${path}`,
+    {
+      method: 'PATCH',
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+    }
+  );
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error('[bootstrap-admin] Firestore PATCH failed:', errText);
+    throw new Error('No se pudo guardar la configuración');
+  }
+};
+
+const firestoreDeleteDoc = async (
+  accessToken: string,
+  projectId: string,
+  path: string
+): Promise<void> => {
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${path}`,
+    {
+      method: 'DELETE',
+      headers: { "Authorization": `Bearer ${accessToken}` },
+    }
+  );
+
+  if (!response.ok) {
+    console.error('[bootstrap-admin] Firestore DELETE failed:', await response.text());
+    throw new Error('No se pudo eliminar la configuración');
+  }
+};
+
+const firestoreRunQuery = async (
+  accessToken: string,
+  projectId: string,
+  structuredQuery: Record<string, unknown>
+): Promise<Array<Record<string, unknown>>> => {
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`,
+    {
+      method: 'POST',
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ structuredQuery }),
+    }
+  );
+
+  if (!response.ok) {
+    console.error('[bootstrap-admin] Firestore runQuery failed:', await response.text());
+    throw new Error('No se pudieron cargar las configuraciones');
+  }
+
+  return await response.json();
+};
+
+// -----------------------------
+// Admin verification (Firebase ID token)
+// -----------------------------
+
+const verifyFirebaseIdToken = async (
+  accessToken: string,
+  projectId: string,
+  idToken: string,
+): Promise<{ uid: string; email: string } | null> => {
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:lookup`,
+    {
+      method: 'POST',
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idToken }),
+    }
+  );
+
+  if (!response.ok) {
+    console.error('[bootstrap-admin] Token verification failed:', await response.text());
+    return null;
+  }
+
+  const data = await response.json();
+  if (data.users && data.users[0]) {
+    return {
+      uid: data.users[0].localId,
+      email: data.users[0].email || '',
+    };
+  }
+  return null;
+};
+
+const requireAdmin = async (
+  accessToken: string,
+  projectId: string,
+  idToken: string
+): Promise<{ uid: string; email: string }> => {
+  const verified = await verifyFirebaseIdToken(accessToken, projectId, idToken);
+  if (!verified) {
+    throw new Error('UNAUTHORIZED');
+  }
+
+  const userDoc = await firestoreGetDoc(accessToken, projectId, `users/${verified.uid}`);
+  const parsed = userDoc ? parseFirestoreDoc(userDoc) : null;
+  const role = parsed?.role;
+  if (role !== 'ADMIN') {
+    throw new Error('FORBIDDEN');
+  }
+  return verified;
+};
+
 // Check if document exists in Firestore
 const checkDocExists = async (
   accessToken: string,
@@ -170,8 +375,147 @@ serve(async (req) => {
   try {
     console.log("[bootstrap-admin] Starting...");
     
-    const body = await req.json();
-    const { uid, email, name } = body;
+    console.log("[bootstrap-admin] Initializing Firebase Admin...");
+    const { accessToken, projectId } = await initFirebaseAdmin();
+    console.log("[bootstrap-admin] Firebase Admin initialized");
+
+    const body = await req.json().catch(() => ({}));
+
+    // If action is provided, handle admin operations
+    if (body?.action) {
+      const action = String(body.action);
+      const idToken = String(body.idToken || '');
+
+      // Require admin for ALL actions
+      try {
+        await requireAdmin(accessToken, projectId, idToken);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'UNAUTHORIZED';
+        const status = msg === 'FORBIDDEN' ? 403 : 401;
+        return new Response(
+          JSON.stringify({ error: status === 403 ? 'No autorizado' : 'Sesión inválida' }),
+          { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // --- Chat configs CRUD ---
+      if (action === 'chat_configs_list') {
+        const results = await firestoreRunQuery(accessToken, projectId, {
+          from: [{ collectionId: 'chat_configs' }],
+          orderBy: [{ field: { fieldPath: 'updatedAt' }, direction: 'DESCENDING' }],
+          limit: 100,
+        });
+
+        const configs = results
+          .map((r: any) => (r.document ? { raw: r.document } : null))
+          .filter(Boolean)
+          .map((r: any) => {
+            const parsed = parseFirestoreDoc(r.raw) || {};
+            const namePath = String(r.raw.name || '');
+            const id = namePath.split('/').pop() || '';
+            return { id, ...parsed };
+          });
+
+        return new Response(
+          JSON.stringify({ success: true, configs }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (action === 'chat_configs_upsert') {
+        const config = (body?.config || {}) as Record<string, unknown>;
+        const id = String(config.id || '');
+        if (!id) {
+          return new Response(
+            JSON.stringify({ error: 'Falta id' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Ensure timestamps
+        const now = new Date();
+        const createdAt = config.createdAt instanceof Date ? config.createdAt : (config.createdAt ? new Date(String(config.createdAt)) : now);
+        const updatedAt = now;
+
+        // Keep payload minimal and consistent
+        const payload = {
+          ...config,
+          createdAt,
+          updatedAt,
+        };
+
+        // Upsert via PATCH (creates if missing? Firestore PATCH requires existing)
+        const exists = await checkDocExists(accessToken, projectId, 'chat_configs', id);
+        if (!exists) {
+          await createFirestoreDoc(accessToken, projectId, 'chat_configs', id, payload);
+        } else {
+          await firestorePatchDoc(accessToken, projectId, `chat_configs/${id}`, payload);
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (action === 'chat_configs_delete') {
+        const id = String(body?.id || '');
+        if (!id) {
+          return new Response(
+            JSON.stringify({ error: 'Falta id' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        await firestoreDeleteDoc(accessToken, projectId, `chat_configs/${id}`);
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (action === 'chat_configs_activate') {
+        const id = String(body?.id || '');
+        if (!id) {
+          return new Response(
+            JSON.stringify({ error: 'Falta id' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Load all configs, deactivate, then activate target
+        const results = await firestoreRunQuery(accessToken, projectId, {
+          from: [{ collectionId: 'chat_configs' }],
+          limit: 200,
+        });
+        const allIds = results
+          .map((r: any) => (r.document?.name ? String(r.document.name).split('/').pop() : null))
+          .filter(Boolean) as string[];
+
+        for (const cid of allIds) {
+          const isActive = cid === id;
+          const exists = await checkDocExists(accessToken, projectId, 'chat_configs', cid);
+          if (exists) {
+            await firestorePatchDoc(accessToken, projectId, `chat_configs/${cid}`, {
+              isActive,
+              updatedAt: new Date(),
+            });
+          }
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ error: 'Acción no soportada' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Default legacy behavior: bootstrap admin doc creation
+    const { uid, email, name } = body || {};
 
     if (!uid || !email) {
       return new Response(
@@ -179,10 +523,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log("[bootstrap-admin] Initializing Firebase Admin...");
-    const { accessToken, projectId } = await initFirebaseAdmin();
-    console.log("[bootstrap-admin] Firebase Admin initialized");
 
     // Check if user document already exists
     const exists = await checkDocExists(accessToken, projectId, "users", uid);
