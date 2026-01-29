@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useRefCode } from '@/hooks/useRefCode';
-import type { LeadTier, LeadIntent } from '@/lib/firebase-types';
+import type { LeadTier } from '@/lib/firebase-types';
 
 const WHATSAPP_NUMBER = '59176356972';
 
@@ -28,10 +28,9 @@ interface AgentChatDrawerProps {
 }
 
 interface DebugInfo {
-  intent_detected: string | null;
-  missing_fields: string[];
-  score_rules: number;
-  score_ai: number;
+  configId: string | null;
+  currentQuestionId: string | null;
+  missingRequiredIds: string[];
   score_total: number;
   tier: 'NOVATO' | 'POTENCIAL' | 'PROMETEDOR' | null;
   error?: string;
@@ -50,7 +49,6 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [detectedIntent, setDetectedIntent] = useState<LeadIntent | null>('AGENTE');
   const [interviewStarted, setInterviewStarted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -80,7 +78,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
     return suggestions.slice(0, 5);
   };
 
-  // Initialize chat with agent-focused greeting
+  // Initialize chat with greeting (no API call yet)
   useEffect(() => {
     if (open && messages.length === 0 && !hasInitialized.current) {
       hasInitialized.current = true;
@@ -92,9 +90,9 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       };
       setMessages([greeting]);
     }
-  }, [open]);
+  }, [open, messages.length]);
 
-  // Scroll to bottom on new messages - but only within the chat container
+  // Scroll to bottom on new messages
   useEffect(() => {
     if (interviewStarted && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -108,13 +106,51 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
     }
   }, [open]);
 
-  const startInterview = () => {
+  const startInterview = async () => {
     setInterviewStarted(true);
-    // Focus input ONLY after user explicitly starts
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
-    sendMessage('Quiero ser agente');
+    setIsLoading(true);
+    
+    try {
+      // Send __start__ to get the first question from config
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          messages: [{ role: 'user', content: '__start__' }],
+          type: 'conversational',
+          collectedData: {},
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      if (data?.success && data?.data) {
+        const response = data.data as ConversationalData;
+        setCollectedData(response.datos_lead_update);
+        
+        const suggestions = extractSuggestions(response.reply);
+        
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'bot',
+          content: response.reply,
+          suggestions: suggestions.length > 0 ? suggestions : undefined,
+        };
+        setMessages(prev => [...prev, botMessage]);
+      }
+    } catch (error) {
+      console.error('[Chat] Start interview error:', error);
+      
+      // Fallback first question
+      const fallbackMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'bot',
+        content: '¡Empecemos! ¿Cuál es tu nombre completo?',
+      };
+      setMessages(prev => [...prev, fallbackMessage]);
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
   };
 
   const sendMessage = async (content: string) => {
@@ -155,10 +191,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       if (data?.success && data?.data) {
         const response = data.data as ConversationalData;
         const mergedData = { ...collectedData, ...response.datos_lead_update };
-
-        if (response.datos_lead_update && Object.keys(response.datos_lead_update).length > 0) {
-          setCollectedData(mergedData);
-        }
+        setCollectedData(mergedData);
 
         const suggestions = extractSuggestions(response.reply);
         
@@ -204,7 +237,8 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       }
 
       const refCode = getRefCode();
-      const country = String(mergedData.pais || mergedData.country || 'No especificado');
+      const answers = mergedData.answers as Record<string, unknown> || mergedData;
+      const country = String(answers.country || mergedData.country || mergedData.pais || 'No especificado');
 
       const { data: saveResult, error: saveError } = await supabase.functions.invoke('save-chat-lead', {
         body: {
@@ -275,8 +309,9 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
   };
 
   const getWhatsAppMessage = () => {
-    const name = collectedData.nombre || collectedData.name || '';
-    const country = collectedData.pais || collectedData.country || 'LATAM';
+    const answers = collectedData.answers as Record<string, unknown> || collectedData;
+    const name = answers.name || collectedData.nombre || '';
+    const country = answers.country || collectedData.pais || 'LATAM';
     return `Hola, quiero postular para ser agente de Ganaya.bet. Soy ${name} de ${country}. Ya completé el formulario del chat.`;
   };
 
@@ -284,7 +319,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
     <AnimatePresence>
       {open && (
         <>
-          {/* Backdrop - NO scroll lock on body */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -389,7 +424,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Start interview button - shown before interview starts */}
+            {/* Start interview button */}
             {!interviewStarted && !isComplete && (
               <div className="px-4 pb-4">
                 <Button 
@@ -397,14 +432,24 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
                   size="lg" 
                   className="w-full"
                   onClick={startInterview}
+                  disabled={isLoading}
                 >
-                  Comenzar entrevista
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Cargando...
+                    </>
+                  ) : (
+                    <>
+                      Comenzar entrevista
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  )}
                 </Button>
               </div>
             )}
 
-            {/* Input - only shown after interview started */}
+            {/* Input */}
             {interviewStarted && !isComplete && (
               <form onSubmit={handleSubmit} className="p-4 border-t border-border">
                 <div className="flex gap-2">
@@ -415,7 +460,6 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
                     placeholder="Escribí tu respuesta..."
                     className="flex-1"
                     disabled={isLoading}
-                    // NO autoFocus - user must tap to focus
                   />
                   <Button type="submit" variant="hero" size="icon" disabled={isLoading || !inputValue.trim()}>
                     <Send className="w-4 h-4" />
