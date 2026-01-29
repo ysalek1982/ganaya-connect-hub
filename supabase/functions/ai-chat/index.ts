@@ -38,12 +38,12 @@ interface ConversationalResponse {
 // Required fields for each intent before fin_entrevista can be true
 const REQUIRED_FIELDS = {
   JUGADOR: ["country", "contact", "player_needs", "age_confirmed_18plus"],
-  AGENTE: ["country", "contact", "experience", "binance_level", "capital_range", "availability_hours", "age_confirmed_18plus"],
+  AGENTE: ["country", "contact", "experience", "payment_methods_knowledge", "capital_range", "availability_hours", "age_confirmed_18plus"],
 };
 
-// Scoring rules (0-60 points)
+// Scoring rules (0-60 points) - Updated for local currency focus
 const SCORING_RULES = {
-  binance_level: { ninguno: 0, basico: 10, verificado: 20, avanzado: 25 },
+  payment_methods_knowledge: { ninguno: 0, basico: 10, intermedio: 20, avanzado: 25 },
   capital_range: { "0-100": 0, "100-300": 5, "300-500": 10, "500+": 15 },
   experience: { ninguna: 0, ventas: 3, finanzas: 5, casinos: 7, multiple: 10 },
   availability_hours: { "1-2": 3, "3-5": 7, "6+": 10 },
@@ -56,6 +56,12 @@ Tu función es captar, clasificar y convertir usuarios que llegan a la landing p
 Idioma: Español neutro latinoamericano.
 Tono: Humano, claro, confiable, directo.
 Nunca suenes robótico ni corporativo.
+
+IMPORTANTE - ENFOQUE EN MONEDA LOCAL:
+- Ganaya opera con CAJEROS LOCALES que procesan pagos en MONEDA LOCAL de cada país.
+- Los métodos de pago incluyen: transferencia bancaria, billeteras electrónicas (Mercado Pago, Nequi, Yape, etc.), depósitos.
+- NO menciones USDT, Binance ni criptomonedas como método principal.
+- Si el usuario pregunta por crypto, responde que también pueden orientarlo, pero la operación principal es en moneda local con cajeros.
 
 OBJETIVO PRINCIPAL:
 Detectar la intención del usuario y guiarlo por el flujo correcto:
@@ -88,11 +94,11 @@ NO uses markdown, NO uses \`\`\`json, SOLO el objeto JSON puro.
     
     // Solo para JUGADOR:
     "player_needs": { "need": "crear_cuenta | recargar | retirar | bonos | otro" },
-    "prefers_usdt": true/false,
+    "preferred_payment": "transferencia | billetera | deposito | otro",
     
     // Solo para AGENTE:
     "experience": "ninguna | ventas | finanzas | casinos | multiple",
-    "binance_level": "ninguno | basico | verificado | avanzado",
+    "payment_methods_knowledge": "ninguno | basico | intermedio | avanzado",
     "capital_range": "0-100 | 100-300 | 300-500 | 500+",
     "availability_hours": "1-2 | 3-5 | 6+",
     "score_ai": 0-40 (tu evaluación cualitativa: claridad, motivación, profesionalismo)
@@ -116,15 +122,15 @@ DETECCIÓN DE INTENCIÓN:
 FLUJO JUGADOR (campos requeridos: country, contact, player_needs.need, age_confirmed_18plus):
 1. Pregunta qué necesita (crear cuenta / recargar / retirar / bonos)
 2. Pregunta país
-3. Solicita WhatsApp o Telegram
-4. Pregunta si usa USDT (opcional pero útil)
+3. Pregunta: "¿Cómo prefieres recargar/retirar? 1) Transferencia bancaria 2) Billetera electrónica 3) Depósito 4) Otro"
+4. Solicita WhatsApp o Telegram
 5. Confirma +18
 6. Solo marca fin_entrevista=true cuando tengas TODOS los campos requeridos
 
-FLUJO AGENTE (campos requeridos: country, contact, experience, binance_level, capital_range, availability_hours, age_confirmed_18plus):
+FLUJO AGENTE (campos requeridos: country, contact, experience, payment_methods_knowledge, capital_range, availability_hours, age_confirmed_18plus):
 1. Pregunta experiencia (casinos, ventas, recargas, finanzas, ninguna)
-2. Pregunta nivel de Binance/USDT (ninguno, básico, verificado, avanzado)
-3. Pregunta rango de capital ($0-100, $100-300, $300-500, $500+)
+2. Pregunta conocimiento de métodos de pago locales (ninguno, básico, intermedio, avanzado)
+3. Pregunta rango de capital para operar ($0-100, $100-300, $300-500, $500+)
 4. Pregunta horas diarias disponibles (1-2, 3-5, 6+)
 5. Solicita nombre, país y WhatsApp/Telegram
 6. Confirma +18
@@ -132,13 +138,13 @@ FLUJO AGENTE (campos requeridos: country, contact, experience, binance_level, ca
 8. Solo marca fin_entrevista=true cuando tengas TODOS los campos requeridos
 
 SCORING (interno, NUNCA mostrar al usuario):
-- score_rules: binance(0-25) + capital(0-15) + experiencia(0-10) + disponibilidad(0-10) = 0-60
+- score_rules: payment_methods(0-25) + capital(0-15) + experiencia(0-10) + disponibilidad(0-10) = 0-60
 - score_ai: tu evaluación cualitativa 0-40
 - score_total: score_rules + score_ai = 0-100
 - tier: NOVATO (<60), POTENCIAL (60-79), APROBABLE (>=80)
 
 CIERRE:
-- Jugador: "¡Perfecto! Te conecto con un cajero asignado que te ayudará por WhatsApp."
+- Jugador: "¡Perfecto! Te conecto con un cajero asignado que te ayudará por WhatsApp. Podrás recargar y retirar en tu moneda local."
 - Agente: "¡Excelente! Tu perfil fue registrado y será evaluado por nuestro equipo. Te contactaremos pronto."
 
 RECUERDA: Responde SOLO con JSON válido, sin texto adicional.`;
@@ -175,15 +181,15 @@ function extractJSON(text: string): Record<string, unknown> | null {
   return null;
 }
 
-// Calculate rules-based score
+// Calculate rules-based score - Updated for local currency focus
 function calculateRulesScore(data: Record<string, unknown>): number {
   let score = 0;
   
-  // Binance level (0-25)
-  const binanceLevel = String(data.binance_level || '').toLowerCase();
-  if (binanceLevel.includes('avanzado')) score += 25;
-  else if (binanceLevel.includes('verificado')) score += 20;
-  else if (binanceLevel.includes('basico') || binanceLevel.includes('básico')) score += 10;
+  // Payment methods knowledge (0-25)
+  const paymentLevel = String(data.payment_methods_knowledge || '').toLowerCase();
+  if (paymentLevel.includes('avanzado')) score += 25;
+  else if (paymentLevel.includes('intermedio')) score += 20;
+  else if (paymentLevel.includes('basico') || paymentLevel.includes('básico')) score += 10;
   
   // Capital range (0-15)
   const capital = String(data.capital_range || '');
@@ -484,7 +490,8 @@ Mensaje amigable, profesional, máximo 200 caracteres.`;
             { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        
+        const errorText = await response.text();
+        console.error("Lovable Gateway error:", response.status, errorText);
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -498,51 +505,33 @@ Mensaje amigable, profesional, máximo 200 caracteres.`;
       rawContent = data.choices?.[0]?.message?.content || "";
     }
 
-    console.log("Raw AI response:", rawContent.substring(0, 500));
+    console.log("Raw AI content:", rawContent.substring(0, 500));
 
-    // Process response based on type
+    // Process based on type
     if (type === "conversational") {
-      const processedResponse = processAIResponse(rawContent, collectedData as Record<string, unknown>);
-      console.log("Processed response:", JSON.stringify(processedResponse.debug));
+      const processed = processAIResponse(rawContent, collectedData);
+      console.log("Processed response debug:", processed.debug);
       
       return new Response(
-        JSON.stringify({ success: true, data: processedResponse }), 
+        JSON.stringify({ success: true, data: processed }), 
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
-    }
-
-    // For other types, try to parse JSON or return raw
-    if (type === "summarize") {
-      try {
-        const parsed = extractJSON(rawContent);
-        if (parsed) {
-          return new Response(
-            JSON.stringify({ success: true, data: parsed }), 
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      } catch {
-        // Fall through
-      }
+    } else {
+      // Simple response for other types
       return new Response(
-        JSON.stringify({ success: true, data: { resumen: rawContent } }), 
+        JSON.stringify({ success: true, content: rawContent }), 
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    return new Response(
-      JSON.stringify({ success: true, content: rawContent }), 
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
 
   } catch (error) {
-    console.error("Chat function error:", error);
+    console.error("AI Chat error:", error);
     return new Response(
       JSON.stringify({ 
-        success: true,
-        data: createFallbackResponse(error instanceof Error ? error.message : "unknown_error")
+        success: true, 
+        data: createFallbackResponse(String(error)) 
       }), 
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, Users, ArrowRight, Shield, Clock, Wallet, BadgeCheck, Sparkles } from 'lucide-react';
+import { MessageCircle, Users, ArrowRight, Shield, Clock, Wallet, BadgeCheck, Sparkles, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FloatingParticles } from '@/components/home/FloatingParticles';
@@ -80,9 +80,9 @@ export const HeroPremium = ({ onOpenChat }: HeroPremiumProps) => {
             transition={{ delay: 0.1 }}
             className="font-display text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-6 leading-[1.1] tracking-tight"
           >
-            <span className="text-foreground">Recarga y retira</span>
+            <span className="text-foreground">Recarga y retira en minutos</span>
             <br />
-            <span className="text-gradient-primary">en minutos con soporte personalizado</span>
+            <span className="text-gradient-primary">en tu moneda local</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -92,7 +92,7 @@ export const HeroPremium = ({ onOpenChat }: HeroPremiumProps) => {
             transition={{ delay: 0.2 }}
             className="text-lg md:text-xl text-foreground/80 max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Operación segura con <strong className="text-primary">USDT vía Binance</strong> · Atención directa por cajeros
+            Atención personalizada por <strong className="text-primary">cajeros verificados</strong> · Soporte rápido por WhatsApp
           </motion.p>
 
           {/* Trust Badges Row */}
@@ -106,7 +106,7 @@ export const HeroPremium = ({ onOpenChat }: HeroPremiumProps) => {
               { icon: BadgeCheck, text: '+18' },
               { icon: Clock, text: 'Soporte 24/7' },
               { icon: Sparkles, text: 'Retiros rápidos' },
-              { icon: Wallet, text: 'USDT/Binance' },
+              { icon: Banknote, text: 'Moneda local' },
             ].map((badge, i) => (
               <Badge 
                 key={i} 
@@ -144,7 +144,7 @@ export const HeroPremium = ({ onOpenChat }: HeroPremiumProps) => {
             >
               <a href="/agente" className="gap-2">
                 <Users className="w-4 h-4" />
-                Quiero ser cajero (ganar comisiones)
+                Quiero ser cajero
               </a>
             </Button>
           </motion.div>
@@ -164,6 +164,11 @@ export const HeroPremium = ({ onOpenChat }: HeroPremiumProps) => {
             <div className="flex items-center gap-2">
               <MessageCircle className="w-4 h-4 text-[#25D366]" />
               <span>Atención por WhatsApp</span>
+            </div>
+            <div className="w-px h-4 bg-border hidden sm:block" />
+            <div className="hidden sm:flex items-center gap-2">
+              <Banknote className="w-4 h-4 text-gold" />
+              <span>Transferencia bancaria</span>
             </div>
           </motion.div>
         </div>
