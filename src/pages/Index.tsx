@@ -3,8 +3,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { HeroPremium } from '@/components/home/HeroPremium';
 import { HowItWorksPremium } from '@/components/home/HowItWorksPremium';
-import { CountriesSection } from '@/components/home/CountriesSection';
-import { BenefitsPremium } from '@/components/home/BenefitsPremium';
+import { WhyGanayaSection } from '@/components/home/WhyGanayaSection';
 import { FAQPremium } from '@/components/home/FAQPremium';
 import { ComplianceSection } from '@/components/home/ComplianceSection';
 import { MobileStickyNav } from '@/components/home/MobileStickyNav';
@@ -107,9 +106,7 @@ const Index = () => {
         )}
         
         <SectionDivider variant="gold" />
-        <CountriesSection />
-        <SectionDivider variant="accent" />
-        <BenefitsPremium />
+        <WhyGanayaSection />
         <SectionDivider variant="primary" />
         <FAQPremium />
         <ComplianceSection />

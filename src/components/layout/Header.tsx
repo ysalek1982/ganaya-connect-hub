@@ -10,7 +10,6 @@ const GANAYA_URL = 'https://ganaya.bet/es/sport';
 const navLinks = [
   { href: '/#como-funciona', label: 'Cómo funciona' },
   { href: '/tutoriales', label: 'Tutoriales' },
-  { href: '/#faq', label: 'Ayuda' },
   { href: '/agente', label: 'Ser Cajero' },
 ];
 
