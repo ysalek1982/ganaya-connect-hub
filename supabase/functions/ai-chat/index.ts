@@ -522,14 +522,15 @@ Mensaje profesional, máximo 200 caracteres.`;
         ...messages
       ];
 
-      const gatewayResponse = await fetch("https://lovable.dev/ai/v2/chat/completions", {
+      const gatewayResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          // Default model for Lovable AI
+          model: "google/gemini-3-flash-preview",
           messages: gatewayMessages,
           temperature: 0.7,
           max_tokens: 1000,
@@ -537,9 +538,18 @@ Mensaje profesional, máximo 200 caracteres.`;
       });
 
       if (!gatewayResponse.ok) {
-        const error = await gatewayResponse.text();
-        console.error("Gateway API error:", error);
-        throw new Error(`Gateway API error: ${gatewayResponse.status}`);
+        const errorText = await gatewayResponse.text();
+        console.error("Gateway API error:", gatewayResponse.status, errorText);
+
+        // Surface billing/rate-limit issues clearly to the client
+        if (gatewayResponse.status === 429) {
+          throw new Error("Gateway API error: 429 (rate_limited)");
+        }
+        if (gatewayResponse.status === 402) {
+          throw new Error("Gateway API error: 402 (payment_required)");
+        }
+
+        throw new Error(`Gateway API error: ${gatewayResponse.status} :: ${errorText}`);
       }
 
       const gatewayData = await gatewayResponse.json();
