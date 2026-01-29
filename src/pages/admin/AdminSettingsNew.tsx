@@ -1,13 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, Send, TestTube, Eye, EyeOff, Globe, Calculator } from 'lucide-react';
+import { collection, getDocs, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Save, Send, TestTube, Eye, EyeOff, Globe, Calculator, AlertTriangle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 
 interface Settings {
   id: string;
@@ -151,7 +163,7 @@ const AdminSettingsNew = () => {
       </div>
 
       <Tabs defaultValue="ai" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
           <TabsTrigger value="ai">
             <TestTube className="w-4 h-4 mr-2" />
             IA & Chat
@@ -163,6 +175,10 @@ const AdminSettingsNew = () => {
           <TabsTrigger value="scoring">
             <Calculator className="w-4 h-4 mr-2" />
             Scoring
+          </TabsTrigger>
+          <TabsTrigger value="danger">
+            <AlertTriangle className="w-4 h-4 mr-2" />
+            Danger Zone
           </TabsTrigger>
         </TabsList>
 
@@ -449,6 +465,11 @@ const AdminSettingsNew = () => {
             </div>
           </div>
         </TabsContent>
+
+        {/* Danger Zone */}
+        <TabsContent value="danger" className="space-y-6">
+          <DangerZone />
+        </TabsContent>
       </Tabs>
 
       {/* Save Button */}
@@ -457,6 +478,156 @@ const AdminSettingsNew = () => {
           <Save className="w-4 h-4 mr-2" />
           Guardar configuración
         </Button>
+      </div>
+    </div>
+  );
+};
+
+// Danger Zone Component
+const DangerZone = () => {
+  const [confirmText, setConfirmText] = useState('');
+  const [purging, setPurging] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [stats, setStats] = useState<{ leads: number; refCodes: number; chatConfigs: number } | null>(null);
+
+  const loadStats = async () => {
+    try {
+      const [leadsSnap, refCodesSnap, chatConfigsSnap] = await Promise.all([
+        getDocs(collection(db, 'leads')),
+        getDocs(collection(db, 'refCodes')),
+        getDocs(collection(db, 'chat_configs')),
+      ]);
+      setStats({
+        leads: leadsSnap.size,
+        refCodes: refCodesSnap.size,
+        chatConfigs: chatConfigsSnap.size,
+      });
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const handlePurge = async () => {
+    if (confirmText !== 'BORRAR') {
+      toast.error('Debes escribir "BORRAR" para confirmar');
+      return;
+    }
+
+    setPurging(true);
+    try {
+      // Delete all leads
+      const leadsSnap = await getDocs(collection(db, 'leads'));
+      const deleteLeadsPromises = leadsSnap.docs.map(d => deleteDoc(doc(db, 'leads', d.id)));
+      await Promise.all(deleteLeadsPromises);
+
+      // Delete all refCodes (except system ones if needed)
+      const refCodesSnap = await getDocs(collection(db, 'refCodes'));
+      const deleteRefCodesPromises = refCodesSnap.docs.map(d => deleteDoc(doc(db, 'refCodes', d.id)));
+      await Promise.all(deleteRefCodesPromises);
+
+      toast.success('Datos demo eliminados correctamente');
+      setDialogOpen(false);
+      setConfirmText('');
+      loadStats();
+    } catch (error) {
+      console.error('Purge error:', error);
+      toast.error('Error al purgar datos');
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="glass-card rounded-xl p-6 border-2 border-destructive/30 bg-destructive/5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+            <AlertTriangle className="w-5 h-5 text-destructive" />
+          </div>
+          <div>
+            <h2 className="font-semibold text-lg text-destructive">Danger Zone</h2>
+            <p className="text-sm text-muted-foreground">Acciones irreversibles. Usar con precaución.</p>
+          </div>
+        </div>
+
+        {stats && (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="p-4 rounded-lg bg-background/50 text-center">
+              <div className="text-2xl font-bold">{stats.leads}</div>
+              <div className="text-xs text-muted-foreground">Leads</div>
+            </div>
+            <div className="p-4 rounded-lg bg-background/50 text-center">
+              <div className="text-2xl font-bold">{stats.refCodes}</div>
+              <div className="text-xs text-muted-foreground">Ref Codes</div>
+            </div>
+            <div className="p-4 rounded-lg bg-background/50 text-center">
+              <div className="text-2xl font-bold">{stats.chatConfigs}</div>
+              <div className="text-xs text-muted-foreground">Chat Configs</div>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div className="p-4 rounded-lg border border-destructive/20 bg-background">
+            <h3 className="font-medium mb-2">Purgar Leads y RefCodes</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Elimina TODOS los leads y códigos de referencia. Usa esto para limpiar datos de prueba antes de producción.
+              Los usuarios/agentes NO serán eliminados.
+            </p>
+            
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Purgar datos demo
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="text-destructive flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5" />
+                    Confirmar purga de datos
+                  </DialogTitle>
+                  <DialogDescription>
+                    Esta acción eliminará permanentemente:
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li><strong>{stats?.leads || 0}</strong> leads</li>
+                      <li><strong>{stats?.refCodes || 0}</strong> códigos de referencia</li>
+                    </ul>
+                    <p className="mt-4 text-destructive font-medium">
+                      Esta acción NO se puede deshacer.
+                    </p>
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <Label>Escribe "BORRAR" para confirmar:</Label>
+                  <Input
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+                    placeholder="BORRAR"
+                    className="text-center font-mono text-lg"
+                  />
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">Cancelar</Button>
+                  </DialogClose>
+                  <Button
+                    variant="destructive"
+                    onClick={handlePurge}
+                    disabled={confirmText !== 'BORRAR' || purging}
+                  >
+                    {purging ? 'Purgando...' : 'Confirmar purga'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
       </div>
     </div>
   );
