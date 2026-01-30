@@ -47,7 +47,7 @@ const AdminLayout = () => {
 
   const navItems = [
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/admin/leads', icon: Users, label: 'Leads' },
+    { path: '/admin/leads', icon: Users, label: 'Postulaciones' },
     { path: '/admin/agentes', icon: UserCheck, label: 'Agentes' },
     { path: '/admin/red', icon: Network, label: 'Red' },
     { path: '/admin/asignacion', icon: Shuffle, label: 'Asignación' },

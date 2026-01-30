@@ -162,8 +162,8 @@ const AdminAsignacion = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl md:text-3xl font-bold">Asignación de Leads</h1>
-          <p className="text-muted-foreground">Round-robin por país/ciudad con override manual</p>
+          <h1 className="font-display text-2xl md:text-3xl font-bold">Postulaciones de Agentes</h1>
+          <p className="text-muted-foreground">Asignación de postulantes a reclutadores por país</p>
         </div>
         <Button
           onClick={() => autoAssignMutation.mutate()}
@@ -178,15 +178,15 @@ const AdminAsignacion = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="glass-card rounded-xl p-4">
-          <p className="text-sm text-muted-foreground">Leads sin asignar</p>
+          <p className="text-sm text-muted-foreground">Postulantes sin asignar</p>
           <p className="font-display text-2xl font-bold text-primary">{leadsData?.length || 0}</p>
         </div>
         <div className="glass-card rounded-xl p-4">
-          <p className="text-sm text-muted-foreground">Agentes activos</p>
+          <p className="text-sm text-muted-foreground">Reclutadores activos</p>
           <p className="font-display text-2xl font-bold text-gold">{agentesData?.length || 0}</p>
         </div>
         <div className="glass-card rounded-xl p-4">
-          <p className="text-sm text-muted-foreground">Países con leads</p>
+          <p className="text-sm text-muted-foreground">Países con postulantes</p>
           <p className="font-display text-2xl font-bold">{countries.length}</p>
         </div>
         <div className="glass-card rounded-xl p-4">
@@ -218,25 +218,24 @@ const AdminAsignacion = () => {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border text-left">
-                <th className="p-4 font-semibold">Lead</th>
+                <th className="p-4 font-semibold">Postulante</th>
                 <th className="p-4 font-semibold">País/Ciudad</th>
-                <th className="p-4 font-semibold">Tipo</th>
-                <th className="p-4 font-semibold">Agentes disponibles</th>
-                <th className="p-4 font-semibold">Asignar</th>
+                <th className="p-4 font-semibold">Reclutadores disponibles</th>
+                <th className="p-4 font-semibold">Asignar a</th>
               </tr>
             </thead>
             <tbody>
               {loadingLeads || loadingAgentes ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center">
+                  <td colSpan={4} className="p-8 text-center">
                     <div className="spinner mx-auto" />
                   </td>
                 </tr>
               ) : leadsData?.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={4} className="p-8 text-center text-muted-foreground">
                     <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No hay leads sin asignar</p>
+                    <p>No hay postulantes sin asignar</p>
                   </td>
                 </tr>
               ) : (
@@ -258,19 +257,12 @@ const AdminAsignacion = () => {
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          lead.tipo === 'agente' ? 'badge-success' : 'bg-muted text-muted-foreground'
-                        }`}>
-                          {lead.tipo}
-                        </span>
-                      </td>
-                      <td className="p-4">
                         {availableAgents.length === 0 ? (
-                          <span className="text-sm text-muted-foreground">Sin agentes en {lead.pais}</span>
+                          <span className="text-sm text-muted-foreground">Sin reclutadores en {lead.pais}</span>
                         ) : (
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">
-                              {availableAgents.length} agente(s)
+                              {availableAgents.length} reclutador(es)
                             </span>
                           </div>
                         )}
@@ -281,7 +273,7 @@ const AdminAsignacion = () => {
                             onValueChange={(agentId) => assignMutation.mutate({ leadId: lead.id, agenteId: agentId })}
                           >
                             <SelectTrigger className="w-48">
-                              <SelectValue placeholder="Seleccionar agente" />
+                              <SelectValue placeholder="Seleccionar reclutador" />
                             </SelectTrigger>
                             <SelectContent>
                               {availableAgents.map((agent) => (
@@ -293,7 +285,7 @@ const AdminAsignacion = () => {
                           </Select>
                         ) : (
                           <Button variant="outline" size="sm" disabled>
-                            Sin agentes
+                            Sin reclutadores
                           </Button>
                         )}
                       </td>
@@ -306,9 +298,9 @@ const AdminAsignacion = () => {
         </div>
       </div>
 
-      {/* Agents Overview */}
+      {/* Recruiters Overview */}
       <div>
-        <h2 className="font-display text-xl font-bold mb-4">Resumen por agente</h2>
+        <h2 className="font-display text-xl font-bold mb-4">Resumen por reclutador</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {agentesData?.map((agent) => (
             <div key={agent.id} className="glass-card rounded-xl p-4">
