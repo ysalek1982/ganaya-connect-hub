@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { auth } from '@/lib/firebase';
-import { Save, TestTube, Eye, EyeOff, Globe, AlertTriangle, Trash2 } from 'lucide-react';
+import { Save, TestTube, Eye, EyeOff, Globe, AlertTriangle, Trash2, MessageCircle } from 'lucide-react';
+import { WhatsAppTemplates } from '@/components/admin/WhatsAppTemplates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -203,8 +204,12 @@ const AdminSettingsNew = () => {
         <p className="text-muted-foreground">Ajustes del sistema</p>
       </div>
 
-      <Tabs defaultValue="ai" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+      <Tabs defaultValue="whatsapp" className="w-full">
+        <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsTrigger value="whatsapp">
+            <MessageCircle className="w-4 h-4 mr-2" />
+            WhatsApp
+          </TabsTrigger>
           <TabsTrigger value="ai">
             <TestTube className="w-4 h-4 mr-2" />
             IA & Chat
@@ -215,9 +220,14 @@ const AdminSettingsNew = () => {
           </TabsTrigger>
           <TabsTrigger value="danger">
             <AlertTriangle className="w-4 h-4 mr-2" />
-            Danger Zone
+            Peligro
           </TabsTrigger>
         </TabsList>
+
+        {/* WhatsApp Templates */}
+        <TabsContent value="whatsapp" className="space-y-6">
+          <WhatsAppTemplates mode="edit" />
+        </TabsContent>
 
         {/* AI Settings */}
         <TabsContent value="ai" className="space-y-6">

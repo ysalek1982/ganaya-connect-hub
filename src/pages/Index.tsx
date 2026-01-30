@@ -4,13 +4,13 @@ import { HeroAgents } from '@/components/landing/HeroAgents';
 import { ProblemSection } from '@/components/landing/ProblemSection';
 import { OpportunitySection } from '@/components/landing/OpportunitySection';
 import { SolutionSection } from '@/components/landing/SolutionSection';
+import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { RequirementsSection } from '@/components/landing/RequirementsSection';
 import { FlowSection } from '@/components/landing/FlowSection';
 import { CommissionsSection } from '@/components/landing/CommissionsSection';
 import { GrowthSection } from '@/components/landing/GrowthSection';
 import { ComparisonSection } from '@/components/landing/ComparisonSection';
-import { CaptacionSection } from '@/components/landing/CaptacionSection';
-import { NextStepsSection } from '@/components/landing/NextStepsSection';
+import { FAQSection } from '@/components/landing/FAQSection';
 import { CTAFinalSection } from '@/components/landing/CTAFinalSection';
 import { MobileStickyNavAgents } from '@/components/landing/MobileStickyNavAgents';
 import { Footer } from '@/components/layout/Footer';
@@ -25,7 +25,7 @@ const Index = () => {
     document.title = 'Programa de Agentes | Ganaya.bet - Comisiones hasta 40%';
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
-      metaDesc.setAttribute('content', 'Conviértete en agente de Ganaya.bet. Comisiones escalables hasta 40% + bonos en cascada 7% y 5%. Opera 100% desde tu móvil con banca mínima de $300 USD.');
+      metaDesc.setAttribute('content', 'Crea tu ingreso como agente de Ganaya.bet. Comisiones escalables hasta 40% + bonos por red. 100% móvil, en tu país.');
     }
   }, []);
 
@@ -47,13 +47,13 @@ const Index = () => {
         <ProblemSection />
         <OpportunitySection />
         <SolutionSection />
+        <HowItWorksSection />
         <FlowSection />
         <RequirementsSection />
         <CommissionsSection />
         <GrowthSection />
         <ComparisonSection />
-        <CaptacionSection />
-        <NextStepsSection />
+        <FAQSection />
         <CTAFinalSection onOpenChat={handleOpenChat} />
       </main>
       

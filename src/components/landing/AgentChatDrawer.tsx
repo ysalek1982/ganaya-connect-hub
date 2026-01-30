@@ -86,7 +86,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       const greeting: Message = {
         id: Date.now().toString(),
         role: 'bot',
-        content: '¡Hola! 👋 Soy el asistente de reclutamiento de Ganaya.bet.\n\nEstoy aquí para ayudarte a convertirte en agente. Te haré algunas preguntas rápidas para evaluar tu perfil.\n\n¿Estás listo/a para comenzar?',
+        content: '¡Hola! 👋 Gracias por tu interés en ser agente Ganaya.bet.\n\nTe haré unas preguntas rápidas (2 minutos) para conocerte mejor. ¿Empezamos?',
       };
       setMessages([greeting]);
     }
@@ -301,7 +301,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       const greeting: Message = {
         id: Date.now().toString(),
         role: 'bot',
-        content: '¡Hola! 👋 Soy el asistente de reclutamiento de Ganaya.bet.\n\nEstoy aquí para ayudarte a convertirte en agente. Te haré algunas preguntas rápidas para evaluar tu perfil.\n\n¿Estás listo/a para comenzar?',
+        content: '¡Hola! 👋 Gracias por tu interés en ser agente Ganaya.bet.\n\nTe haré unas preguntas rápidas (2 minutos) para conocerte mejor. ¿Empezamos?',
       };
       setMessages([greeting]);
       hasInitialized.current = true;

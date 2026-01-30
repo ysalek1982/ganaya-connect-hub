@@ -1,30 +1,30 @@
 import { motion } from 'framer-motion';
-import { DollarSign, Smartphone, Wallet, ArrowLeftRight, CheckCircle2 } from 'lucide-react';
+import { DollarSign, Smartphone, Clock, UserCheck, CheckCircle2 } from 'lucide-react';
 
 const requirements = [
   {
-    icon: DollarSign,
-    title: 'Banca operativa mínima',
-    description: '$300 USD de liquidez',
-    note: 'Capital de trabajo, no gasto',
-  },
-  {
     icon: Smartphone,
     title: 'Smartphone + Internet',
-    description: 'Conexión estable (3G+)',
-    note: 'Opera desde cualquier lugar',
+    description: 'Conexión estable para operar',
+    note: 'Todo desde tu celular',
   },
   {
-    icon: Wallet,
-    title: 'Cuenta Binance verificada',
-    description: 'Para transacciones P2P',
-    note: 'Requisito operativo',
+    icon: Clock,
+    title: 'Disponibilidad diaria',
+    description: 'Al menos 2-3 horas por día',
+    note: 'Tú manejas tu horario',
   },
   {
-    icon: ArrowLeftRight,
-    title: 'Manejo básico de P2P',
-    description: 'Transferencias locales',
-    note: 'Pagos en moneda local',
+    icon: DollarSign,
+    title: 'Banca operativa',
+    description: 'Capital de trabajo para atender',
+    note: 'Lo usás y lo recuperás',
+  },
+  {
+    icon: UserCheck,
+    title: 'Responsabilidad',
+    description: 'Trato profesional con personas',
+    note: 'Construís tu reputación',
   },
 ];
 
@@ -82,7 +82,7 @@ export const RequirementsSection = () => {
           className="text-center"
         >
           <p className="text-sm text-muted-foreground bg-card/50 inline-block px-4 py-2 rounded-full border border-border">
-            💡 El mensaje a tus clientes: <strong className="text-foreground">pagos y cobros en moneda local</strong>
+            💡 No necesitás experiencia previa · Te capacitamos en todo
           </p>
         </motion.div>
       </div>

@@ -28,13 +28,11 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
           className="max-w-3xl mx-auto text-center"
         >
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-            <span className="text-gradient-primary">TU LIBERTAD</span>
-            <br />
-            <span className="text-foreground">EMPIEZA HOY</span>
+            <span className="text-gradient-primary">¿Listo para empezar?</span>
           </h2>
           
           <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-            Completá tu postulación y recibí tu ID de Agente en menos de 24 horas
+            Completá tu postulación en 2 minutos. Te contactamos por WhatsApp para coordinar los siguientes pasos.
           </p>
 
           <motion.div
@@ -50,7 +48,7 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
               className="min-w-[300px] shadow-lg shadow-primary/40 text-lg pulse-glow"
             >
               <MessageCircle className="w-5 h-5" />
-              Postularme y recibir mi ID
+              Postularme ahora
               <ArrowRight className="w-5 h-5" />
             </Button>
           </motion.div>

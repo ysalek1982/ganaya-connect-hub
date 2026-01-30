@@ -9,7 +9,6 @@ import {
   LogOut, 
   Menu,
   X,
-  Shuffle,
   Network,
   MessageSquare
 } from 'lucide-react';
@@ -50,9 +49,8 @@ const AdminLayout = () => {
     { path: '/admin/leads', icon: Users, label: 'Postulaciones' },
     { path: '/admin/agentes', icon: UserCheck, label: 'Agentes' },
     { path: '/admin/red', icon: Network, label: 'Red' },
-    { path: '/admin/asignacion', icon: Shuffle, label: 'Asignación' },
     { path: '/admin/chat-config', icon: MessageSquare, label: 'Chat Config' },
-    { path: '/admin/settings', icon: Settings, label: 'Settings' },
+    { path: '/admin/settings', icon: Settings, label: 'Configuración' },
   ];
 
   if (loading) {
