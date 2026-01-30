@@ -227,27 +227,37 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
                 // Fallback: Display from agentProfile or rawJson
                 <div className="grid grid-cols-1 gap-2">
                   <ScoringItem 
-                    label="Horas/día"
+                    label="Disponibilidad diaria"
                     value={agentProfile.hours_per_day ?? agentProfile.availability_hours}
                     points={parseHoursPoints(agentProfile.hours_per_day ?? agentProfile.availability_hours)}
+                    maxPoints={30}
+                  />
+                  <ScoringItem 
+                    label="Experiencia ventas/atención"
+                    value={agentProfile.has_sales_experience}
+                    points={agentProfile.has_sales_experience === true ? 20 : 0}
                     maxPoints={20}
                   />
                   <ScoringItem 
-                    label="Métodos de cobro local"
-                    value={agentProfile.has_local_payment_methods ?? (agentProfile.payment_methods_knowledge !== 'ninguno' ? true : null)}
-                    points={agentProfile.has_local_payment_methods === true || (agentProfile.payment_methods_knowledge && agentProfile.payment_methods_knowledge !== 'ninguno') ? 15 : 0}
-                    maxPoints={15}
+                    label="Conoce jugadores de casino"
+                    value={agentProfile.knows_casino_players === 'yes' || agentProfile.knows_casino_players === true ? true : (agentProfile.knows_casino_players === 'no' ? false : agentProfile.knows_casino_players)}
+                    points={agentProfile.knows_casino_players === 'yes' || agentProfile.knows_casino_players === true ? 20 : 0}
+                    maxPoints={20}
                   />
                   <ScoringItem 
-                    label="Red de contactos casino"
-                    value={agentProfile.knows_casino_players}
-                    points={agentProfile.knows_casino_players === 'yes' || agentProfile.knows_casino_players === true ? 15 : 0}
-                    maxPoints={15}
+                    label="Interés en reclutar"
+                    value={agentProfile.wants_to_recruit ?? agentProfile.wants_to_start_now}
+                    points={
+                      agentProfile.wants_to_recruit === 'yes' ? 20 :
+                      agentProfile.wants_to_recruit === 'maybe' ? 10 :
+                      agentProfile.wants_to_start_now === true ? 10 : 5
+                    }
+                    maxPoints={20}
                   />
                   <ScoringItem 
-                    label="Quiere empezar ya"
-                    value={agentProfile.wants_to_start_now ?? agentProfile.quiere_empezar}
-                    points={agentProfile.wants_to_start_now === true || agentProfile.quiere_empezar === true ? 10 : 0}
+                    label="País"
+                    value={agentProfile.country ?? agentProfile.pais}
+                    points={(agentProfile.country || agentProfile.pais) && (agentProfile.country || agentProfile.pais) !== 'Otro' ? 10 : 5}
                     maxPoints={10}
                   />
                 </div>
@@ -370,9 +380,10 @@ const ScoringItem = ({
 function parseHoursPoints(value: unknown): number {
   if (!value) return 0;
   const str = String(value).toLowerCase();
-  if (str.includes('6') || str.includes('+') || str.includes('más')) return 20;
-  if (str.includes('3') || str.includes('4') || str.includes('5')) return 10;
-  return 0;
+  if (str.includes('6') || str.includes('+') || str.includes('más')) return 30;
+  if (str.includes('4') || str.includes('5')) return 25;
+  if (str.includes('2') || str.includes('3')) return 15;
+  return 5;
 }
 
 export default LeadDetailModal;

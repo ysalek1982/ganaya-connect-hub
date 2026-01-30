@@ -41,15 +41,27 @@ interface ChatConfig {
   name: string;
   isActive: boolean;
   version: number;
+  introMessage?: string;
   thresholds: {
     prometedorMin: number;
     potencialMin: number;
+  };
+  tone?: {
+    confirmationPhrases?: string[];
+    transitionPhrases?: string[];
+    errorMessage?: string;
   };
   closing: {
     successTitle: string;
     successMessage: string;
     nextSteps: string;
-    ctaWhatsAppLabel: string;
+    ctaLabel?: string;
+    ctaWhatsAppLabel?: string; // Legacy support
+  };
+  disqualifiedClosing?: {
+    title: string;
+    message: string;
+    nextSteps: string;
   };
   questions: ChatQuestion[];
 }
@@ -309,69 +321,89 @@ const DEFAULT_CONFIG: ChatConfig = {
   id: 'default',
   name: 'Default Config',
   isActive: true,
-  version: 1,
-  thresholds: { prometedorMin: 50, potencialMin: 30 },
+  version: 2,
+  introMessage: '¡Hola! 👋 Soy el asistente de reclutamiento de Ganaya.bet.\n\nVoy a hacerte algunas preguntas rápidas para evaluar tu perfil como agente. ¡Será muy rápido!',
+  thresholds: { prometedorMin: 70, potencialMin: 45 },
+  tone: {
+    confirmationPhrases: ['Perfecto, gracias 🙌', 'Buenísimo, anotado ✅', 'Genial, seguimos…', 'Muy bien 👍'],
+    transitionPhrases: ['Vamos bien. Falta poco.', 'Súper. Ahora una más y terminamos.', 'Ya casi terminamos…'],
+    errorMessage: 'Perdón, no lo entendí bien. ¿Puedes responder con 1 o 2?',
+  },
   closing: {
-    successTitle: '¡Listo! Ya recibimos tu postulación 🙌',
-    successMessage: 'Gracias por postular. En breve revisaremos tus respuestas y te escribiremos por WhatsApp para coordinar los siguientes pasos.',
-    nextSteps: '📌 Mantén tu WhatsApp disponible.\n📌 Si calificas, te explicamos el proceso y te damos tu enlace de reclutamiento.',
-    ctaWhatsAppLabel: 'Entendido'
+    successTitle: '¡Listo! Recibimos tu postulación 🙌',
+    successMessage: 'Gracias por tu tiempo. Revisaremos tus respuestas y te escribiremos por WhatsApp para coordinar el siguiente paso.',
+    nextSteps: '📌 Mantén tu WhatsApp disponible.\n📌 Si tu perfil encaja, coordinamos un onboarding corto y te activamos tu enlace.',
+    ctaLabel: 'Entendido'
+  },
+  disqualifiedClosing: {
+    title: 'Gracias por tu interés 🙏',
+    message: 'Para continuar con el programa de agentes, es necesario ser mayor de 18 años.',
+    nextSteps: 'Si te equivocaste al responder, vuelve a intentarlo.',
   },
   questions: [
     { id: 'name', label: 'Nombre', prompt: '¿Cuál es tu nombre completo?', type: 'text', required: true, storeKey: 'name', order: 1 },
-    { id: 'country', label: 'País', prompt: '¿En qué país te encuentras?', type: 'text', required: true, storeKey: 'country', order: 2 },
-    { id: 'whatsapp', label: 'WhatsApp', prompt: '¿Cuál es tu número de WhatsApp con código de país?', type: 'text', required: true, storeKey: 'whatsapp', order: 3 },
-    { id: 'age18', label: 'Mayor de edad', prompt: '¿Eres mayor de 18 años?\n1) Sí\n2) No', type: 'boolean', required: true, storeKey: 'age18', order: 4 },
     { 
-      id: 'hours_per_day', 
-      label: 'Horas disponibles', 
-      prompt: '¿Cuántas horas al día podrías dedicar?\n1) 6 o más horas\n2) 4-6 horas\n3) 2-4 horas\n4) Menos de 2 horas', 
-      type: 'select', 
-      required: true, 
-      storeKey: 'hours_per_day',
+      id: 'country', label: 'País', prompt: '¿En qué país te encuentras?', type: 'select', required: true, storeKey: 'country',
       options: [
-        { value: '6+', label: '6+ horas', points: 20 },
-        { value: '4-6', label: '4-6 horas', points: 15 },
-        { value: '2-4', label: '2-4 horas', points: 10 },
+        { value: 'Paraguay', label: 'Paraguay', points: 10 },
+        { value: 'Argentina', label: 'Argentina', points: 10 },
+        { value: 'Chile', label: 'Chile', points: 10 },
+        { value: 'Colombia', label: 'Colombia', points: 10 },
+        { value: 'Ecuador', label: 'Ecuador', points: 10 },
+        { value: 'México', label: 'México', points: 10 },
+        { value: 'USA', label: 'USA', points: 10 },
+        { value: 'España', label: 'España', points: 10 },
+        { value: 'Otro', label: 'Otro país', points: 5 },
+      ],
+      order: 2
+    },
+    { id: 'whatsapp', label: 'WhatsApp', prompt: '¿Cuál es tu número de WhatsApp con código de país? (ej: +595981123456)', type: 'text', required: true, storeKey: 'whatsapp', order: 3 },
+    { id: 'age18', label: 'Mayor de 18', prompt: '¿Eres mayor de 18 años?\n1) Sí\n2) No', type: 'boolean', required: true, storeKey: 'age18', scoring: { rules: [{ condition: '==', value: true, points: 10 }] }, order: 4 },
+    { 
+      id: 'hours_per_day', label: 'Disponibilidad', prompt: '¿Cuántas horas al día podrías dedicar?\n1) 6 o más horas\n2) 4-6 horas\n3) 2-4 horas\n4) Menos de 2 horas', 
+      type: 'select', required: true, storeKey: 'hours_per_day',
+      options: [
+        { value: '6+', label: '6+ horas', points: 30 },
+        { value: '4-6', label: '4-6 horas', points: 25 },
+        { value: '2-4', label: '2-4 horas', points: 15 },
         { value: '0-2', label: '<2 horas', points: 5 },
       ],
       order: 5 
     },
     { 
-      id: 'has_local_payment', 
-      label: 'Métodos de pago', 
-      prompt: '¿Tienes acceso a métodos de cobro locales (transferencias, billeteras móviles)?\n1) Sí\n2) No', 
-      type: 'boolean', 
-      required: true, 
-      storeKey: 'has_local_payment_methods',
-      scoring: { rules: [{ condition: '==', value: true, points: 15 }] },
+      id: 'has_sales_experience', label: 'Experiencia ventas', prompt: '¿Tienes experiencia en ventas o atención al cliente?\n1) Sí\n2) No', 
+      type: 'boolean', required: true, storeKey: 'has_sales_experience',
+      scoring: { rules: [{ condition: '==', value: true, points: 20 }] },
       order: 6 
     },
     { 
-      id: 'knows_casino_players', 
-      label: 'Red de contactos', 
-      prompt: '¿Conoces personas que jueguen en casinos en línea?\n1) Sí\n2) No', 
-      type: 'select', 
-      required: true, 
-      storeKey: 'knows_casino_players',
+      id: 'knows_casino_players', label: 'Conoce jugadores', prompt: '¿Conoces personas que jueguen en casinos en línea?\n1) Sí\n2) No', 
+      type: 'select', required: true, storeKey: 'knows_casino_players',
       options: [
-        { value: 'yes', label: 'Sí', points: 15 },
+        { value: 'yes', label: 'Sí', points: 20 },
         { value: 'no', label: 'No', points: 0 },
       ],
       order: 7 
     },
     { 
-      id: 'wants_to_start', 
-      label: 'Inicio inmediato', 
-      prompt: '¿Estás listo para comenzar esta semana?\n1) Sí, quiero empezar\n2) Aún estoy evaluando', 
-      type: 'boolean', 
-      required: true, 
-      storeKey: 'wants_to_start_now',
-      scoring: { rules: [{ condition: '==', value: true, points: 10 }] },
+      id: 'wants_to_recruit', label: 'Interés reclutar', prompt: '¿Te interesaría reclutar sub-agentes para hacer crecer tu red?\n1) Sí, me interesa\n2) Tal vez más adelante\n3) No por ahora', 
+      type: 'select', required: true, storeKey: 'wants_to_recruit',
+      options: [
+        { value: 'yes', label: 'Sí, me interesa', points: 20 },
+        { value: 'maybe', label: 'Tal vez', points: 10 },
+        { value: 'no', label: 'No por ahora', points: 5 },
+      ],
       order: 8 
     },
   ],
 };
+
+// ============ HELPER: GET RANDOM PHRASE ============
+
+function getRandomPhrase(phrases: string[] | undefined): string {
+  if (!phrases || phrases.length === 0) return '';
+  return phrases[Math.floor(Math.random() * phrases.length)];
+}
 
 // ============ SCORING LOGIC ============
 
@@ -552,6 +584,10 @@ async function handleConfigDrivenChat(
   // If this is the start message or no current question, find first unanswered
   const isStartMessage = userMessage === '__start__' || userMessage.toLowerCase().includes('quiero ser agente') || userMessage.toLowerCase().includes('comenzar');
   
+  // Track if we got a valid answer (for confirmation phrase)
+  let gotValidAnswer = false;
+  let invalidAnswerForQuestion: ChatQuestion | null = null;
+
   if (!isStartMessage && chatState.currentQuestionId) {
     // Process answer to current question
     const currentQ = sortedQuestions.find(q => q.id === chatState!.currentQuestionId);
@@ -568,6 +604,7 @@ async function handleConfigDrivenChat(
             _chatState: chatState,
             restricted_country: true,
             attempted_country: value,
+            status: 'REJECTED',
           },
           fin_entrevista: true,
           debug: {
@@ -581,6 +618,34 @@ async function handleConfigDrivenChat(
         };
       }
       
+      // Check for age18 disqualification
+      const isAge18Question = currentQ.id === 'age18' || currentQ.storeKey === 'age18';
+      if (isAge18Question && value === false) {
+        const disq = config.disqualifiedClosing || DEFAULT_CONFIG.disqualifiedClosing!;
+        return {
+          reply: `${disq.title}\n\n${disq.message}\n\n${disq.nextSteps}`,
+          datos_lead_update: {
+            answers: { ...answers, [currentQ.id]: value, age18: false },
+            _chatState: chatState,
+            disqualified: true,
+            disqualified_reason: 'under_18',
+            status: 'DISQUALIFIED',
+            tier: 'NOVATO',
+            scoreTotal: 0,
+          },
+          fin_entrevista: true,
+          debug: {
+            configId: config.id,
+            currentQuestionId: chatState.currentQuestionId,
+            missingRequiredIds: [],
+            score_total: 0,
+            tier: 'NOVATO',
+            error: 'disqualified_under_18',
+          },
+        };
+      }
+      
+      // Check if value is valid
       if (value !== null && value !== undefined) {
         answers[currentQ.id] = value;
         if (currentQ.storeKey) {
@@ -589,8 +654,33 @@ async function handleConfigDrivenChat(
         if (!chatState.answeredIds.includes(currentQ.id)) {
           chatState.answeredIds.push(currentQ.id);
         }
+        gotValidAnswer = true;
+      } else if ((currentQ.type === 'boolean' || currentQ.type === 'select') && currentQ.required) {
+        // Invalid answer for select/boolean - ask again with error message
+        invalidAnswerForQuestion = currentQ;
       }
     }
+  }
+
+  // If invalid answer, repeat the question with error message
+  if (invalidAnswerForQuestion) {
+    const errorMsg = config.tone?.errorMessage || DEFAULT_CONFIG.tone?.errorMessage || 'Perdón, no lo entendí bien. ¿Puedes responder con una de las opciones?';
+    return {
+      reply: `${errorMsg}\n\n${buildQuestionPrompt(invalidAnswerForQuestion)}`,
+      datos_lead_update: {
+        answers,
+        _chatState: chatState,
+      },
+      fin_entrevista: false,
+      debug: {
+        configId: config.id,
+        currentQuestionId: chatState.currentQuestionId,
+        missingRequiredIds: [],
+        score_total: 0,
+        tier: null,
+        error: 'invalid_answer',
+      },
+    };
   }
 
   // Find next unanswered question
@@ -635,9 +725,28 @@ async function handleConfigDrivenChat(
     chatState.currentQuestionId = nextQuestion.id;
     
     if (isStartMessage) {
-      reply = `¡Hola! 👋 Soy el asistente de reclutamiento de Ganaya.bet.\n\nVoy a hacerte algunas preguntas rápidas para evaluar tu perfil como agente.\n\n${buildQuestionPrompt(nextQuestion)}`;
+      // Use intro message from config
+      const intro = config.introMessage || DEFAULT_CONFIG.introMessage || '¡Hola! 👋 Soy el asistente de reclutamiento de Ganaya.bet.';
+      reply = `${intro}\n\n${buildQuestionPrompt(nextQuestion)}`;
     } else {
-      reply = buildQuestionPrompt(nextQuestion);
+      // Add confirmation phrase if we got a valid answer
+      let prefix = '';
+      if (gotValidAnswer) {
+        // Decide: use confirmation or transition phrase
+        const answeredCount = chatState.answeredIds.length;
+        const totalQuestions = sortedQuestions.length;
+        const progress = answeredCount / totalQuestions;
+        
+        if (progress >= 0.7) {
+          // Near the end, use transition phrase
+          prefix = getRandomPhrase(config.tone?.transitionPhrases) || getRandomPhrase(DEFAULT_CONFIG.tone?.transitionPhrases);
+        } else {
+          // Use confirmation phrase
+          prefix = getRandomPhrase(config.tone?.confirmationPhrases) || getRandomPhrase(DEFAULT_CONFIG.tone?.confirmationPhrases);
+        }
+      }
+      
+      reply = prefix ? `${prefix}\n\n${buildQuestionPrompt(nextQuestion)}` : buildQuestionPrompt(nextQuestion);
     }
   } else {
     reply = "¡Gracias! Hemos completado todas las preguntas.";

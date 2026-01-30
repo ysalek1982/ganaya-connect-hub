@@ -87,15 +87,26 @@ interface ChatConfig {
   name: string;
   isActive: boolean;
   version: number;
+  introMessage: string;
   thresholds: {
     prometedorMin: number;
     potencialMin: number;
+  };
+  tone: {
+    confirmationPhrases: string[];
+    transitionPhrases: string[];
+    errorMessage: string;
   };
   closing: {
     successTitle: string;
     successMessage: string;
     nextSteps: string;
-    ctaWhatsAppLabel: string;
+    ctaLabel: string;
+  };
+  disqualifiedClosing: {
+    title: string;
+    message: string;
+    nextSteps: string;
   };
   questions: ChatQuestion[];
   createdAt?: Date;
@@ -104,18 +115,39 @@ interface ChatConfig {
 
 // Default template for new config
 const defaultConfig: Omit<ChatConfig, 'id'> = {
-  name: 'Recruit Agents v1',
+  name: 'Reclutamiento Agentes v2',
   isActive: false,
-  version: 1,
+  version: 2,
+  introMessage: '¡Hola! 👋 Soy el asistente de reclutamiento de Ganaya.bet.\n\nVoy a hacerte algunas preguntas rápidas para evaluar tu perfil como agente. ¡Será muy rápido!',
   thresholds: {
-    prometedorMin: 50,
-    potencialMin: 30,
+    prometedorMin: 70,
+    potencialMin: 45,
+  },
+  tone: {
+    confirmationPhrases: [
+      'Perfecto, gracias 🙌',
+      'Buenísimo, anotado ✅',
+      'Genial, seguimos…',
+      'Muy bien 👍',
+    ],
+    transitionPhrases: [
+      'Vamos bien. Falta poco.',
+      'Súper. Ahora una más y terminamos.',
+      'Última parte y listo.',
+      'Ya casi terminamos…',
+    ],
+    errorMessage: 'Perdón, no lo entendí bien. ¿Puedes responder con 1 o 2?',
   },
   closing: {
-    successTitle: '¡Listo! Ya recibimos tu postulación 🙌',
-    successMessage: 'Gracias por postular. En breve revisaremos tus respuestas y te escribiremos por WhatsApp para coordinar los siguientes pasos.',
-    nextSteps: '📌 Mantén tu WhatsApp disponible.\n📌 Si calificas, te explicamos el proceso y te damos tu enlace de reclutamiento.',
-    ctaWhatsAppLabel: 'Entendido',
+    successTitle: '¡Listo! Recibimos tu postulación 🙌',
+    successMessage: 'Gracias por tu tiempo. Revisaremos tus respuestas y te escribiremos por WhatsApp para coordinar el siguiente paso.',
+    nextSteps: '📌 Mantén tu WhatsApp disponible.\n📌 Si tu perfil encaja, coordinamos un onboarding corto y te activamos tu enlace.',
+    ctaLabel: 'Entendido',
+  },
+  disqualifiedClosing: {
+    title: 'Gracias por tu interés 🙏',
+    message: 'Para continuar con el programa de agentes, es necesario ser mayor de 18 años.',
+    nextSteps: 'Si te equivocaste al responder, vuelve a intentarlo.',
   },
   questions: [
     {
@@ -128,15 +160,6 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
       order: 1,
     },
     {
-      id: 'whatsapp',
-      label: 'WhatsApp',
-      prompt: '¿Cuál es tu número de WhatsApp con código de país?',
-      type: 'text',
-      required: true,
-      storeKey: 'whatsapp',
-      order: 2,
-    },
-    {
       id: 'country',
       label: 'País',
       prompt: '¿En qué país te encuentras?',
@@ -144,80 +167,91 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
       required: true,
       storeKey: 'country',
       options: [
-        { value: 'Paraguay', label: 'Paraguay', points: 0 },
-        { value: 'Argentina', label: 'Argentina', points: 0 },
-        { value: 'Chile', label: 'Chile', points: 0 },
-        { value: 'Colombia', label: 'Colombia', points: 0 },
-        { value: 'Ecuador', label: 'Ecuador', points: 0 },
-        { value: 'México', label: 'México', points: 0 },
-        { value: 'USA', label: 'USA', points: 0 },
-        { value: 'España', label: 'España', points: 0 },
-        { value: 'Otro', label: 'Otro país', points: 0 },
+        { value: 'Paraguay', label: 'Paraguay', points: 10 },
+        { value: 'Argentina', label: 'Argentina', points: 10 },
+        { value: 'Chile', label: 'Chile', points: 10 },
+        { value: 'Colombia', label: 'Colombia', points: 10 },
+        { value: 'Ecuador', label: 'Ecuador', points: 10 },
+        { value: 'México', label: 'México', points: 10 },
+        { value: 'USA', label: 'USA', points: 10 },
+        { value: 'España', label: 'España', points: 10 },
+        { value: 'Otro', label: 'Otro país', points: 5 },
       ],
+      order: 2,
+    },
+    {
+      id: 'whatsapp',
+      label: 'WhatsApp',
+      prompt: '¿Cuál es tu número de WhatsApp con código de país? (ej: +595981123456)',
+      type: 'text',
+      required: true,
+      storeKey: 'whatsapp',
       order: 3,
     },
     {
       id: 'age18',
-      label: 'Mayor de edad',
+      label: 'Mayor de 18',
       prompt: '¿Eres mayor de 18 años?',
       type: 'boolean',
       required: true,
       storeKey: 'age18',
       scoring: {
-        rules: [{ condition: '==', value: true, points: 0 }],
+        rules: [{ condition: '==', value: true, points: 10 }],
       },
       order: 4,
     },
     {
       id: 'hours_per_day',
-      label: 'Horas disponibles',
+      label: 'Disponibilidad diaria',
       prompt: '¿Cuántas horas al día podrías dedicar?',
       type: 'select',
       required: true,
       storeKey: 'hours_per_day',
       options: [
-        { value: '6+', label: '6 o más horas', points: 20 },
-        { value: '4-6', label: '4-6 horas', points: 15 },
-        { value: '2-4', label: '2-4 horas', points: 10 },
+        { value: '6+', label: '6 o más horas', points: 30 },
+        { value: '4-6', label: '4-6 horas', points: 25 },
+        { value: '2-4', label: '2-4 horas', points: 15 },
         { value: '0-2', label: 'Menos de 2 horas', points: 5 },
       ],
       order: 5,
     },
     {
-      id: 'has_local_payment',
-      label: 'Métodos de pago locales',
-      prompt: '¿Tienes acceso a métodos de pago/cobro locales (transferencias, billeteras móviles)?',
+      id: 'has_sales_experience',
+      label: 'Experiencia ventas/atención',
+      prompt: '¿Tienes experiencia en ventas o atención al cliente?',
       type: 'boolean',
       required: true,
-      storeKey: 'has_local_payment_methods',
+      storeKey: 'has_sales_experience',
       scoring: {
-        rules: [{ condition: '==', value: true, points: 15 }],
+        rules: [{ condition: '==', value: true, points: 20 }],
       },
       order: 6,
     },
     {
       id: 'knows_casino_players',
-      label: 'Red de contactos',
+      label: 'Conoce jugadores',
       prompt: '¿Conoces personas que jueguen en casinos en línea?',
       type: 'select',
       required: true,
       storeKey: 'knows_casino_players',
       options: [
-        { value: 'yes', label: 'Sí', points: 15 },
+        { value: 'yes', label: 'Sí', points: 20 },
         { value: 'no', label: 'No', points: 0 },
       ],
       order: 7,
     },
     {
-      id: 'wants_to_start',
-      label: 'Inicio inmediato',
-      prompt: '¿Estás listo para comenzar esta semana?',
-      type: 'boolean',
+      id: 'wants_to_recruit',
+      label: 'Interés reclutar',
+      prompt: '¿Te interesaría reclutar sub-agentes para hacer crecer tu red?',
+      type: 'select',
       required: true,
-      storeKey: 'wants_to_start_now',
-      scoring: {
-        rules: [{ condition: '==', value: true, points: 10 }],
-      },
+      storeKey: 'wants_to_recruit',
+      options: [
+        { value: 'yes', label: 'Sí, me interesa', points: 20 },
+        { value: 'maybe', label: 'Tal vez más adelante', points: 10 },
+        { value: 'no', label: 'No por ahora', points: 5 },
+      ],
       order: 8,
     },
   ],
@@ -468,8 +502,16 @@ const AdminChatConfig = () => {
         name: data.name || 'Sin nombre',
         isActive: !!data.isActive,
         version: data.version || 1,
-        thresholds: data.thresholds || { prometedorMin: 70, potencialMin: 40 },
-        closing: data.closing || defaultConfig.closing,
+        introMessage: data.introMessage || defaultConfig.introMessage,
+        thresholds: data.thresholds || { prometedorMin: 70, potencialMin: 45 },
+        tone: data.tone || defaultConfig.tone,
+        closing: {
+          successTitle: data.closing?.successTitle || defaultConfig.closing.successTitle,
+          successMessage: data.closing?.successMessage || defaultConfig.closing.successMessage,
+          nextSteps: data.closing?.nextSteps || defaultConfig.closing.nextSteps,
+          ctaLabel: data.closing?.ctaLabel || data.closing?.ctaWhatsAppLabel || defaultConfig.closing.ctaLabel,
+        },
+        disqualifiedClosing: data.disqualifiedClosing || defaultConfig.disqualifiedClosing,
         questions: (data.questions || []).sort((a: ChatQuestion, b: ChatQuestion) => a.order - b.order),
         createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
         updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
@@ -864,10 +906,75 @@ const AdminChatConfig = () => {
                 </CardContent>
               </Card>
 
-              {/* Closing messages */}
+              {/* Intro Message */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Mensajes de Cierre</CardTitle>
+                  <CardTitle className="text-lg">Mensaje de Bienvenida</CardTitle>
+                  <CardDescription>El primer mensaje que ve el postulante al abrir el chat</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Textarea
+                    value={selectedConfig.introMessage}
+                    onChange={(e) => setSelectedConfig({
+                      ...selectedConfig,
+                      introMessage: e.target.value,
+                    })}
+                    rows={3}
+                    placeholder="¡Hola! 👋 Soy el asistente de reclutamiento..."
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Tone Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Tono del Chat</CardTitle>
+                  <CardDescription>Frases para hacer el chat más humano y conversacional</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Frases de confirmación (una por línea)</Label>
+                    <Textarea
+                      value={selectedConfig.tone.confirmationPhrases.join('\n')}
+                      onChange={(e) => setSelectedConfig({
+                        ...selectedConfig,
+                        tone: { ...selectedConfig.tone, confirmationPhrases: e.target.value.split('\n').filter(p => p.trim()) },
+                      })}
+                      rows={4}
+                      placeholder="Perfecto, gracias 🙌\nBuenísimo, anotado ✅"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Frases de transición (una por línea)</Label>
+                    <Textarea
+                      value={selectedConfig.tone.transitionPhrases.join('\n')}
+                      onChange={(e) => setSelectedConfig({
+                        ...selectedConfig,
+                        tone: { ...selectedConfig.tone, transitionPhrases: e.target.value.split('\n').filter(p => p.trim()) },
+                      })}
+                      rows={4}
+                      placeholder="Vamos bien. Falta poco.\nÚltima parte y listo."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Mensaje de error (cuando no entiende la respuesta)</Label>
+                    <Input
+                      value={selectedConfig.tone.errorMessage}
+                      onChange={(e) => setSelectedConfig({
+                        ...selectedConfig,
+                        tone: { ...selectedConfig.tone, errorMessage: e.target.value },
+                      })}
+                      placeholder="Perdón, no lo entendí bien..."
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Success Closing */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Cierre Exitoso</CardTitle>
+                  <CardDescription>Mensaje cuando el postulante completa la entrevista</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -882,12 +989,12 @@ const AdminChatConfig = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Label botón WhatsApp</Label>
+                      <Label>Label del botón</Label>
                       <Input
-                        value={selectedConfig.closing.ctaWhatsAppLabel}
+                        value={selectedConfig.closing.ctaLabel}
                         onChange={(e) => setSelectedConfig({
                           ...selectedConfig,
-                          closing: { ...selectedConfig.closing, ctaWhatsAppLabel: e.target.value },
+                          closing: { ...selectedConfig.closing, ctaLabel: e.target.value },
                         })}
                       />
                     </div>
@@ -910,6 +1017,48 @@ const AdminChatConfig = () => {
                       onChange={(e) => setSelectedConfig({
                         ...selectedConfig,
                         closing: { ...selectedConfig.closing, nextSteps: e.target.value },
+                      })}
+                      rows={2}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Disqualified Closing */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Cierre Descalificado (+18)</CardTitle>
+                  <CardDescription>Mensaje cuando el postulante indica que no es mayor de 18</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Título</Label>
+                    <Input
+                      value={selectedConfig.disqualifiedClosing.title}
+                      onChange={(e) => setSelectedConfig({
+                        ...selectedConfig,
+                        disqualifiedClosing: { ...selectedConfig.disqualifiedClosing, title: e.target.value },
+                      })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Mensaje</Label>
+                    <Textarea
+                      value={selectedConfig.disqualifiedClosing.message}
+                      onChange={(e) => setSelectedConfig({
+                        ...selectedConfig,
+                        disqualifiedClosing: { ...selectedConfig.disqualifiedClosing, message: e.target.value },
+                      })}
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Indicaciones</Label>
+                    <Textarea
+                      value={selectedConfig.disqualifiedClosing.nextSteps}
+                      onChange={(e) => setSelectedConfig({
+                        ...selectedConfig,
+                        disqualifiedClosing: { ...selectedConfig.disqualifiedClosing, nextSteps: e.target.value },
                       })}
                       rows={2}
                     />
