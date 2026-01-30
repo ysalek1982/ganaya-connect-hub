@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Smartphone, Clock, TrendingUp, Users, Shield, MessageCircle, ArrowRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLandingContent } from '@/hooks/useLandingContent';
 
 interface BenefitsSectionProps {
   onOpenChat?: () => void;
@@ -46,6 +47,16 @@ const benefits = [
 ];
 
 export const BenefitsSection = ({ onOpenChat }: BenefitsSectionProps) => {
+  const { data: content } = useLandingContent();
+  
+  // Check if section is enabled
+  if (content?.sectionsEnabled?.benefits === false) {
+    return null;
+  }
+  
+  // Get CTA text and disclaimer from CMS
+  const ctaText = content?.ctaPrimaryText || 'Postularme ahora';
+  const disclaimerShort = content?.socialProof?.disclaimerShort || '* Resultados dependen de tu gestión y actividad. Sin ingresos garantizados.';
   return (
     <section id="beneficios" className="py-24 relative overflow-hidden">
       {/* Background */}
@@ -111,20 +122,20 @@ export const BenefitsSection = ({ onOpenChat }: BenefitsSectionProps) => {
           >
             <Button variant="hero" size="lg" onClick={onOpenChat}>
               <MessageCircle className="w-5 h-5" />
-              Postularme ahora
+              {ctaText}
               <ArrowRight className="w-4 h-4" />
             </Button>
           </motion.div>
         )}
 
-        {/* Disclaimer */}
+        {/* Disclaimer from CMS */}
         <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           className="text-center mt-8 text-sm text-muted-foreground/60"
         >
-          * Resultados dependen de tu gestión y actividad. Sin ingresos garantizados.
+          {disclaimerShort}
         </motion.p>
       </div>
     </section>

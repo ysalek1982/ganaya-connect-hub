@@ -2,6 +2,8 @@ import { motion } from 'framer-motion';
 import { MessageCircle, ArrowRight, Users, Zap, Shield, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FloatingParticles } from '@/components/home/FloatingParticles';
+import { HeroBackground } from '@/components/landing/HeroBackground';
+import { TrustBadges } from '@/components/landing/TrustBadges';
 import { useLandingContent } from '@/hooks/useLandingContent';
 
 interface HeroAgentsProps {
@@ -21,57 +23,26 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
   // Use CMS content with fallbacks
   const heroTitle = content?.heroTitle || 'Genera ingresos como Agente Ganaya.bet';
   const heroSubtitle = content?.heroSubtitle || 'Comisiones escalables hasta 40% + bonos por red. 100% desde tu celular.';
+  const heroBullets = content?.heroBullets || [];
   const ctaPrimary = content?.ctaPrimaryText || 'Postularme ahora';
-  const ctaSecondary = content?.ctaSecondaryText || 'Ver cómo funciona';
+  const ctaSecondary = content?.hero?.heroCTASecondaryText || content?.ctaSecondaryText || 'Ver cómo funciona';
+  const heroEyebrow = content?.hero?.heroEyebrow || 'PROGRAMA DE AGENTES';
+  const disclaimerText = content?.disclaimerText || '+18 · Programa de agentes · Juego responsable';
 
-  const features = [
-    { icon: Zap, text: 'Proceso simple + soporte' },
-    { icon: Users, text: 'Crece con sub-agentes' },
-    { icon: Shield, text: 'Pago mensual seguro' },
-  ];
+  // Feature icons for bullets
+  const bulletIcons = [Zap, Users, Shield];
 
   return (
     <section id="inicio" className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-20 pb-16">
-      {/* Premium gradient background */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--surface-1))] via-background to-background" />
-        
-        {/* Grid pattern overlay */}
-        <div 
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
-            backgroundSize: '60px 60px',
-          }}
-        />
-        
-        {/* Radial glow - primary */}
-        <div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[140%] h-[80vh]"
-          style={{
-            background: `radial-gradient(ellipse 50% 50% at 50% 0%, hsl(var(--primary) / 0.12) 0%, transparent 70%)`,
-          }}
-        />
-        
-        {/* Side glows */}
-        <motion.div 
-          animate={{ opacity: [0.08, 0.15, 0.08] }}
-          transition={{ duration: 6, repeat: Infinity }}
-          className="absolute top-1/4 -left-40 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[150px]" 
-        />
-        <motion.div 
-          animate={{ opacity: [0.06, 0.12, 0.06] }}
-          transition={{ duration: 8, repeat: Infinity, delay: 2 }}
-          className="absolute bottom-1/4 -right-40 w-[400px] h-[400px] bg-gold/10 rounded-full blur-[150px]" 
-        />
-      </div>
+      {/* Dynamic background from CMS */}
+      <HeroBackground />
       
-      {/* Floating particles */}
+      {/* Floating particles (respects prefers-reduced-motion) */}
       <FloatingParticles count={10} />
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
-          {/* Badge */}
+          {/* Eyebrow badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -81,22 +52,36 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
               <span className="animate-ping absolute h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative rounded-full h-2 w-2 bg-primary"></span>
             </span>
-            <span className="text-sm font-medium text-primary">Programa de Agentes Activo</span>
+            <span className="text-sm font-medium text-primary">{heroEyebrow}</span>
           </motion.div>
 
-          {/* Main Title */}
+          {/* Main Title - from CMS */}
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="font-display text-[2.75rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-[1.1] tracking-tight"
           >
-            <span className="text-foreground">{heroTitle.split('Agente')[0]}</span>
-            <span className="text-gradient-primary">Agente</span>
-            <span className="text-foreground">{heroTitle.split('Agente')[1]}</span>
+            {heroTitle.includes('Agente') ? (
+              <>
+                <span className="text-foreground">{heroTitle.split('Agente')[0]}</span>
+                <span className="text-gradient-primary">Agente</span>
+                <span className="text-foreground">{heroTitle.split('Agente')[1]}</span>
+              </>
+            ) : (
+              <span className="text-foreground">{heroTitle}</span>
+            )}
           </motion.h1>
 
-          {/* Subtitle */}
+          {/* Glow line under H1 */}
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+            className="mx-auto mb-6 h-1 w-32 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"
+          />
+
+          {/* Subtitle - from CMS */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -106,23 +91,28 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             {heroSubtitle}
           </motion.p>
 
-          {/* Feature pills */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10"
-          >
-            {features.map((item, i) => (
-              <div 
-                key={i}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card/60 border border-border/50 backdrop-blur-sm"
-              >
-                <item.icon className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-foreground/90">{item.text}</span>
-              </div>
-            ))}
-          </motion.div>
+          {/* Feature pills from CMS bullets */}
+          {heroBullets.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10"
+            >
+              {heroBullets.slice(0, 3).map((bullet, i) => {
+                const Icon = bulletIcons[i] || Zap;
+                return (
+                  <div 
+                    key={i}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card/60 border border-border/50 backdrop-blur-sm"
+                  >
+                    <Icon className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground/90">{bullet}</span>
+                  </div>
+                );
+              })}
+            </motion.div>
+          )}
 
           {/* CTAs */}
           <motion.div
@@ -152,14 +142,17 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             </Button>
           </motion.div>
 
-          {/* Trust text */}
+          {/* Trust badges from CMS */}
+          <TrustBadges />
+
+          {/* Disclaimer text - from CMS */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
             className="mt-10 text-sm text-muted-foreground/70"
           >
-            {content?.disclaimerText || '+18 · Programa de agentes · Juego responsable'}
+            {disclaimerText}
           </motion.p>
         </div>
       </div>

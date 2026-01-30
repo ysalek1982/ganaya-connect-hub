@@ -1,12 +1,17 @@
 import { motion } from 'framer-motion';
 import { ArrowRight, MessageCircle, Shield, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLandingContent } from '@/hooks/useLandingContent';
 
 interface CTAFinalSectionProps {
   onOpenChat: () => void;
 }
 
 export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
+  const { data: content } = useLandingContent();
+  
+  // Get CTA text from CMS
+  const ctaText = content?.ctaPrimaryText || 'Postularme ahora';
   return (
     <section id="postular" className="py-24 relative overflow-hidden">
       {/* Background glow */}
@@ -54,7 +59,7 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
               className="min-w-[300px] shadow-xl shadow-primary/30 text-lg"
             >
               <MessageCircle className="w-5 h-5" />
-              Postularme ahora
+              {ctaText}
               <ArrowRight className="w-5 h-5" />
             </Button>
           </motion.div>

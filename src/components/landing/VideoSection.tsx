@@ -5,12 +5,22 @@ import { useLandingContent, extractYouTubeId } from '@/hooks/useLandingContent';
 export const VideoSection = () => {
   const { data: content } = useLandingContent();
   
-  const youtubeId = extractYouTubeId(content?.vslYoutubeUrl || '');
+  // Get video URL from either old or new CMS structure
+  const youtubeUrl = content?.vslYoutubeUrl || content?.vsl?.vslYoutubeUrl || '';
+  const youtubeId = extractYouTubeId(youtubeUrl);
   
-  // If no video URL configured, don't render the section
-  if (!youtubeId || content?.sectionsEnabled?.video === false) {
+  // Check if section is enabled
+  const isEnabled = content?.sectionsEnabled?.video !== false;
+  
+  // If no video URL configured or section disabled, don't render
+  if (!youtubeId || !isEnabled) {
     return null;
   }
+
+  // Get content from CMS with fallbacks
+  const vslTitle = content?.vslTitle || content?.vsl?.vslTitle || 'Mira esto antes de postular';
+  const vslSubtitle = content?.vslSubtitle || content?.vsl?.vslSubtitle || 'En menos de 2 minutos vas a entender todo lo que necesitás saber:';
+  const vslLayout = content?.vsl?.vslLayout || 'split';
 
   const videoPoints = [
     'Cómo funciona el modelo de negocio',
@@ -19,6 +29,65 @@ export const VideoSection = () => {
     'Por qué otros ya están ganando',
   ];
 
+  // Center layout
+  if (vslLayout === 'center') {
+    return (
+      <section id="video" className="py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--surface-1))] via-background to-background" />
+        
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="space-y-6 mb-10"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                <Clock className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-primary">90 segundos</span>
+              </div>
+              
+              <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
+                {vslTitle.includes('postular') ? (
+                  <>
+                    {vslTitle.split('postular')[0]}
+                    <span className="text-gradient-primary">postular</span>
+                  </>
+                ) : (
+                  vslTitle
+                )}
+              </h2>
+              
+              <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl mx-auto">
+                {vslSubtitle}
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="relative"
+            >
+              <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/50 shadow-2xl shadow-black/30">
+                <iframe
+                  src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
+                  title="Cómo ser agente"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="absolute inset-0 w-full h-full"
+                />
+              </div>
+              <div className="absolute -inset-3 bg-gradient-to-r from-primary/15 via-gold/10 to-primary/15 rounded-3xl -z-10 blur-2xl opacity-60" />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Split layout (default)
   return (
     <section id="video" className="py-24 relative overflow-hidden">
       {/* Background */}
@@ -37,7 +106,7 @@ export const VideoSection = () => {
               <div className="relative aspect-video rounded-2xl overflow-hidden border border-border/50 shadow-2xl shadow-black/30">
                 <iframe
                   src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
-                  title="Cómo ser agente Ganaya.bet"
+                  title="Cómo ser agente"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                   className="absolute inset-0 w-full h-full"
@@ -61,11 +130,18 @@ export const VideoSection = () => {
               </div>
               
               <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold leading-tight">
-                {content?.vslTitle || 'Mira esto antes de'} <span className="text-gradient-primary">postular</span>
+                {vslTitle.includes('postular') ? (
+                  <>
+                    {vslTitle.split('postular')[0]}
+                    <span className="text-gradient-primary">postular</span>
+                  </>
+                ) : (
+                  vslTitle
+                )}
               </h2>
               
               <p className="text-muted-foreground text-lg leading-relaxed">
-                {content?.vslSubtitle || 'En menos de 2 minutos vas a entender todo lo que necesitás saber:'}
+                {vslSubtitle}
               </p>
               
               <ul className="space-y-4 pt-2">

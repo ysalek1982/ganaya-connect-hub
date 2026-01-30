@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { MessageSquare, UserCheck, Link2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLandingContent } from '@/hooks/useLandingContent';
 
 interface HowItWorksSectionProps {
   onOpenChat?: () => void;
@@ -28,6 +29,15 @@ const steps = [
 ];
 
 export const HowItWorksSection = ({ onOpenChat }: HowItWorksSectionProps) => {
+  const { data: content } = useLandingContent();
+  
+  // Check if section is enabled
+  if (content?.sectionsEnabled?.howItWorks === false) {
+    return null;
+  }
+  
+  // Get CTA text from CMS
+  const ctaText = content?.ctaPrimaryText || 'Postularme ahora';
   return (
     <section id="como-funciona" className="py-24 relative overflow-hidden">
       {/* Background */}

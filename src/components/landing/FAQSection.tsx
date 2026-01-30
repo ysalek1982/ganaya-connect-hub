@@ -6,6 +6,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { useLandingContent } from '@/hooks/useLandingContent';
 
 const faqs = [
   {
@@ -51,6 +52,15 @@ const faqs = [
 ];
 
 export const FAQSection = () => {
+  const { data: content } = useLandingContent();
+  
+  // Check if section is enabled
+  if (content?.sectionsEnabled?.faq === false) {
+    return null;
+  }
+  
+  // Get title from CMS
+  const sectionTitle = content?.sectionTitles?.faqTitle || 'Preguntas frecuentes';
   return (
     <section id="faq" className="py-24 relative overflow-hidden">
       {/* Background */}
