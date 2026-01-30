@@ -16,6 +16,7 @@ import AdminNetwork from "./pages/admin/AdminNetwork";
 import AdminTutorials from "./pages/admin/AdminTutorials";
 import AdminSettingsNew from "./pages/admin/AdminSettingsNew";
 import AdminChatConfig from "./pages/admin/AdminChatConfig";
+import AdminContent from "./pages/admin/AdminContent";
 // Agent Portal
 import AppLogin from "./pages/app/AppLogin";
 import AppLayout from "./pages/app/AppLayout";
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="leads" element={<AdminLeads />} />
             <Route path="agentes" element={<AdminAgentesNew />} />
             <Route path="red" element={<AdminNetwork />} />
+            <Route path="content" element={<AdminContent />} />
             <Route path="tutoriales" element={<AdminTutorials />} />
             <Route path="chat-config" element={<AdminChatConfig />} />
             <Route path="settings" element={<AdminSettingsNew />} />
