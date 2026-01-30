@@ -3,9 +3,6 @@ project_id = "pmnqcwxhuxeadohvngcl"
 [functions.ai-chat]
 verify_jwt = false
 
-[functions.assign-lead]
-verify_jwt = false
-
 [functions.create-agent-user]
 verify_jwt = false
 
@@ -22,7 +19,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.save-chat-lead]
-verify_jwt = false
-
-[functions.convert-lead-to-agent]
 verify_jwt = false

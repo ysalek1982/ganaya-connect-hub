@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import Agente from "./pages/Agente";
 import Tutoriales from "./pages/Tutoriales";
 import NotFound from "./pages/NotFound";
 // Admin
@@ -40,7 +39,6 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/agente" element={<Agente />} />
           <Route path="/tutoriales" element={<Tutoriales />} />
           
           {/* Agent Portal */}

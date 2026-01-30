@@ -12,7 +12,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { FirebaseLead, LeadStatus } from '@/lib/firebase-types';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 // Fetch leads based on user role - WITHOUT orderBy to avoid composite index requirements
@@ -143,93 +142,6 @@ export const useUpdateFirebaseLead = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['firebase-leads'] });
-    },
-  });
-};
-
-// Assign lead via Edge Function
-export const useAssignLead = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: {
-      leadId: string;
-      refCode?: string;
-      country?: string;
-    }) => {
-      const { data: response, error } = await supabase.functions.invoke('assign-lead', {
-        body: data,
-      });
-
-      if (error) throw new Error(error.message);
-      if (response?.error) throw new Error(response.error);
-
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['firebase-leads'] });
-    },
-  });
-};
-
-// Save lead from chat (combines creation and assignment)
-export const useSaveChatLead = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: {
-      name: string;
-      country: string;
-      contact: { whatsapp?: string; email?: string; telegram?: string };
-      intent: 'AGENTE';
-      refCode?: string | null;
-      scoreTotal?: number;
-      tier?: 'NOVATO' | 'POTENCIAL' | 'PROMETEDOR' | null;
-      rawJson: Record<string, unknown>;
-    }) => {
-      // First, add the lead to Firestore
-      const leadsRef = collection(db, 'leads');
-      const leadData: Omit<FirebaseLead, 'id'> = {
-        name: data.name,
-        country: data.country,
-        contact: data.contact,
-        intent: data.intent,
-        refCode: data.refCode || null,
-        scoreTotal: data.scoreTotal || 0,
-        tier: data.tier || null,
-        rawJson: data.rawJson,
-        status: 'NUEVO',
-        assignedAgentId: null,
-        assignedLineLeaderId: null,
-        origen: 'chat_ia',
-        createdAt: new Date(),
-      };
-
-      const docRef = await addDoc(leadsRef, {
-        ...leadData,
-        createdAt: Timestamp.now(),
-      });
-
-      // If there's a refCode, try to assign via edge function
-      if (data.refCode) {
-        try {
-          await supabase.functions.invoke('assign-lead', {
-            body: {
-              leadId: docRef.id,
-              refCode: data.refCode,
-              country: data.country,
-            },
-          });
-        } catch (e) {
-          console.error('Error assigning lead:', e);
-        }
-      }
-
-      return docRef.id;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['firebase-leads'] });
-      queryClient.invalidateQueries({ queryKey: ['firebase-lead-counts'] });
     },
   });
 };
