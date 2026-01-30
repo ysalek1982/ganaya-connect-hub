@@ -78,7 +78,7 @@ service cloud.firestore {
       // Anyone can create leads (from chat)
       allow create: if true;
       
-      // Read access based on role
+      // Read access based on role and upline array
       allow read: if isAuthenticated() && (
         isAdmin() ||
         // Line leaders can see leads assigned to their network
@@ -86,7 +86,9 @@ service cloud.firestore {
         // Effective leaders (agents with canRecruitSubagents) can see their network leads
         (isEffectiveLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
         // Agents can see their assigned leads
-        (isAgent() && resource.data.assignedAgentId == request.auth.uid)
+        (isAgent() && resource.data.assignedAgentId == request.auth.uid) ||
+        // Multi-level: anyone in the upline can see the lead
+        (resource.data.upline != null && request.auth.uid in resource.data.upline)
       );
       
       // Update access for status changes
@@ -94,7 +96,9 @@ service cloud.firestore {
         isAdmin() ||
         (isLineLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
         (isEffectiveLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
-        (isAgent() && resource.data.assignedAgentId == request.auth.uid)
+        (isAgent() && resource.data.assignedAgentId == request.auth.uid) ||
+        // Multi-level: anyone in the upline can update the lead
+        (resource.data.upline != null && request.auth.uid in resource.data.upline)
       );
       
       // Delete only by admin
@@ -122,6 +126,29 @@ service cloud.firestore {
       // Agents can update/delete their own links, admins can update any
       allow update, delete: if isAuthenticated() && 
         (isAdmin() || resource.data.agentUid == request.auth.uid);
+    }
+    
+    // Tutorials collection - CMS for video tutorials
+    match /tutorials/{tutorialId} {
+      // Public can read published tutorials, admins can read all
+      // Agents can read their own unpublished tutorials
+      allow read: if resource.data.isPublished == true || 
+        isAdmin() ||
+        (isAuthenticated() && resource.data.ownerType == 'AGENT' && resource.data.ownerUid == request.auth.uid);
+      
+      // Admins can create any tutorial
+      // Agents can create tutorials for themselves
+      allow create: if isAuthenticated() && (
+        isAdmin() || 
+        (request.resource.data.ownerType == 'AGENT' && request.resource.data.ownerUid == request.auth.uid)
+      );
+      
+      // Admins can update/delete any tutorial
+      // Agents can update/delete their own tutorials
+      allow update, delete: if isAuthenticated() && (
+        isAdmin() || 
+        (resource.data.ownerType == 'AGENT' && resource.data.ownerUid == request.auth.uid)
+      );
     }
     
     // Chat logs (if needed)

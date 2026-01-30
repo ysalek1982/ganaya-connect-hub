@@ -550,11 +550,15 @@ function buildQuestionPrompt(question: ChatQuestion): string {
 }
 
 // ============ RESTRICTED COUNTRIES ============
+// Countries can be configured in Firestore settings/eligibility.allowedCountries
+// If not configured, all countries are allowed (empty array = no restrictions)
 
-const RESTRICTED_COUNTRIES = ['bolivia', 'perú', 'peru', 'brasil', 'brazil'];
+const RESTRICTED_COUNTRIES: string[] = []; // No hardcoded restrictions - use Firestore config if needed
 
-function isRestrictedCountry(value: string): boolean {
-  const normalized = value.toLowerCase().trim();
+function isRestrictedCountry(_value: string): boolean {
+  // No restrictions by default - can be enabled via Firestore settings/eligibility
+  if (RESTRICTED_COUNTRIES.length === 0) return false;
+  const normalized = _value.toLowerCase().trim();
   return RESTRICTED_COUNTRIES.some(c => normalized === c || normalized.includes(c));
 }
 
