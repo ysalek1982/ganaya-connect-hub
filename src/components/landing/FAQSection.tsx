@@ -22,15 +22,31 @@ const faqs = [
   },
   {
     question: '¿Necesito experiencia previa?',
-    answer: 'No es obligatorio, pero ayuda. Te damos capacitación completa y soporte continuo para que aprendas rápido. Lo importante es tu compromiso y disponibilidad.',
+    answer: 'No es obligatorio. Te damos capacitación completa y soporte continuo para que aprendas rápido. Lo importante es tu compromiso y disponibilidad.',
   },
   {
-    question: '¿Cuánto capital necesito para empezar?',
-    answer: 'Recomendamos una banca operativa de $300 USD para poder atender a tus contactos. Es capital de trabajo, no un gasto. Lo usás para operar y lo recuperás.',
+    question: '¿En qué países funciona?',
+    answer: 'Operamos en toda Latinoamérica. Buscamos agentes en cada país para atender a personas en su moneda local y con métodos de pago conocidos.',
+  },
+  {
+    question: '¿Cuánto tiempo toma empezar?',
+    answer: 'El proceso es rápido: postulás en 2 minutos, te contactamos en 24-48 horas para el onboarding, y podés comenzar a operar el mismo día que recibas tus accesos.',
+  },
+  {
+    question: '¿Qué es la banca operativa?',
+    answer: 'Es el capital de trabajo que usás para operar. Recomendamos $300 USD aproximadamente. No es un pago a nosotros, es tu herramienta para atender a tus contactos y lo recuperás con las operaciones.',
   },
   {
     question: '¿Es 100% móvil?',
-    answer: 'Sí. Toda la operación se hace desde tu celular: WhatsApp, Binance y nuestra plataforma web. No necesitás computadora ni local físico.',
+    answer: 'Sí. Toda la operación se hace desde tu celular: WhatsApp, transferencias y nuestra plataforma web. No necesitás computadora ni local físico.',
+  },
+  {
+    question: '¿Qué hago si no tengo experiencia en casinos?',
+    answer: 'No hay problema. Te capacitamos en todo lo necesario. Lo más importante es tu capacidad de comunicarte y atender personas, no tu conocimiento previo del rubro.',
+  },
+  {
+    question: '¿Hay algún costo inicial?',
+    answer: 'No cobramos inscripción ni cuotas. Solo necesitás tu banca operativa (capital de trabajo propio) para comenzar a operar.',
   },
 ];
 

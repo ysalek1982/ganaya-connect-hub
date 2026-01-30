@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
 import { HeaderAgents } from '@/components/landing/HeaderAgents';
 import { HeroAgents } from '@/components/landing/HeroAgents';
-import { ProblemSection } from '@/components/landing/ProblemSection';
-import { OpportunitySection } from '@/components/landing/OpportunitySection';
-import { SolutionSection } from '@/components/landing/SolutionSection';
+import { VideoSection } from '@/components/landing/VideoSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { BenefitsSection } from '@/components/landing/BenefitsSection';
+import { ForWhoSection } from '@/components/landing/ForWhoSection';
 import { RequirementsSection } from '@/components/landing/RequirementsSection';
 import { FlowSection } from '@/components/landing/FlowSection';
 import { CommissionsSection } from '@/components/landing/CommissionsSection';
 import { GrowthSection } from '@/components/landing/GrowthSection';
-import { ComparisonSection } from '@/components/landing/ComparisonSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { CTAFinalSection } from '@/components/landing/CTAFinalSection';
 import { MobileStickyNavAgents } from '@/components/landing/MobileStickyNavAgents';
@@ -44,15 +43,14 @@ const Index = () => {
       
       <main className="relative z-10">
         <HeroAgents onOpenChat={handleOpenChat} />
-        <ProblemSection />
-        <OpportunitySection />
-        <SolutionSection />
+        <VideoSection />
         <HowItWorksSection />
-        <FlowSection />
+        <BenefitsSection onOpenChat={handleOpenChat} />
+        <ForWhoSection />
         <RequirementsSection />
+        <FlowSection />
         <CommissionsSection />
         <GrowthSection />
-        <ComparisonSection />
         <FAQSection />
         <CTAFinalSection onOpenChat={handleOpenChat} />
       </main>
