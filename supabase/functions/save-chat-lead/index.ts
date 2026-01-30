@@ -56,6 +56,7 @@ interface SaveLeadRequest {
   debug?: Record<string, unknown>;
   intent: "AGENTE" | null;
   refCode: string | null;
+  campaignId?: string | null;
   country: string | null;
   scoreTotal?: number;
   tier?: string | null;
@@ -398,6 +399,29 @@ async function getRefCodeDoc(
   return result;
 }
 
+async function getAgentDoc(
+  accessToken: string,
+  projectId: string,
+  agentUid: string
+): Promise<Record<string, unknown> | null> {
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${agentUid}`,
+    { headers: { "Authorization": `Bearer ${accessToken}` } }
+  );
+
+  if (response.status === 404) return null;
+  if (!response.ok) return null;
+
+  const doc = await response.json();
+  if (!doc.fields) return null;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(doc.fields as Record<string, Record<string, unknown>>)) {
+    result[key] = parseFirestoreValue(value);
+  }
+  return result;
+}
+
 async function getAgentByCountry(
   accessToken: string,
   projectId: string,
@@ -487,6 +511,39 @@ async function getAnyActiveAgent(
   return null;
 }
 
+// ============ BUILD UPLINE ARRAY ============
+
+async function buildUplineArray(
+  accessToken: string,
+  projectId: string,
+  agentUid: string | null,
+  lineLeaderId: string | null,
+  maxLevels: number = 5
+): Promise<string[]> {
+  const upline: string[] = [];
+  
+  if (agentUid) {
+    upline.push(agentUid);
+  }
+  
+  let currentLeaderId = lineLeaderId;
+  let level = 0;
+  
+  while (currentLeaderId && level < maxLevels) {
+    upline.push(currentLeaderId);
+    
+    // Fetch the leader's document to get their lineLeaderId
+    const leaderDoc = await getAgentDoc(accessToken, projectId, currentLeaderId);
+    if (!leaderDoc) break;
+    
+    currentLeaderId = leaderDoc.lineLeaderId ? String(leaderDoc.lineLeaderId) : null;
+    if (currentLeaderId === '' || currentLeaderId === 'null') currentLeaderId = null;
+    level++;
+  }
+  
+  return upline;
+}
+
 // ============ CREATE LEAD ============
 
 async function createLeadDocument(
@@ -527,14 +584,14 @@ serve(async (req) => {
 
   try {
     const body = await req.json() as SaveLeadRequest;
-    const { mergedData, intent, refCode, country, tracking } = body;
+    const { mergedData, intent, refCode, campaignId, country, tracking } = body;
 
-    console.log("[save-chat-lead] Processing lead:", { intent, refCode, country, tracking });
+    console.log("[save-chat-lead] Processing lead:", { intent, refCode, campaignId, country, tracking });
 
     // Initialize Firebase Admin
     const { accessToken, projectId } = await initFirebaseAdmin();
 
-    // Extract answers from mergedData
+    // Extract answers from mergedData - support both question.id and storeKey formats
     const answers = (mergedData.answers || mergedData) as Record<string, unknown>;
     const chatConfigId = mergedData.chatConfigId as string | undefined;
     const chatConfigVersion = mergedData.chatConfigVersion as number | undefined;
@@ -561,10 +618,10 @@ serve(async (req) => {
       console.log("[save-chat-lead] Using frontend score (no config):", { scoreTotal, tier });
     }
 
-    // Extract applicant info
-    const name = answers.name || mergedData.name || mergedData.nombre || 'Sin nombre';
-    const applicantCountry = answers.country || mergedData.country || mergedData.pais || country || 'No especificado';
-    const whatsapp = answers.whatsapp || mergedData.whatsapp || mergedData.telefono || '';
+    // Extract applicant info with robust fallbacks for both id and storeKey
+    const name = answers.name || answers.nombre || mergedData.name || mergedData.nombre || 'Sin nombre';
+    const applicantCountry = answers.country || answers.pais || mergedData.country || mergedData.pais || country || 'No especificado';
+    const whatsapp = answers.whatsapp || answers.telefono || answers.phone || mergedData.whatsapp || mergedData.telefono || '';
     const age18 = answers.age18 ?? mergedData.age18 ?? null;
 
     // Assignment logic
@@ -587,7 +644,11 @@ serve(async (req) => {
       }
     }
 
-    // Build lead document
+    // Build upline array for multi-level network visibility (up to 5 levels)
+    const upline = await buildUplineArray(accessToken, projectId, assignedAgentId, assignedLineLeaderId, 5);
+    console.log("[save-chat-lead] Built upline array:", upline);
+
+    // Build lead document - status is ALWAYS 'NUEVO', use isAssigned for assignment tracking
     const leadDoc = {
       createdAt: new Date(),
       type: 'AGENT_RECRUITMENT',
@@ -596,9 +657,12 @@ serve(async (req) => {
       contact: { whatsapp: String(whatsapp) },
       intent: intent || 'AGENTE',
       refCode: refCode || null,
+      campaignId: campaignId || null,
       assignedAgentId,
       assignedLineLeaderId,
-      status: assignedAgentId ? 'ASIGNADO' : 'NUEVO',
+      upline, // Multi-level network visibility
+      isAssigned: !!assignedAgentId, // Boolean flag for assignment
+      status: 'NUEVO', // Always NUEVO on creation
       scoreTotal,
       tier,
       scoreBreakdown,
@@ -625,7 +689,8 @@ serve(async (req) => {
         success: true, 
         leadId, 
         assignedAgentId, 
-        assignedLineLeaderId, 
+        assignedLineLeaderId,
+        upline,
         scoreTotal, 
         tier,
         scoreBreakdown,

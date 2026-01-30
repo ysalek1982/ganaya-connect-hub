@@ -9,7 +9,15 @@ import { useRefCode } from '@/hooks/useRefCode';
 import { getTrackingData } from '@/hooks/useUTM';
 import type { LeadTier } from '@/lib/firebase-types';
 
-const WHATSAPP_NUMBER = '59176356972';
+// Fallback WhatsApp if no agent found
+const FALLBACK_WHATSAPP = '59176356972';
+
+interface AgentInfo {
+  whatsapp: string;
+  contactLabel: string;
+  messageTemplate?: string;
+  displayName?: string;
+}
 
 interface SuggestionChip {
   label: string;
@@ -44,6 +52,18 @@ interface ConversationalData {
   debug: DebugInfo;
 }
 
+interface PendingLead {
+  mergedData: Record<string, unknown>;
+  debug?: Record<string, unknown>;
+  intent: string;
+  refCode: string | null;
+  country: string;
+  scoreTotal?: number;
+  tier?: string;
+  tracking?: Record<string, string>;
+  timestamp: number;
+}
+
 const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [collectedData, setCollectedData] = useState<Record<string, unknown>>({});
@@ -51,10 +71,113 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [interviewStarted, setInterviewStarted] = useState(false);
+  const [agentInfo, setAgentInfo] = useState<AgentInfo | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const hasInitialized = useRef(false);
-  const { getRefCode } = useRefCode();
+  const { getRefCode, getCampaignId } = useRefCode();
+
+  // Load agent info on mount based on refCode
+  useEffect(() => {
+    const loadAgentInfo = async () => {
+      const refCode = getRefCode();
+      const campaignId = getCampaignId();
+      
+      if (!refCode) {
+        console.log('[Chat] No refCode, using fallback WhatsApp');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke('agent-by-ref', {
+          body: {},
+          headers: {},
+        });
+
+        // Use query params approach
+        const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-by-ref`);
+        url.searchParams.set('ref', refCode);
+        if (campaignId) url.searchParams.set('cid', campaignId);
+
+        const response = await fetch(url.toString(), {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.agentInfo) {
+            setAgentInfo({
+              whatsapp: result.agentInfo.whatsapp || FALLBACK_WHATSAPP,
+              contactLabel: result.agentInfo.contactLabel || 'Tu asesor',
+              messageTemplate: result.agentInfo.messageTemplate,
+              displayName: result.agentInfo.displayName,
+            });
+            console.log('[Chat] Agent info loaded:', result.agentInfo.displayName);
+          }
+        }
+      } catch (error) {
+        console.error('[Chat] Error loading agent info:', error);
+      }
+    };
+
+    loadAgentInfo();
+  }, [getRefCode, getCampaignId]);
+
+  // Retry pending leads from localStorage
+  useEffect(() => {
+    const retryPendingLeads = async () => {
+      try {
+        const pendingQueue = JSON.parse(localStorage.getItem('pendingLeadQueue') || '[]') as PendingLead[];
+        if (pendingQueue.length === 0) return;
+
+        console.log(`[Chat] Retrying ${pendingQueue.length} pending leads...`);
+        const remaining: PendingLead[] = [];
+
+        for (const item of pendingQueue) {
+          try {
+            const { data, error } = await supabase.functions.invoke('save-chat-lead', {
+              body: {
+                mergedData: item.mergedData,
+                debug: item.debug,
+                intent: item.intent,
+                refCode: item.refCode,
+                country: item.country,
+                scoreTotal: item.scoreTotal,
+                tier: item.tier,
+                tracking: item.tracking,
+              },
+            });
+
+            if (error || !data?.success) {
+              remaining.push(item);
+            } else {
+              console.log('[Chat] Pending lead saved successfully');
+            }
+          } catch {
+            remaining.push(item);
+          }
+        }
+
+        localStorage.setItem('pendingLeadQueue', JSON.stringify(remaining));
+        
+        if (remaining.length < pendingQueue.length) {
+          const saved = pendingQueue.length - remaining.length;
+          toast.success(`${saved} postulación(es) pendiente(s) guardada(s)`);
+        }
+      } catch (error) {
+        console.error('[Chat] Error retrying pending leads:', error);
+      }
+    };
+
+    // Retry on mount and when online
+    retryPendingLeads();
+    window.addEventListener('online', retryPendingLeads);
+    return () => window.removeEventListener('online', retryPendingLeads);
+  }, []);
 
   // Extract numbered options from bot message for suggestion chips
   const extractSuggestions = (text: string): SuggestionChip[] => {
@@ -238,8 +361,9 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       }
 
       const refCode = getRefCode();
+      const campaignId = getCampaignId();
       const answers = mergedData.answers as Record<string, unknown> || mergedData;
-      const country = String(answers.country || mergedData.country || mergedData.pais || 'No especificado');
+      const country = String(answers.country || answers.pais || mergedData.country || mergedData.pais || 'No especificado');
 
       // Capture UTM tracking data
       const tracking = getTrackingData();
@@ -250,6 +374,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
           debug: response.debug,
           intent: 'AGENTE',
           refCode,
+          campaignId,
           country,
           scoreTotal,
           tier,
@@ -267,17 +392,20 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       console.error('[Chat] Error saving lead:', error);
       
       try {
-        const pendingQueue = JSON.parse(localStorage.getItem('pendingLeadQueue') || '[]');
+        const pendingQueue = JSON.parse(localStorage.getItem('pendingLeadQueue') || '[]') as PendingLead[];
         pendingQueue.push({
           mergedData,
-          debug: response.debug,
+          debug: response.debug as unknown as Record<string, unknown>,
           intent: 'AGENTE',
           refCode: getRefCode(),
           country: String(mergedData.pais || mergedData.country || ''),
+          scoreTotal: response.debug?.score_total,
+          tier: response.debug?.tier || undefined,
+          tracking: getTrackingData(),
           timestamp: Date.now(),
         });
         localStorage.setItem('pendingLeadQueue', JSON.stringify(pendingQueue));
-        toast.warning('No se pudo guardar. Reintentaremos más tarde.');
+        toast.warning('Guardado en cola. Se enviará cuando haya conexión.');
       } catch (localError) {
         console.error('[Chat] LocalStorage fallback failed:', localError);
         toast.error('Error al guardar. Por favor, intenta de nuevo.');
@@ -313,10 +441,26 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
     }, 100);
   };
 
-  const getWhatsAppMessage = () => {
+  const getWhatsAppNumber = (): string => {
+    return agentInfo?.whatsapp || FALLBACK_WHATSAPP;
+  };
+
+  const getWhatsAppMessage = (): string => {
     const answers = collectedData.answers as Record<string, unknown> || collectedData;
-    const name = answers.name || collectedData.nombre || '';
-    const country = answers.country || collectedData.pais || 'LATAM';
+    const name = String(answers.name || collectedData.nombre || '');
+    const country = String(answers.country || answers.pais || collectedData.pais || 'LATAM');
+    const tier = String(collectedData.tier || 'NOVATO');
+
+    // Use agent's message template if available
+    if (agentInfo?.messageTemplate) {
+      return agentInfo.messageTemplate
+        .replace('{name}', name)
+        .replace('{country}', country)
+        .replace('{tier}', tier)
+        .replace('{agentName}', agentInfo.displayName || 'Tu asesor');
+    }
+
+    // Default message
     return `Hola, quiero postular para ser agente de Ganaya.bet. Soy ${name} de ${country}. Ya completé el formulario del chat.`;
   };
 
@@ -354,7 +498,9 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
                 </div>
                 <div>
                   <h3 className="font-semibold">Postulación Agente</h3>
-                  <p className="text-xs text-muted-foreground">💼 Evaluación de perfil</p>
+                  <p className="text-xs text-muted-foreground">
+                    {agentInfo?.contactLabel || '💼 Evaluación de perfil'}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -478,7 +624,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
               <div className="p-4 border-t border-border space-y-2">
                 <Button variant="whatsapp" className="w-full" asChild>
                   <a 
-                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(getWhatsAppMessage())}`} 
+                    href={`https://wa.me/${getWhatsAppNumber()}?text=${encodeURIComponent(getWhatsAppMessage())}`} 
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -488,7 +634,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
                 </Button>
                 <Button variant="outline" className="w-full" onClick={resetChat}>
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  Nueva consulta
+                  Nueva postulación
                 </Button>
               </div>
             )}

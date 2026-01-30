@@ -354,9 +354,16 @@ const AdminLeads = () => {
                         </div>
                       </td>
                       <td className="p-4">
-                        <Badge variant="outline" className={estadoBadge(lead.status)}>
-                          {lead.status.toLowerCase()}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="outline" className={estadoBadge(lead.status)}>
+                            {lead.status.toLowerCase()}
+                          </Badge>
+                          {lead.assignedAgentId && (
+                            <Badge variant="outline" className="bg-accent/20 text-accent-foreground border-accent/30">
+                              asignado
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4 text-sm">
                         {getAgentName(lead.assignedAgentId)}
