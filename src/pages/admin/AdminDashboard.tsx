@@ -1,56 +1,71 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { collection, getDocs, query, where, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { Users, UserCheck, TrendingUp, Globe } from 'lucide-react';
-import { format, subDays, startOfDay } from 'date-fns';
+import { startOfDay, subDays } from 'date-fns';
 
 const AdminDashboard = () => {
   const today = startOfDay(new Date());
   const weekAgo = subDays(today, 7);
 
   const { data: stats } = useQuery({
-    queryKey: ['admin-stats'],
+    queryKey: ['admin-dashboard-stats'],
     queryFn: async () => {
-      const [leadsToday, leadsWeek, agentesAltos, totalAgentes, leadsByCountry] = await Promise.all([
-        supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', today.toISOString()),
-        supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .gte('created_at', weekAgo.toISOString()),
-        supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .eq('etiqueta', 'AGENTE_POTENCIAL_ALTO'),
-        supabase
-          .from('agentes')
-          .select('id', { count: 'exact', head: true })
-          .eq('estado', 'activo'),
-        supabase
-          .from('leads')
-          .select('pais')
-      ]);
+      const leadsRef = collection(db, 'leads');
+      const agentsRef = collection(db, 'agents');
 
-      const countryStats = (leadsByCountry.data || []).reduce((acc, lead) => {
-        acc[lead.pais] = (acc[lead.pais] || 0) + 1;
+      // Fetch all leads
+      const leadsSnapshot = await getDocs(leadsRef);
+      const allLeads = leadsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          tier: data.tier as string | null,
+          country: data.country as string | undefined,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+        };
+      });
+
+      // Leads today
+      const leadsToday = allLeads.filter(lead => 
+        lead.createdAt >= today
+      ).length;
+
+      // Leads this week
+      const leadsWeek = allLeads.filter(lead => 
+        lead.createdAt >= weekAgo
+      ).length;
+
+      // High potential agent leads (PROMETEDOR tier)
+      const agentesAltos = allLeads.filter(lead => 
+        lead.tier === 'PROMETEDOR'
+      ).length;
+
+      // Active agents count
+      const activeAgentsQuery = query(agentsRef, where('status', '==', 'active'));
+      const activeAgentsSnapshot = await getDocs(activeAgentsQuery);
+      const totalAgentes = activeAgentsSnapshot.size;
+
+      // Country breakdown
+      const countryStats = allLeads.reduce((acc, lead) => {
+        const country = lead.country || 'Desconocido';
+        acc[country] = (acc[country] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
       return {
-        leadsToday: leadsToday.count || 0,
-        leadsWeek: leadsWeek.count || 0,
-        agentesAltos: agentesAltos.count || 0,
-        totalAgentes: totalAgentes.count || 0,
+        leadsToday,
+        leadsWeek,
+        agentesAltos,
+        totalAgentes,
         countryStats,
       };
     },
   });
 
   const statCards = [
-    { label: 'Leads hoy', value: stats?.leadsToday || 0, icon: Users, color: 'text-primary' },
-    { label: 'Leads 7 días', value: stats?.leadsWeek || 0, icon: TrendingUp, color: 'text-gold' },
-    { label: 'Agentes potenciales altos', value: stats?.agentesAltos || 0, icon: UserCheck, color: 'text-accent' },
+    { label: 'Postulaciones hoy', value: stats?.leadsToday || 0, icon: Users, color: 'text-primary' },
+    { label: 'Postulaciones 7 días', value: stats?.leadsWeek || 0, icon: TrendingUp, color: 'text-gold' },
+    { label: 'Prospectos prometedores', value: stats?.agentesAltos || 0, icon: UserCheck, color: 'text-accent' },
     { label: 'Agentes activos', value: stats?.totalAgentes || 0, icon: Users, color: 'text-primary' },
   ];
 
@@ -59,14 +74,17 @@ const AdminDashboard = () => {
     'Argentina': '🇦🇷',
     'Colombia': '🇨🇴',
     'Ecuador': '🇪🇨',
+    'Chile': '🇨🇱',
+    'México': '🇲🇽',
     'USA': '🇺🇸',
+    'España': '🇪🇸',
   };
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-bold mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Resumen del sistema Ganaya.bet</p>
+        <p className="text-muted-foreground">Resumen del reclutamiento Ganaya.bet</p>
       </div>
 
       {/* Stats Grid */}
@@ -90,7 +108,7 @@ const AdminDashboard = () => {
       <div className="glass-card rounded-xl p-6">
         <div className="flex items-center gap-2 mb-6">
           <Globe className="w-5 h-5 text-primary" />
-          <h2 className="font-display text-lg font-semibold">Leads por país</h2>
+          <h2 className="font-display text-lg font-semibold">Postulaciones por país</h2>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -103,7 +121,7 @@ const AdminDashboard = () => {
           ))}
           {Object.keys(stats?.countryStats || {}).length === 0 && (
             <p className="text-muted-foreground col-span-full text-center py-8">
-              No hay leads registrados aún
+              No hay postulaciones registradas aún
             </p>
           )}
         </div>
@@ -113,9 +131,9 @@ const AdminDashboard = () => {
       <div className="glass-card rounded-xl p-6">
         <h2 className="font-display text-lg font-semibold mb-4">Acciones rápidas</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-          <p>• Ve a <strong>Leads Clientes</strong> para gestionar apostadores</p>
-          <p>• Ve a <strong>Leads Agentes</strong> para evaluar postulantes</p>
-          <p>• Ve a <strong>Asignación</strong> para auto-asignar por round-robin</p>
+          <p>• Ve a <strong>Postulaciones</strong> para gestionar candidatos a agente</p>
+          <p>• Ve a <strong>Agentes</strong> para administrar tu red activa</p>
+          <p>• Ve a <strong>Asignación</strong> para distribuir postulaciones por round-robin</p>
         </div>
       </div>
     </div>

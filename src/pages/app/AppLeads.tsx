@@ -47,11 +47,11 @@ const AppLeads = () => {
       },
       {
         onSuccess: () => {
-          toast.success('Lead agregado');
+          toast.success('Postulación agregada');
           setShowAddModal(false);
           setNewLead({ nombre: '', whatsapp: '', pais: 'Paraguay' });
         },
-        onError: () => toast.error('Error al agregar lead'),
+        onError: () => toast.error('Error al agregar postulación'),
       }
     );
   };
@@ -91,12 +91,12 @@ const AppLeads = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl md:text-3xl font-bold">Mis Leads</h1>
-          <p className="text-muted-foreground">Jugadores y prospectos capturados</p>
+          <h1 className="font-display text-2xl md:text-3xl font-bold">Mis Postulaciones</h1>
+          <p className="text-muted-foreground">Candidatos a agente capturados con tu link</p>
         </div>
         <Button onClick={() => setShowAddModal(true)} variant="hero" size="sm" className="gap-2">
           <Plus className="w-4 h-4" />
-          Agregar jugador
+          Agregar postulación
         </Button>
       </div>
 
@@ -119,8 +119,8 @@ const AppLeads = () => {
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="nuevo">Nuevo</SelectItem>
             <SelectItem value="contactado">Contactado</SelectItem>
-            <SelectItem value="asignado">Asignado</SelectItem>
-            <SelectItem value="cerrado">Cerrado</SelectItem>
+            <SelectItem value="aprobado">Aprobado</SelectItem>
+            <SelectItem value="onboarded">Onboarded</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -134,7 +134,7 @@ const AppLeads = () => {
         ) : filteredLeads?.length === 0 ? (
           <Card className="glass-card">
             <CardContent className="py-12 text-center text-muted-foreground">
-              No hay leads aún. ¡Comparte tu link para capturar jugadores!
+              No hay postulaciones aún. ¡Comparte tu link para reclutar agentes!
             </CardContent>
           </Card>
         ) : (
@@ -148,9 +148,11 @@ const AppLeads = () => {
                       <Badge variant="outline" className={statusColor(lead.status)}>
                         {lead.status.toLowerCase()}
                       </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {lead.intent?.toLowerCase() || 'cliente'}
-                      </Badge>
+                      {lead.tier && (
+                        <Badge variant="outline" className="text-xs">
+                          {lead.tier.toLowerCase()}
+                        </Badge>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
@@ -183,7 +185,7 @@ const AppLeads = () => {
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Agregar jugador manual</DialogTitle>
+            <DialogTitle>Agregar postulación manual</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -236,7 +238,7 @@ const AppLeads = () => {
       <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Detalle del Lead</DialogTitle>
+            <DialogTitle>Detalle de la Postulación</DialogTitle>
           </DialogHeader>
           {selectedLead && (
             <div className="space-y-4 py-4">
@@ -258,8 +260,8 @@ const AppLeads = () => {
                   <p className="font-medium">{selectedLead.status}</p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Intent</Label>
-                  <p className="font-medium">{selectedLead.intent || 'N/A'}</p>
+                  <Label className="text-muted-foreground">Tier</Label>
+                  <p className="font-medium">{selectedLead.tier || 'N/A'}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Fecha</Label>

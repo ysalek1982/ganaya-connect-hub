@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseUsers } from '@/hooks/useFirebaseUsers';
 import LeadDetailModal from '@/components/admin/LeadDetailModal';
-import type { FirebaseLead, LeadStatus, LeadTier, LeadIntent } from '@/lib/firebase-types';
+import type { FirebaseLead, LeadStatus, LeadTier } from '@/lib/firebase-types';
 
 const AdminLeads = () => {
   const { isAdmin, isLineLeader, agentId } = useFirebaseAuth();
@@ -22,7 +22,6 @@ const AdminLeads = () => {
   const [search, setSearch] = useState('');
   const [filterPais, setFilterPais] = useState<string>('all');
   const [filterEstado, setFilterEstado] = useState<LeadStatus | 'all'>('all');
-  const [filterIntent, setFilterIntent] = useState<string>('all');
   const [filterTier, setFilterTier] = useState<LeadTier | 'all'>('all');
   const [filterAgente, setFilterAgente] = useState<string>('all');
   const [sortByScore, setSortByScore] = useState(false);
@@ -93,7 +92,7 @@ const AdminLeads = () => {
 
       if (result.success) {
         // Update lead status
-        await updateDoc(doc(db, 'leads', lead.id), { status: 'CERRADO' });
+        await updateDoc(doc(db, 'leads', lead.id), { status: 'ONBOARDED' });
         toast.success(`Agente creado con código: ${result.refCode}`);
         setSelectedLead(null);
       } else {
@@ -114,11 +113,10 @@ const AdminLeads = () => {
 
     const matchesPais = filterPais === 'all' || lead.country === filterPais;
     const matchesEstado = filterEstado === 'all' || lead.status === filterEstado;
-    const matchesIntent = filterIntent === 'all' || filterIntent === 'agente'; // All leads are now agents
     const matchesTier = filterTier === 'all' || lead.tier === filterTier;
     const matchesAgente = filterAgente === 'all' || lead.assignedAgentId === filterAgente;
 
-    return matchesSearch && matchesPais && matchesEstado && matchesIntent && matchesTier && matchesAgente;
+    return matchesSearch && matchesPais && matchesEstado && matchesTier && matchesAgente;
   });
 
   // Sort
@@ -133,10 +131,9 @@ const AdminLeads = () => {
   };
 
   const exportCSV = () => {
-    const headers = ['Fecha', 'Intent', 'Nombre', 'País', 'Contacto', 'Estado', 'Agente', 'Tier', 'Score'];
+    const headers = ['Fecha', 'Nombre', 'País', 'Contacto', 'Estado', 'Reclutador', 'Tier', 'Score'];
     const rows = filteredLeads.map(l => [
       format(l.createdAt, 'dd/MM/yyyy'),
-      l.intent || '',
       l.name,
       l.country,
       l.contact.whatsapp || '',
@@ -150,14 +147,8 @@ const AdminLeads = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `leads-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.download = `postulaciones-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
-  };
-
-  const intentBadge = (intent: LeadIntent | null) => {
-    return intent === 'AGENTE' 
-      ? 'bg-gold/20 text-gold border-gold/30' 
-      : 'bg-primary/20 text-primary border-primary/30';
   };
 
   const estadoBadge = (status: LeadStatus) => {
@@ -186,9 +177,9 @@ const AdminLeads = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl md:text-3xl font-bold">Leads</h1>
+          <h1 className="font-display text-2xl md:text-3xl font-bold">Postulaciones</h1>
           <p className="text-muted-foreground">
-            {isAdmin ? 'Todos los leads' : isLineLeader ? 'Leads de tu red' : 'Tus leads asignados'}
+            {isAdmin ? 'Todos los candidatos a agente' : isLineLeader ? 'Postulaciones de tu red' : 'Tus postulaciones asignadas'}
           </p>
         </div>
         <div className="flex gap-2">
@@ -231,17 +222,6 @@ const AdminLeads = () => {
             </SelectContent>
           </Select>
 
-          <Select value={filterIntent} onValueChange={setFilterIntent}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Intent" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="cliente">Cliente</SelectItem>
-              <SelectItem value="agente">Agente</SelectItem>
-            </SelectContent>
-          </Select>
-
           <Select value={filterEstado} onValueChange={(v) => setFilterEstado(v as LeadStatus | 'all')}>
             <SelectTrigger className="w-36">
               <SelectValue placeholder="Estado" />
@@ -250,9 +230,9 @@ const AdminLeads = () => {
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="NUEVO">Nuevo</SelectItem>
               <SelectItem value="CONTACTADO">Contactado</SelectItem>
-              <SelectItem value="ASIGNADO">Asignado</SelectItem>
-              <SelectItem value="CERRADO">Cerrado</SelectItem>
-              <SelectItem value="DESCARTADO">Descartado</SelectItem>
+              <SelectItem value="APROBADO">Aprobado</SelectItem>
+              <SelectItem value="RECHAZADO">Rechazado</SelectItem>
+              <SelectItem value="ONBOARDED">Onboarded</SelectItem>
             </SelectContent>
           </Select>
 
@@ -262,19 +242,19 @@ const AdminLeads = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los tiers</SelectItem>
-              <SelectItem value="APROBABLE">Alto</SelectItem>
-              <SelectItem value="POTENCIAL">Medio</SelectItem>
-              <SelectItem value="NOVATO">Bajo</SelectItem>
+              <SelectItem value="PROMETEDOR">Prometedor</SelectItem>
+              <SelectItem value="POTENCIAL">Potencial</SelectItem>
+              <SelectItem value="NOVATO">Novato</SelectItem>
             </SelectContent>
           </Select>
 
           {(isAdmin || isLineLeader) && (
             <Select value={filterAgente} onValueChange={setFilterAgente}>
               <SelectTrigger className="w-44">
-                <SelectValue placeholder="Agente" />
+                <SelectValue placeholder="Reclutador" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los agentes</SelectItem>
+                <SelectItem value="all">Todos los reclutadores</SelectItem>
                 {visibleAgents?.map(agent => (
                   <SelectItem key={agent.uid} value={agent.uid}>
                     {agent.name}
@@ -293,11 +273,10 @@ const AdminLeads = () => {
             <thead>
               <tr className="border-b border-border text-left bg-muted/30">
                 <th className="p-4 font-semibold">Fecha</th>
-                <th className="p-4 font-semibold">Intent</th>
                 <th className="p-4 font-semibold">País</th>
                 <th className="p-4 font-semibold">Contacto</th>
                 <th className="p-4 font-semibold">Estado</th>
-                <th className="p-4 font-semibold">Agente</th>
+                <th className="p-4 font-semibold">Reclutador</th>
                 <th className="p-4 font-semibold">Tier</th>
                 <th className="p-4 font-semibold">Score</th>
                 <th className="p-4 font-semibold">Acciones</th>
@@ -306,14 +285,14 @@ const AdminLeads = () => {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center">
+                  <td colSpan={8} className="p-8 text-center">
                     <div className="spinner mx-auto" />
                   </td>
                 </tr>
               ) : filteredLeads.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-muted-foreground">
-                    No hay leads
+                  <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                    No hay postulaciones
                   </td>
                 </tr>
               ) : (
@@ -321,11 +300,6 @@ const AdminLeads = () => {
                   <tr key={lead.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="p-4 text-muted-foreground text-sm">
                       {format(lead.createdAt, 'dd/MM/yyyy')}
-                    </td>
-                    <td className="p-4">
-                      <Badge variant="outline" className={intentBadge(lead.intent)}>
-                        {lead.intent === 'AGENTE' ? 'agente' : lead.intent === 'JUGADOR' ? 'cliente' : 'soporte'}
-                      </Badge>
                     </td>
                     <td className="p-4">{lead.country}</td>
                     <td className="p-4">

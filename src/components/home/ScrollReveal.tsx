@@ -1,6 +1,5 @@
-import { ReactNode } from 'react';
-import { motion } from 'framer-motion';
-import { useScrollReveal } from '@/hooks/useScrollReveal';
+import { ReactNode, useRef } from 'react';
+import { motion, useInView } from 'framer-motion';
 
 interface ScrollRevealProps {
   children: ReactNode;
@@ -25,14 +24,15 @@ export const ScrollReveal = ({
   direction = 'up',
   className = ''
 }: ScrollRevealProps) => {
-  const { ref, isVisible } = useScrollReveal({ threshold: 0.15 });
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-15%' });
   const initialPos = getInitialPosition(direction);
 
   return (
     <motion.div
       ref={ref}
       initial={{ opacity: 0, ...initialPos }}
-      animate={isVisible ? { opacity: 1, x: 0, y: 0 } : { opacity: 0, ...initialPos }}
+      animate={isInView ? { opacity: 1, x: 0, y: 0 } : { opacity: 0, ...initialPos }}
       transition={{ 
         duration: 0.6, 
         delay: delay / 1000,
