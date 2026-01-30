@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Calendar, Users, TrendingUp, Rocket } from 'lucide-react';
+import { useLandingContent } from '@/hooks/useLandingContent';
 
 const timeline = [
   {
@@ -33,6 +34,15 @@ const timeline = [
 ];
 
 export const GrowthSection = () => {
+  const { data: content } = useLandingContent();
+  
+  // Check if section is enabled
+  if (content?.sectionsEnabled?.growth === false) {
+    return null;
+  }
+  
+  // Get title from CMS
+  const sectionTitle = content?.sectionTitles?.growthTitle || 'Cronograma realista';
   return (
     <section id="crecimiento" className="py-24 relative overflow-hidden">
       {/* Background */}

@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Percent, Users, ArrowDown, TrendingUp, Sparkles } from 'lucide-react';
+import { useLandingContent } from '@/hooks/useLandingContent';
 
 const tiers = [
   { range: '$1 - $500', rate: '25%', active: false },
@@ -9,6 +10,15 @@ const tiers = [
 ];
 
 export const CommissionsSection = () => {
+  const { data: content } = useLandingContent();
+  
+  // Check if section is enabled
+  if (content?.sectionsEnabled?.commissions === false) {
+    return null;
+  }
+  
+  // Get disclaimer from CMS
+  const disclaimerShort = content?.socialProof?.disclaimerShort || '* Resultados dependen de tu gestión y actividad. Pago mensual según política.';
   return (
     <section id="comisiones" className="py-24 relative overflow-hidden">
       {/* Background */}
@@ -132,14 +142,14 @@ export const CommissionsSection = () => {
           </motion.div>
         </div>
 
-        {/* Disclaimer */}
+        {/* Disclaimer from CMS */}
         <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           className="text-center mt-10 text-sm text-muted-foreground/70"
         >
-          * Resultados dependen de tu gestión y actividad. Pago mensual según política.
+          {disclaimerShort}
         </motion.p>
       </div>
     </section>
