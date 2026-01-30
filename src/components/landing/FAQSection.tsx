@@ -52,20 +52,24 @@ const faqs = [
 
 export const FAQSection = () => {
   return (
-    <section id="faq" className="py-20 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-card/20 to-background" />
+    <section id="faq" className="py-24 relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--surface-1))] via-background to-background" />
       
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-16"
         >
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+          <span className="inline-block px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-4">
+            Dudas comunes
+          </span>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
             Preguntas <span className="text-gradient-primary">frecuentes</span>
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Resolvemos tus dudas antes de postular
           </p>
         </motion.div>
@@ -81,14 +85,14 @@ export const FAQSection = () => {
               <AccordionItem
                 key={index}
                 value={`item-${index}`}
-                className="glass-card rounded-xl border-border/50 px-6 data-[state=open]:border-primary/30"
+                className="bg-card/40 backdrop-blur-sm rounded-xl border border-border/50 px-6 data-[state=open]:border-primary/30 transition-colors"
               >
-                <AccordionTrigger className="hover:no-underline py-4">
+                <AccordionTrigger className="hover:no-underline py-5">
                   <span className="text-left font-semibold text-foreground">
                     {faq.question}
                   </span>
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-4">
+                <AccordionContent className="text-muted-foreground pb-5 leading-relaxed">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>

@@ -1,146 +1,131 @@
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Smartphone, Clock, Shield, Zap } from 'lucide-react';
+import { Smartphone, Clock, TrendingUp, Users, Shield, MessageCircle, ArrowRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { MessageCircle } from 'lucide-react';
 
 interface BenefitsSectionProps {
-  onOpenChat: () => void;
+  onOpenChat?: () => void;
 }
 
 const benefits = [
   {
     icon: TrendingUp,
-    title: 'Hasta 40% de comisión',
-    description: 'Comisiones escalables según tu desempeño mensual',
-    highlight: '40%',
+    title: 'Hasta 40% comisión',
+    description: 'Comisiones escalables según tu volumen mensual de operaciones.',
     color: 'primary',
   },
   {
     icon: Users,
-    title: 'Bonos por red',
-    description: '7% de tus referidos directos + 5% de segunda línea',
-    highlight: '7% + 5%',
+    title: 'Bonos por red: 7% y 5%',
+    description: 'Generá ingresos pasivos por cada sub-agente que reclutes.',
     color: 'gold',
   },
   {
     icon: Smartphone,
-    title: '100% desde tu celular',
-    description: 'Operá desde cualquier lugar, sin oficina ni horario',
-    highlight: 'Móvil',
+    title: '100% desde el celular',
+    description: 'Operá desde cualquier lugar, sin necesidad de una oficina.',
     color: 'primary',
   },
   {
     icon: Clock,
     title: 'Sin horario fijo',
-    description: 'Vos decidís cuándo y cuánto trabajar',
-    highlight: 'Flexible',
+    description: 'Vos elegís cuándo trabajar. Tu tiempo, tus reglas.',
     color: 'gold',
   },
   {
     icon: Shield,
     title: 'Soporte continuo',
-    description: 'Te acompañamos en cada paso de tu crecimiento',
-    highlight: '24/7',
+    description: 'Capacitación inicial y acompañamiento permanente.',
     color: 'primary',
   },
   {
     icon: Zap,
-    title: 'Pagos mensuales',
-    description: 'Liquidación el primer día de cada mes',
-    highlight: 'Puntual',
+    title: 'Herramientas listas',
+    description: 'Panel de gestión, links de referido y materiales de apoyo.',
     color: 'gold',
   },
 ];
 
 export const BenefitsSection = ({ onOpenChat }: BenefitsSectionProps) => {
   return (
-    <section id="beneficios" className="py-16 md:py-20 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/5 to-background" />
+    <section id="beneficios" className="py-24 relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--surface-1))] via-background to-background" />
       
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-16"
         >
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-            <span className="text-gradient-primary">Beneficios</span> de ser agente
+          <span className="inline-block px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-4">
+            ¿Por qué unirte?
+          </span>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+            Beneficios del <span className="text-gradient-primary">programa</span>
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Lo que vas a obtener cuando te sumes al programa
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            Todo lo que necesitás para comenzar a generar ingresos
           </p>
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        {/* Benefits grid */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto mb-12">
           {benefits.map((benefit, index) => (
             <motion.div
               key={benefit.title}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="glass-card rounded-2xl p-6 hover:border-primary/30 transition-all duration-300 group"
+              className="bg-card/40 backdrop-blur-sm rounded-2xl p-6 border border-border/50 hover:border-primary/20 transition-all duration-300 group"
             >
-              <div className="flex items-start gap-4">
-                <div 
-                  className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
-                  style={{
-                    backgroundColor: benefit.color === 'primary' ? 'hsl(var(--primary) / 0.1)' : 'hsl(var(--gold) / 0.1)',
-                  }}
-                >
-                  <benefit.icon 
-                    className="w-6 h-6" 
-                    style={{
-                      color: benefit.color === 'primary' ? 'hsl(var(--primary))' : 'hsl(var(--gold))',
-                    }}
-                  />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-display font-semibold text-foreground">
-                      {benefit.title}
-                    </h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {benefit.description}
-                  </p>
-                </div>
+              <div 
+                className={`w-12 h-12 mb-5 rounded-xl flex items-center justify-center transition-colors ${
+                  benefit.color === 'primary' 
+                    ? 'bg-primary/10 group-hover:bg-primary/20' 
+                    : 'bg-gold/10 group-hover:bg-gold/20'
+                }`}
+              >
+                <benefit.icon 
+                  className={`w-6 h-6 ${benefit.color === 'primary' ? 'text-primary' : 'text-gold'}`} 
+                />
               </div>
+              <h3 className="font-display text-lg font-semibold text-foreground mb-2">
+                {benefit.title}
+              </h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {benefit.description}
+              </p>
             </motion.div>
           ))}
         </div>
 
+        {/* CTA */}
+        {onOpenChat && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center"
+          >
+            <Button variant="hero" size="lg" onClick={onOpenChat}>
+              <MessageCircle className="w-5 h-5" />
+              Postularme ahora
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </motion.div>
+        )}
+
         {/* Disclaimer */}
-        <motion.div
+        <motion.p
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="mt-10 text-center"
+          className="text-center mt-8 text-sm text-muted-foreground/60"
         >
-          <p className="text-sm text-muted-foreground italic max-w-2xl mx-auto">
-            ⚠️ Los resultados dependen de tu gestión, actividad y tamaño de red. 
-            No garantizamos ingresos específicos.
-          </p>
-        </motion.div>
-
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="mt-10 text-center"
-        >
-          <Button 
-            variant="hero" 
-            size="lg" 
-            onClick={onOpenChat}
-            className="shadow-lg shadow-primary/30"
-          >
-            <MessageCircle className="w-5 h-5" />
-            Quiero ser agente
-          </Button>
-        </motion.div>
+          * Resultados dependen de tu gestión y actividad. Sin ingresos garantizados.
+        </motion.p>
       </div>
     </section>
   );

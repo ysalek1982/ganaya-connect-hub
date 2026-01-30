@@ -34,25 +34,29 @@ const timeline = [
 
 export const GrowthSection = () => {
   return (
-    <section id="crecimiento" className="py-20 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-gold/5 to-background" />
+    <section id="crecimiento" className="py-24 relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-gold/[0.03] to-background" />
       
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-16"
         >
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+          <span className="inline-block px-3 py-1 rounded-full bg-gold/10 border border-gold/20 text-gold text-sm font-medium mb-4">
+            Tu progreso
+          </span>
+          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
             Cronograma <span className="text-gradient-gold">realista</span>
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
             Proyección de crecimiento basada en actividad constante
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           {timeline.map((phase, index) => (
             <motion.div
               key={phase.period}
@@ -60,24 +64,24 @@ export const GrowthSection = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="glass-card rounded-2xl p-6 relative group hover:border-gold/30 transition-all duration-300"
+              className="bg-card/40 backdrop-blur-sm rounded-2xl p-6 relative border border-border/50 hover:border-gold/20 transition-all duration-300 group"
             >
               {/* Step number */}
               <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-gold/20 border border-gold/40 flex items-center justify-center font-display font-bold text-gold text-sm">
                 {index + 1}
               </div>
               
-              <div className="w-12 h-12 mb-4 rounded-xl bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors">
+              <div className="w-12 h-12 mb-5 rounded-xl bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors">
                 <phase.icon className="w-6 h-6 text-gold" />
               </div>
               
-              <h3 className="font-display text-lg font-bold text-gold mb-3">
+              <h3 className="font-display text-xl font-bold text-gold mb-4">
                 {phase.period}
               </h3>
               
               <div className="space-y-2 text-sm">
-                <p className="text-foreground">{phase.clients}</p>
-                <p className="font-semibold text-primary">{phase.income}</p>
+                <p className="text-foreground/90">{phase.clients}</p>
+                <p className="font-semibold text-primary text-base">{phase.income}</p>
                 <p className="text-muted-foreground">{phase.activity}</p>
               </div>
             </motion.div>
@@ -88,9 +92,9 @@ export const GrowthSection = () => {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center mt-8 text-xs text-muted-foreground"
+          className="text-center mt-10 text-sm text-muted-foreground/60"
         >
-          * Ingresos referenciales, dependen de tu actividad y red
+          * Ingresos referenciales. Dependen de tu actividad y tamaño de red.
         </motion.p>
       </div>
     </section>
