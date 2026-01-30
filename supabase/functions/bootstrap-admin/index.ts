@@ -544,9 +544,53 @@ serve(async (req) => {
         );
       }
 
+      // --- Landing Content CRUD ---
+      if (action === 'landing_content_get') {
+        const contentDoc = await firestoreGetDoc(accessToken, projectId, 'landing_content/main');
+        const parsed = contentDoc ? parseFirestoreDoc(contentDoc) : null;
+        
+        return new Response(
+          JSON.stringify({ success: true, content: parsed }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (action === 'landing_content_upsert') {
+        const content = (body?.content || {}) as Record<string, unknown>;
+        const now = new Date();
+        
+        const payload = {
+          ...content,
+          updatedAt: now,
+        };
+
+        const exists = await checkDocExists(accessToken, projectId, 'landing_content', 'main');
+        if (!exists) {
+          await createFirestoreDoc(accessToken, projectId, 'landing_content', 'main', { ...payload, createdAt: now });
+        } else {
+          await firestorePatchDoc(accessToken, projectId, 'landing_content/main', payload);
+        }
+
+        return new Response(
+          JSON.stringify({ success: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ error: 'Acción no soportada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Public actions (no auth required)
+    if (body?.action === 'landing_content_get_public') {
+      const contentDoc = await firestoreGetDoc(accessToken, projectId, 'landing_content/main');
+      const parsed = contentDoc ? parseFirestoreDoc(contentDoc) : null;
+      
+      return new Response(
+        JSON.stringify({ success: true, content: parsed }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 

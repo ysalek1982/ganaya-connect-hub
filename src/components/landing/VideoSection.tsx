@@ -1,10 +1,17 @@
 import { motion } from 'framer-motion';
 import { Play, Clock } from 'lucide-react';
-
-// Video ID can be configured - for now using a placeholder
-const VIDEO_ID = 'dQw4w9WgXcQ'; // Replace with actual video ID
+import { useLandingContent, extractYouTubeId } from '@/hooks/useLandingContent';
 
 export const VideoSection = () => {
+  const { data: content } = useLandingContent();
+  
+  const youtubeId = extractYouTubeId(content?.vslYoutubeUrl || '');
+  
+  // If no video URL configured, don't render the section
+  if (!youtubeId || content?.sectionsEnabled?.video === false) {
+    return null;
+  }
+
   return (
     <section id="video" className="py-16 md:py-20 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-card/30 to-background" />
@@ -20,7 +27,7 @@ export const VideoSection = () => {
               className="relative aspect-video rounded-2xl overflow-hidden border border-border shadow-2xl shadow-primary/10"
             >
               <iframe
-                src={`https://www.youtube.com/embed/${VIDEO_ID}?rel=0&modestbranding=1`}
+                src={`https://www.youtube.com/embed/${youtubeId}?rel=0&modestbranding=1`}
                 title="Cómo ser agente Ganaya.bet"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -44,11 +51,11 @@ export const VideoSection = () => {
               </div>
               
               <h2 className="font-display text-2xl md:text-3xl lg:text-4xl font-bold">
-                Mira esto antes de <span className="text-gradient-primary">postular</span>
+                {content?.vslTitle || 'Mira esto antes de'} <span className="text-gradient-primary">postular</span>
               </h2>
               
               <p className="text-muted-foreground text-lg">
-                En menos de 2 minutos vas a entender:
+                {content?.vslSubtitle || 'En menos de 2 minutos vas a entender:'}
               </p>
               
               <ul className="space-y-3">

@@ -141,5 +141,11 @@ service cloud.firestore {
       // Only admins can read and write chat configurations
       allow read, write: if isAdmin();
     }
+    
+    // Landing content - public read, admin write
+    match /landing_content/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
   }
 }

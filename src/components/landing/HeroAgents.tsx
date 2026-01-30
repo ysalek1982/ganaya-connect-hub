@@ -4,18 +4,33 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { FloatingParticles } from '@/components/home/FloatingParticles';
 import { CasinoBackground } from '@/components/home/CasinoElements';
+import { useLandingContent } from '@/hooks/useLandingContent';
 
 interface HeroAgentsProps {
   onOpenChat: () => void;
 }
 
 export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
+  const { data: content } = useLandingContent();
+  
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
+
+  // Use CMS content with fallbacks
+  const heroTitle = content?.heroTitle || 'Crea ingresos como Agente Ganaya.bet desde tu celular';
+  const heroSubtitle = content?.heroSubtitle || 'Comisiones escalables (hasta 40%) + bonos por red (7% y 5%). 100% móvil.';
+  const ctaPrimary = content?.ctaPrimaryText || 'Postularme ahora';
+  const ctaSecondary = content?.ctaSecondaryText || 'Ver cómo funciona';
+  const bullets = content?.heroBullets?.length 
+    ? content.heroBullets 
+    : ['Operación simple + soporte directo', 'Crecimiento por red (sub-agentes)', 'Pago mensual puntual'];
+
+  // Map bullets to icons
+  const bulletIcons = [DollarSign, Smartphone, Clock];
 
   return (
     <section id="inicio" className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-20 md:pt-24 pb-16">
@@ -72,9 +87,9 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             transition={{ delay: 0.1 }}
             className="font-display text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 leading-[1.1] tracking-tight"
           >
-            <span className="text-gradient-primary">Crea tu ingreso como</span>
+            <span className="text-gradient-primary">{heroTitle.split(' ').slice(0, 4).join(' ')}</span>
             <br />
-            <span className="text-foreground">Agente Ganaya.bet</span>
+            <span className="text-foreground">{heroTitle.split(' ').slice(4).join(' ')}</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -84,7 +99,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             transition={{ delay: 0.2 }}
             className="text-lg md:text-xl lg:text-2xl text-muted-foreground mb-6 max-w-2xl mx-auto"
           >
-            Comisiones escalables + bonos por red. <span className="text-primary font-semibold">100% móvil.</span> En tu país.
+            {heroSubtitle}
           </motion.p>
 
           {/* Bullets */}
@@ -92,22 +107,21 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 flex-wrap"
           >
-            {[
-              { icon: DollarSign, text: 'Hasta 40% + bonos 7% y 5%' },
-              { icon: Smartphone, text: 'Operación simple' },
-              { icon: Clock, text: 'Tú manejas tu tiempo' },
-            ].map((item, i) => (
-              <Badge 
-                key={i} 
-                variant="outline" 
-                className="px-4 py-2 bg-card/50 backdrop-blur-sm border-white/10 gap-2 text-sm"
-              >
-                <item.icon className="w-4 h-4 text-primary" />
-                <span className="text-foreground/90">{item.text}</span>
-              </Badge>
-            ))}
+            {bullets.slice(0, 3).map((text, i) => {
+              const Icon = bulletIcons[i] || DollarSign;
+              return (
+                <Badge 
+                  key={i} 
+                  variant="outline" 
+                  className="px-4 py-2 bg-card/50 backdrop-blur-sm border-white/10 gap-2 text-sm"
+                >
+                  <Icon className="w-4 h-4 text-primary" />
+                  <span className="text-foreground/90">{text}</span>
+                </Badge>
+              );
+            })}
           </motion.div>
 
           {/* CTAs */}
@@ -124,7 +138,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
               className="w-full sm:w-auto min-w-[240px] shadow-lg shadow-primary/30 text-lg"
             >
               <MessageCircle className="w-5 h-5" />
-              Postularme ahora
+              {ctaPrimary}
               <ArrowRight className="w-5 h-5" />
             </Button>
             <Button 
@@ -133,7 +147,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
               onClick={() => scrollToSection('como-funciona')}
               className="w-full sm:w-auto opacity-90 hover:opacity-100"
             >
-              Ver cómo funciona
+              {ctaSecondary}
               <ChevronDown className="w-4 h-4 ml-1" />
             </Button>
           </motion.div>
@@ -145,7 +159,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             transition={{ delay: 0.6 }}
             className="mt-8 text-sm text-muted-foreground"
           >
-            Banca operativa de trabajo · Soporte directo · Tu crecimiento, tus reglas
+            {content?.disclaimerText || 'Banca operativa de trabajo · Soporte directo · Tu crecimiento, tus reglas'}
           </motion.p>
         </div>
       </div>

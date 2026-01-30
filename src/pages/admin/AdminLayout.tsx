@@ -10,7 +10,10 @@ import {
   Menu,
   X,
   Network,
-  MessageSquare
+  MessageSquare,
+  FileText,
+  Video,
+  BotMessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -49,7 +52,9 @@ const AdminLayout = () => {
     { path: '/admin/leads', icon: Users, label: 'Postulaciones' },
     { path: '/admin/agentes', icon: UserCheck, label: 'Agentes' },
     { path: '/admin/red', icon: Network, label: 'Red' },
-    { path: '/admin/chat-config', icon: MessageSquare, label: 'Chat Config' },
+    { path: '/admin/content', icon: FileText, label: 'Contenido' },
+    { path: '/admin/chat-config', icon: BotMessageSquare, label: 'Chat Config' },
+    { path: '/admin/tutoriales', icon: Video, label: 'Tutoriales' },
     { path: '/admin/settings', icon: Settings, label: 'Configuración' },
   ];
 
