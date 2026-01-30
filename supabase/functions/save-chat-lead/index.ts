@@ -59,6 +59,7 @@ interface SaveLeadRequest {
   country: string | null;
   scoreTotal?: number;
   tier?: string | null;
+  tracking?: Record<string, string>; // UTM params
 }
 
 // ============ FIREBASE ADMIN ============
@@ -526,9 +527,9 @@ serve(async (req) => {
 
   try {
     const body = await req.json() as SaveLeadRequest;
-    const { mergedData, intent, refCode, country } = body;
+    const { mergedData, intent, refCode, country, tracking } = body;
 
-    console.log("[save-chat-lead] Processing lead:", { intent, refCode, country });
+    console.log("[save-chat-lead] Processing lead:", { intent, refCode, country, tracking });
 
     // Initialize Firebase Admin
     const { accessToken, projectId } = await initFirebaseAdmin();
@@ -610,6 +611,7 @@ serve(async (req) => {
         country: String(applicantCountry),
         age18: age18,
       },
+      tracking: tracking || {}, // UTM and campaign tracking
       rawJson: mergedData,
       origen: 'chat_ia',
     };

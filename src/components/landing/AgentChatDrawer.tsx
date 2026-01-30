@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useRefCode } from '@/hooks/useRefCode';
+import { getTrackingData } from '@/hooks/useUTM';
 import type { LeadTier } from '@/lib/firebase-types';
 
 const WHATSAPP_NUMBER = '59176356972';
@@ -240,6 +241,9 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       const answers = mergedData.answers as Record<string, unknown> || mergedData;
       const country = String(answers.country || mergedData.country || mergedData.pais || 'No especificado');
 
+      // Capture UTM tracking data
+      const tracking = getTrackingData();
+
       const { data: saveResult, error: saveError } = await supabase.functions.invoke('save-chat-lead', {
         body: {
           mergedData,
@@ -249,6 +253,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
           country,
           scoreTotal,
           tier,
+          tracking, // Include UTM params
         },
       });
 
