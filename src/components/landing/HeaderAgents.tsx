@@ -7,11 +7,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 const navLinks = [
   { href: '#oportunidad', label: 'Oportunidad' },
   { href: '#como-funciona', label: 'Cómo Funciona' },
-  { href: '#comisiones', label: 'Comisiones' },
   { href: '#requisitos', label: 'Requisitos' },
-  { href: '#crecimiento', label: 'Crecimiento' },
-  { href: '#ventajas', label: 'Ventajas' },
-  { href: '#captacion', label: 'Captación' },
+  { href: '#comisiones', label: 'Comisiones' },
+  { href: '#faq', label: 'FAQ' },
 ];
 
 interface HeaderAgentsProps {

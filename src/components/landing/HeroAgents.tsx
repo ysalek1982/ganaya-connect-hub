@@ -72,7 +72,9 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             transition={{ delay: 0.1 }}
             className="font-display text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-4 leading-[1.1] tracking-tight"
           >
-            <span className="text-gradient-primary">TU POSITIVO SUMA</span>
+            <span className="text-gradient-primary">Crea tu ingreso como</span>
+            <br />
+            <span className="text-foreground">Agente Ganaya.bet</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -80,9 +82,9 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-xl md:text-2xl lg:text-3xl text-foreground font-semibold mb-6"
+            className="text-lg md:text-xl lg:text-2xl text-muted-foreground mb-6 max-w-2xl mx-auto"
           >
-            Comisiones escalables hasta <span className="text-primary">40%</span> + bonos en cascada <span className="text-gold">7%</span> y <span className="text-gold">5%</span>
+            Comisiones escalables + bonos por red. <span className="text-primary font-semibold">100% móvil.</span> En tu país.
           </motion.p>
 
           {/* Bullets */}
@@ -90,12 +92,12 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-8"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8"
           >
             {[
-              { icon: Smartphone, text: '100% móvil' },
-              { icon: DollarSign, text: 'Banca mínima: $300 USD' },
-              { icon: Clock, text: 'Ingresos 24/7' },
+              { icon: DollarSign, text: 'Hasta 40% + bonos 7% y 5%' },
+              { icon: Smartphone, text: 'Operación simple' },
+              { icon: Clock, text: 'Tú manejas tu tiempo' },
             ].map((item, i) => (
               <Badge 
                 key={i} 
@@ -143,7 +145,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             transition={{ delay: 0.6 }}
             className="mt-8 text-sm text-muted-foreground"
           >
-            Capital de trabajo, no gasto · Tu ganancia viene del positivo de tus clientes
+            Banca operativa de trabajo · Soporte directo · Tu crecimiento, tus reglas
           </motion.p>
         </div>
       </div>

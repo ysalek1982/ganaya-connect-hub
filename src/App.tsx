@@ -13,7 +13,6 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminLeads from "./pages/admin/AdminLeads";
 import AdminAgentesNew from "./pages/admin/AdminAgentesNew";
 import AdminNetwork from "./pages/admin/AdminNetwork";
-import AdminAsignacion from "./pages/admin/AdminAsignacion";
 import AdminTutorials from "./pages/admin/AdminTutorials";
 import AdminSettingsNew from "./pages/admin/AdminSettingsNew";
 import AdminChatConfig from "./pages/admin/AdminChatConfig";
@@ -62,7 +61,6 @@ const App = () => (
             <Route path="leads" element={<AdminLeads />} />
             <Route path="agentes" element={<AdminAgentesNew />} />
             <Route path="red" element={<AdminNetwork />} />
-            <Route path="asignacion" element={<AdminAsignacion />} />
             <Route path="tutoriales" element={<AdminTutorials />} />
             <Route path="chat-config" element={<AdminChatConfig />} />
             <Route path="settings" element={<AdminSettingsNew />} />
