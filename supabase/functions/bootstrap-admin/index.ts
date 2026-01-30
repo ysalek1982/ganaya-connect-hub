@@ -380,13 +380,24 @@ serve(async (req) => {
     console.log("[bootstrap-admin] Firebase Admin initialized");
 
     const body = await req.json().catch(() => ({}));
+    const action = String(body?.action || '');
+
+    // PUBLIC ACTIONS (no auth required) - handle FIRST before admin check
+    if (action === 'landing_content_get_public') {
+      const contentDoc = await firestoreGetDoc(accessToken, projectId, 'landing_content/main');
+      const parsed = contentDoc ? parseFirestoreDoc(contentDoc) : null;
+      
+      return new Response(
+        JSON.stringify({ success: true, content: parsed }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // If action is provided, handle admin operations
-    if (body?.action) {
-      const action = String(body.action);
+    if (action) {
       const idToken = String(body.idToken || '');
 
-      // Require admin for ALL actions
+      // Require admin for ALL protected actions
       try {
         await requireAdmin(accessToken, projectId, idToken);
       } catch (e) {
@@ -580,17 +591,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Acción no soportada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Public actions (no auth required)
-    if (body?.action === 'landing_content_get_public') {
-      const contentDoc = await firestoreGetDoc(accessToken, projectId, 'landing_content/main');
-      const parsed = contentDoc ? parseFirestoreDoc(contentDoc) : null;
-      
-      return new Response(
-        JSON.stringify({ success: true, content: parsed }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
