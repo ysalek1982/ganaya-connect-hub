@@ -89,12 +89,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       }
 
       try {
-        const { data, error } = await supabase.functions.invoke('agent-by-ref', {
-          body: {},
-          headers: {},
-        });
-
-        // Use query params approach
+        // Use query params approach for GET request
         const url = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-by-ref`);
         url.searchParams.set('ref', refCode);
         if (campaignId) url.searchParams.set('cid', campaignId);

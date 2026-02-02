@@ -17,6 +17,7 @@ import AdminTutorials from "./pages/admin/AdminTutorials";
 import AdminSettingsNew from "./pages/admin/AdminSettingsNew";
 import AdminChatConfig from "./pages/admin/AdminChatConfig";
 import AdminContent from "./pages/admin/AdminContent";
+import AdminDiagnostics from "./pages/admin/AdminDiagnostics";
 // Agent Portal
 import AppLogin from "./pages/app/AppLogin";
 import AppLayout from "./pages/app/AppLayout";
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="tutoriales" element={<AdminTutorials />} />
             <Route path="chat-config" element={<AdminChatConfig />} />
             <Route path="settings" element={<AdminSettingsNew />} />
+            <Route path="diagnostics" element={<AdminDiagnostics />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />
