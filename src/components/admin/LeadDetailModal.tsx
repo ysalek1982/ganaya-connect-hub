@@ -224,42 +224,23 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
                   ))}
                 </div>
               ) : (
-                // Fallback: Display from agentProfile or rawJson
-                <div className="grid grid-cols-1 gap-2">
-                  <ScoringItem 
-                    label="Disponibilidad diaria"
-                    value={agentProfile.hours_per_day ?? agentProfile.availability_hours}
-                    points={parseHoursPoints(agentProfile.hours_per_day ?? agentProfile.availability_hours)}
-                    maxPoints={30}
-                  />
-                  <ScoringItem 
-                    label="Experiencia ventas/atención"
-                    value={agentProfile.has_sales_experience}
-                    points={agentProfile.has_sales_experience === true ? 20 : 0}
-                    maxPoints={20}
-                  />
-                  <ScoringItem 
-                    label="Conoce jugadores de casino"
-                    value={agentProfile.knows_casino_players === 'yes' || agentProfile.knows_casino_players === true ? true : (agentProfile.knows_casino_players === 'no' ? false : agentProfile.knows_casino_players)}
-                    points={agentProfile.knows_casino_players === 'yes' || agentProfile.knows_casino_players === true ? 20 : 0}
-                    maxPoints={20}
-                  />
-                  <ScoringItem 
-                    label="Interés en reclutar"
-                    value={agentProfile.wants_to_recruit ?? agentProfile.wants_to_start_now}
-                    points={
-                      agentProfile.wants_to_recruit === 'yes' ? 20 :
-                      agentProfile.wants_to_recruit === 'maybe' ? 10 :
-                      agentProfile.wants_to_start_now === true ? 10 : 5
-                    }
-                    maxPoints={20}
-                  />
-                  <ScoringItem 
-                    label="País"
-                    value={agentProfile.country ?? agentProfile.pais}
-                    points={(agentProfile.country || agentProfile.pais) && (agentProfile.country || agentProfile.pais) !== 'Otro' ? 10 : 5}
-                    maxPoints={10}
-                  />
+                // Fallback: show raw answers if no breakdown available
+                <div className="p-4 rounded-lg bg-muted/30 border border-border">
+                  <p className="text-sm text-muted-foreground mb-3">
+                    No hay desglose detallado disponible. Mostrando respuestas:
+                  </p>
+                  <div className="space-y-2">
+                    {Object.entries(agentProfile).map(([key, value]) => {
+                      // Skip internal fields
+                      if (key.startsWith('_') || key === 'scoreBreakdown' || key === 'upline') return null;
+                      return (
+                        <div key={key} className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
+                          <span className="font-medium">{formatValue(value as boolean | string | number | null)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -320,70 +301,5 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
     </Dialog>
   );
 };
-
-// Helper component for scoring item
-const ScoringItem = ({ 
-  label, 
-  value, 
-  points, 
-  maxPoints 
-}: { 
-  label: string; 
-  value: unknown;
-  points: number; 
-  maxPoints: number;
-}) => {
-  const formatValue = (val: unknown): React.ReactNode => {
-    if (val === null || val === undefined) {
-      return (
-        <span className="flex items-center gap-1 text-muted-foreground">
-          <HelpCircle className="w-4 h-4" />
-          No informado
-        </span>
-      );
-    }
-    if (typeof val === 'boolean') {
-      return val ? (
-        <span className="flex items-center gap-1 text-primary">
-          <CheckCircle className="w-4 h-4" />
-          Sí
-        </span>
-      ) : (
-        <span className="flex items-center gap-1 text-destructive">
-          <XCircle className="w-4 h-4" />
-          No
-        </span>
-      );
-    }
-    return <span className="font-medium">{String(val)}</span>;
-  };
-
-  return (
-    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border border-border">
-      <div className="flex-1">
-        <p className="font-medium">{label}</p>
-        <div className="text-sm mt-1">
-          {formatValue(value)}
-        </div>
-      </div>
-      <div className="text-right">
-        <span className={`text-lg font-bold ${points > 0 ? 'text-primary' : 'text-muted-foreground'}`}>
-          +{points}
-        </span>
-        <span className="text-sm text-muted-foreground">/{maxPoints}</span>
-      </div>
-    </div>
-  );
-};
-
-// Helper functions
-function parseHoursPoints(value: unknown): number {
-  if (!value) return 0;
-  const str = String(value).toLowerCase();
-  if (str.includes('6') || str.includes('+') || str.includes('más')) return 30;
-  if (str.includes('4') || str.includes('5')) return 25;
-  if (str.includes('2') || str.includes('3')) return 15;
-  return 5;
-}
 
 export default LeadDetailModal;
