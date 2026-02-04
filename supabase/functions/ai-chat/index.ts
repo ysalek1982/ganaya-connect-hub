@@ -326,7 +326,7 @@ const DEFAULT_CONFIG: ChatConfig = {
   name: 'Default Config',
   isActive: true,
   version: 2,
-  introMessage: '¡Hola! 👋 Soy el asistente de reclutamiento de Ganaya.bet.\n\nVoy a hacerte algunas preguntas rápidas para evaluar tu perfil como agente. ¡Será muy rápido!',
+  introMessage: '¡Hola! 👋 Soy tu Project Manager del Programa de Agentes de Ganaya.bet.\n\nTe haré unas preguntas rápidas (2 minutos) para evaluar tu perfil y ayudarte a iniciar. ¿Listo/a?',
   thresholds: { prometedorMin: 70, potencialMin: 45 },
   tone: {
     confirmationPhrases: ['Perfecto, gracias 🙌', 'Buenísimo, anotado ✅', 'Genial, seguimos…', 'Muy bien 👍'],
@@ -341,7 +341,7 @@ const DEFAULT_CONFIG: ChatConfig = {
   },
   closing: {
     successTitle: '¡Listo! Recibimos tu postulación 🙌',
-    successMessage: 'Gracias por tu tiempo. Revisaremos tus respuestas y te escribiremos por WhatsApp para coordinar el siguiente paso.',
+    successMessage: 'Gracias por tu tiempo. Un Project Manager te escribirá por WhatsApp para coordinar los siguientes pasos.',
     nextSteps: '📌 Mantén tu WhatsApp disponible.\n📌 Si tu perfil encaja, coordinamos un onboarding corto y te activamos tu enlace.',
     ctaLabel: 'Entendido'
   },

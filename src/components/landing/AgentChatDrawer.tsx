@@ -205,7 +205,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       const greeting: Message = {
         id: Date.now().toString(),
         role: 'bot',
-        content: '¡Hola! 👋 Gracias por tu interés en ser agente Ganaya.bet.\n\nTe haré unas preguntas rápidas (2 minutos) para conocerte mejor. ¿Empezamos?',
+        content: '¡Hola! 👋 Soy tu Project Manager del Programa de Agentes de Ganaya.bet.\n\nTe haré unas preguntas rápidas (2 minutos) para evaluar tu perfil y ayudarte a iniciar. ¿Listo/a?',
       };
       setMessages([greeting]);
     }
@@ -429,7 +429,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       const greeting: Message = {
         id: Date.now().toString(),
         role: 'bot',
-        content: '¡Hola! 👋 Gracias por tu interés en ser agente Ganaya.bet.\n\nTe haré unas preguntas rápidas (2 minutos) para conocerte mejor. ¿Empezamos?',
+        content: '¡Hola! 👋 Soy tu Project Manager del Programa de Agentes de Ganaya.bet.\n\nTe haré unas preguntas rápidas (2 minutos) para evaluar tu perfil y ayudarte a iniciar. ¿Listo/a?',
       };
       setMessages([greeting]);
       hasInitialized.current = true;
