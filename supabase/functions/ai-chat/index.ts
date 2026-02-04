@@ -50,6 +50,9 @@ interface ChatConfig {
     confirmationPhrases?: string[];
     transitionPhrases?: string[];
     errorMessage?: string;
+    humorEnabled?: boolean;
+    humorStyle?: 'soft' | 'playful';
+    humorLines?: string[];
   };
   closing: {
     successTitle: string;
@@ -71,6 +74,7 @@ interface ChatState {
   configVersion: number;
   currentQuestionId: string | null;
   answeredIds: string[];
+  humorShown?: boolean;
 }
 
 interface ScoreBreakdownItem {
@@ -328,6 +332,12 @@ const DEFAULT_CONFIG: ChatConfig = {
     confirmationPhrases: ['Perfecto, gracias 🙌', 'Buenísimo, anotado ✅', 'Genial, seguimos…', 'Muy bien 👍'],
     transitionPhrases: ['Vamos bien. Falta poco.', 'Súper. Ahora una más y terminamos.', 'Ya casi terminamos…'],
     errorMessage: 'Perdón, no lo entendí bien. ¿Puedes responder con 1 o 2?',
+    humorEnabled: true,
+    humorStyle: 'soft',
+    humorLines: [
+      'Dato divertido 😄: a veces nos dicen "no será tan difícil"… tranqui, aquí es fácil.',
+      'Promesa: nada de "examen sorpresa" 😅 Vamos paso a paso.',
+    ],
   },
   closing: {
     successTitle: '¡Listo! Recibimos tu postulación 🙌',
@@ -394,6 +404,17 @@ const DEFAULT_CONFIG: ChatConfig = {
         { value: 'no', label: 'No por ahora', points: 5 },
       ],
       order: 8 
+    },
+    { 
+      id: 'wallet_knowledge', label: 'Wallet / Binance', prompt: '¿Cuál es tu nivel de conocimiento realizando transacciones en Binance u otra wallet? (Es solo para saber si necesitas capacitación)\n1) Experto\n2) Intermedio\n3) Básico\n4) No sé qué es eso', 
+      type: 'select', required: true, storeKey: 'wallet_knowledge',
+      options: [
+        { value: 'expert', label: 'Experto', points: 20 },
+        { value: 'intermediate', label: 'Intermedio', points: 12 },
+        { value: 'basic', label: 'Básico', points: 6 },
+        { value: 'none', label: 'No sé qué es eso', points: 0 },
+      ],
+      order: 9 
     },
   ],
 };
@@ -747,6 +768,18 @@ async function handleConfigDrivenChat(
         } else {
           // Use confirmation phrase
           prefix = getRandomPhrase(config.tone?.confirmationPhrases) || getRandomPhrase(DEFAULT_CONFIG.tone?.confirmationPhrases);
+        }
+        
+        // Insert humor ONCE per conversation after 2nd valid answer
+        const humorEnabled = config.tone?.humorEnabled ?? DEFAULT_CONFIG.tone?.humorEnabled ?? true;
+        const humorLines = config.tone?.humorLines || DEFAULT_CONFIG.tone?.humorLines || [];
+        
+        if (humorEnabled && !chatState.humorShown && answeredCount === 2 && humorLines.length > 0) {
+          const humorLine = getRandomPhrase(humorLines);
+          if (humorLine) {
+            prefix = prefix ? `${prefix}\n\n${humorLine}` : humorLine;
+            chatState.humorShown = true;
+          }
         }
       }
       

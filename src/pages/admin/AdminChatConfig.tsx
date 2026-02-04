@@ -96,6 +96,9 @@ interface ChatConfig {
     confirmationPhrases: string[];
     transitionPhrases: string[];
     errorMessage: string;
+    humorEnabled?: boolean;
+    humorStyle?: 'soft' | 'playful';
+    humorLines?: string[];
   };
   closing: {
     successTitle: string;
@@ -137,6 +140,12 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
       'Ya casi terminamos…',
     ],
     errorMessage: 'Perdón, no lo entendí bien. ¿Puedes responder con 1 o 2?',
+    humorEnabled: true,
+    humorStyle: 'soft',
+    humorLines: [
+      'Dato divertido 😄: a veces nos dicen "no será tan difícil"… tranqui, aquí es fácil.',
+      'Promesa: nada de "examen sorpresa" 😅 Vamos paso a paso.',
+    ],
   },
   closing: {
     successTitle: '¡Listo! Recibimos tu postulación 🙌',
@@ -253,6 +262,21 @@ const defaultConfig: Omit<ChatConfig, 'id'> = {
         { value: 'no', label: 'No por ahora', points: 5 },
       ],
       order: 8,
+    },
+    {
+      id: 'wallet_knowledge',
+      label: 'Wallet / Binance',
+      prompt: '¿Cuál es tu nivel de conocimiento realizando transacciones en Binance u otra wallet? (Es solo para saber si necesitas capacitación)',
+      type: 'select',
+      required: true,
+      storeKey: 'wallet_knowledge',
+      options: [
+        { value: 'expert', label: '1.- Experto', points: 20 },
+        { value: 'intermediate', label: '2.- Intermedio', points: 12 },
+        { value: 'basic', label: '3.- Básico', points: 6 },
+        { value: 'none', label: '4.- No sé qué es eso', points: 0 },
+      ],
+      order: 9,
     },
   ],
 };
@@ -925,13 +949,68 @@ const AdminChatConfig = () => {
                 </CardContent>
               </Card>
 
-              {/* Tone Settings */}
+              {/* Tone & Humor Settings */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Tono del Chat</CardTitle>
                   <CardDescription>Frases para hacer el chat más humano y conversacional</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Humor Settings */}
+                  <div className="p-4 rounded-lg border border-primary/20 bg-primary/5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-base font-semibold">Humor en el chat</Label>
+                        <p className="text-xs text-muted-foreground">Agrega un toque ligero para romper el hielo</p>
+                      </div>
+                      <Switch
+                        checked={selectedConfig.tone.humorEnabled ?? true}
+                        onCheckedChange={(checked) => setSelectedConfig({
+                          ...selectedConfig,
+                          tone: { ...selectedConfig.tone, humorEnabled: checked },
+                        })}
+                      />
+                    </div>
+                    
+                    {selectedConfig.tone.humorEnabled !== false && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Estilo de humor</Label>
+                          <Select
+                            value={selectedConfig.tone.humorStyle || 'soft'}
+                            onValueChange={(value: 'soft' | 'playful') => setSelectedConfig({
+                              ...selectedConfig,
+                              tone: { ...selectedConfig.tone, humorStyle: value },
+                            })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="soft">Suave - Una línea breve</SelectItem>
+                              <SelectItem value="playful">Juguetón - Un poco más bromista</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Frases de humor (una por línea)</Label>
+                          <Textarea
+                            value={(selectedConfig.tone.humorLines || []).join('\n')}
+                            onChange={(e) => setSelectedConfig({
+                              ...selectedConfig,
+                              tone: { ...selectedConfig.tone, humorLines: e.target.value.split('\n').filter(p => p.trim()) },
+                            })}
+                            rows={4}
+                            placeholder='Dato divertido 😄: a veces nos dicen "no será tan difícil"… tranqui, aquí es fácil.'
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Se mostrará máximo 1 frase por conversación, después de la 2da respuesta válida.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <Label>Frases de confirmación (una por línea)</Label>
                     <Textarea
