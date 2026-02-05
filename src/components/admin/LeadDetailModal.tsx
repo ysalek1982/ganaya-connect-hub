@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, deleteDoc, serverTimestamp, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { MessageSquare, User, MapPin, Phone, Mail, Calendar, Target, Award, CheckCircle, XCircle, HelpCircle, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -60,7 +61,7 @@ const LeadDetailModal = ({ lead, onClose, getAgentName, onLeadUpdated }: LeadDet
   const [chatLogs, setChatLogs] = useState<FirestoreChatLog[] | null>(null);
   const [chatLogsLoading, setChatLogsLoading] = useState(false);
 
-  // Fetch chat logs from Firebase Firestore
+  // Fetch chat logs via backend (avoids Firestore client rule issues)
   useEffect(() => {
     const fetchChatLogs = async () => {
       if (!lead?.id) {
@@ -70,24 +71,25 @@ const LeadDetailModal = ({ lead, onClose, getAgentName, onLeadUpdated }: LeadDet
 
       setChatLogsLoading(true);
       try {
-        const chatLogsRef = collection(db, 'chat_logs');
-        const q = query(chatLogsRef, where('leadId', '==', lead.id));
-        const snapshot = await getDocs(q);
-        
-        const logs: FirestoreChatLog[] = snapshot.docs.map(docSnap => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            leadId: data.leadId || '',
-            transcript: data.transcript || null,
-            aiSummary: data.aiSummary || null,
-            aiRecommendation: data.aiRecommendation || null,
-            createdAt: data.createdAt?.toDate?.() || new Date(),
-          };
+        const idToken = await auth.currentUser?.getIdToken();
+        if (!idToken) throw new Error('No session');
+
+        const { data, error } = await supabase.functions.invoke('get-chat-logs', {
+          body: { leadId: lead.id, idToken },
         });
 
-        // Sort by createdAt descending
-        logs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.error || 'No se pudieron cargar los logs');
+
+        const logs: FirestoreChatLog[] = (data.logs || []).map((l: any) => ({
+          id: String(l.id || ''),
+          leadId: String(l.leadId || ''),
+          transcript: (l.transcript as ChatMessage[]) || null,
+          aiSummary: (l.aiSummary as string) || null,
+          aiRecommendation: (l.aiRecommendation as string) || null,
+          createdAt: l.createdAt ? new Date(l.createdAt) : new Date(),
+        }));
+
         setChatLogs(logs);
       } catch (error) {
         console.error('[LeadDetailModal] Error fetching chat logs:', error);
