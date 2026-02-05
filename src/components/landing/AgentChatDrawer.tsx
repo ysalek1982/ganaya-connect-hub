@@ -62,6 +62,7 @@ interface PendingLead {
   tier?: string;
   tracking?: Record<string, string>;
   timestamp: number;
+  transcript?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
 
 const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
@@ -144,6 +145,7 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
                 scoreTotal: item.scoreTotal,
                 tier: item.tier,
                 tracking: item.tracking,
+                transcript: item.transcript,
               },
             });
 
@@ -360,6 +362,12 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
       const answers = mergedData.answers as Record<string, unknown> || mergedData;
       const country = String(answers.country || answers.pais || mergedData.country || mergedData.pais || 'No especificado');
 
+      // Build transcript from messages for chat logs
+      const transcript = messages.map(m => ({
+        role: m.role === 'bot' ? 'assistant' as const : 'user' as const,
+        content: m.content,
+      }));
+
       // Capture UTM tracking data
       const tracking = getTrackingData();
 
@@ -373,7 +381,8 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
           country,
           scoreTotal,
           tier,
-          tracking, // Include UTM params
+          tracking,
+          transcript,
         },
       });
 
@@ -397,6 +406,10 @@ const AgentChatDrawer = ({ open, onOpenChange }: AgentChatDrawerProps) => {
           scoreTotal: response.debug?.score_total,
           tier: response.debug?.tier || undefined,
           tracking: getTrackingData(),
+          transcript: messages.map(m => ({
+            role: m.role === 'bot' ? 'assistant' as const : 'user' as const,
+            content: m.content,
+          })),
           timestamp: Date.now(),
         });
         localStorage.setItem('pendingLeadQueue', JSON.stringify(pendingQueue));
