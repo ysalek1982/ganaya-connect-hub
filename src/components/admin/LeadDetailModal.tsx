@@ -1,19 +1,36 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
-import { MessageSquare, User, MapPin, Phone, Mail, Calendar, Target, Award, CheckCircle, XCircle, HelpCircle } from 'lucide-react';
+import { MessageSquare, User, MapPin, Phone, Mail, Calendar, Target, Award, CheckCircle, XCircle, HelpCircle, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Progress } from '@/components/ui/progress';
-import type { FirebaseLead } from '@/lib/firebase-types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import type { FirebaseLead, LeadStatus } from '@/lib/firebase-types';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { getTierColor, getTierText } from '@/lib/agent-scoring';
+
+const STATUS_OPTIONS: { value: LeadStatus; label: string; color: string }[] = [
+  { value: 'NUEVO', label: 'Nuevo', color: 'bg-green-500' },
+  { value: 'CONTACTADO', label: 'Contactado', color: 'bg-yellow-500' },
+  { value: 'APROBADO', label: 'Aprobado', color: 'bg-blue-500' },
+  { value: 'ONBOARDED', label: 'Onboarded', color: 'bg-primary' },
+  { value: 'RECHAZADO', label: 'Rechazado', color: 'bg-red-500' },
+  { value: 'DESCARTADO', label: 'Descartado', color: 'bg-gray-500' },
+];
 
 interface LeadDetailModalProps {
   lead: FirebaseLead | null;
   onClose: () => void;
   getAgentName: (id: string | null) => string;
+  onLeadUpdated?: () => void;
 }
 
 interface ChatMessage {
@@ -37,7 +54,11 @@ interface ScoreBreakdownItem {
   maxPoints: number;
 }
 
-const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) => {
+const LeadDetailModal = ({ lead, onClose, getAgentName, onLeadUpdated }: LeadDetailModalProps) => {
+  const { isAdmin } = useFirebaseAuth();
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Fetch chat logs for this lead
   const { data: chatLogs } = useQuery({
     queryKey: ['chat-logs', lead?.id],
@@ -53,6 +74,42 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
     },
     enabled: !!lead?.id,
   });
+
+  const handleStatusChange = async (newStatus: LeadStatus) => {
+    if (!lead?.id) return;
+    
+    setIsUpdating(true);
+    try {
+      await updateDoc(doc(db, 'leads', lead.id), {
+        status: newStatus,
+        lastUpdatedAt: serverTimestamp(),
+      });
+      toast.success(`Estado actualizado a ${STATUS_OPTIONS.find(s => s.value === newStatus)?.label}`);
+      onLeadUpdated?.();
+    } catch (error) {
+      console.error('Error updating lead status:', error);
+      toast.error('Error al actualizar estado. Verifica tus permisos.');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!lead?.id) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'leads', lead.id));
+      toast.success('Postulación eliminada');
+      onClose();
+      onLeadUpdated?.();
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      toast.error('Error al eliminar. Solo admins pueden eliminar postulaciones.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (!lead) return null;
 
@@ -171,6 +228,30 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
               </div>
             )}
 
+            {/* Status Selector */}
+            <div className="pt-4 border-t border-border">
+              <label className="text-sm text-muted-foreground mb-2 block">Cambiar Estado</label>
+              <Select
+                value={lead.status}
+                onValueChange={(value) => handleStatusChange(value as LeadStatus)}
+                disabled={isUpdating}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Seleccionar estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${option.color}`} />
+                        {option.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex gap-2 pt-4">
               {lead.contact?.whatsapp && (
                 <Button variant="default" size="sm" asChild className="bg-primary hover:bg-primary/90">
@@ -178,6 +259,38 @@ const LeadDetailModal = ({ lead, onClose, getAgentName }: LeadDetailModalProps) 
                     Abrir WhatsApp
                   </a>
                 </Button>
+              )}
+
+              {/* Delete Button - Admin only */}
+              {isAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" disabled={isDeleting}>
+                      {isDeleting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Eliminar
+                        </>
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Eliminar postulación?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Se eliminará permanentemente la postulación de <strong>{lead.name}</strong>.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Sí, eliminar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </TabsContent>
