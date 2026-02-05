@@ -1,92 +1,73 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { format, subDays, startOfDay } from 'date-fns';
+import { subDays, startOfDay } from 'date-fns';
 import { TrendingUp, Users, UserCheck, BarChart3, MessageCircle, Copy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useUserRole } from '@/hooks/useUserRole';
+import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
+import { useFirebaseLeads } from '@/hooks/useFirebaseLeads';
 import { toast } from 'sonner';
+import { getReferralUrl } from '@/lib/siteUrl';
 
 const AppDashboard = () => {
-  const { agentId, isAdmin, isLineLeader } = useUserRole();
+  const { userData, isAdmin, isLineLeader, agentId } = useFirebaseAuth();
 
-  const { data: stats } = useQuery({
-    queryKey: ['agent-dashboard-stats', agentId],
-    queryFn: async () => {
-      if (!agentId && !isAdmin) return null;
-
-      const today = startOfDay(new Date());
-      const sevenDaysAgo = subDays(today, 7);
-
-      let query = supabase.from('leads').select('*');
-      
-      if (!isAdmin) {
-        query = query.eq('asignado_agente_id', agentId);
-      }
-
-      const { data: allLeads } = await query;
-      
-      const todayLeads = allLeads?.filter(l => 
-        new Date(l.created_at) >= today
-      ).length || 0;
-
-      const weekLeads = allLeads?.filter(l => 
-        new Date(l.created_at) >= sevenDaysAgo
-      ).length || 0;
-
-      const statusCounts = {
-        nuevo: allLeads?.filter(l => l.estado === 'nuevo').length || 0,
-        contactado: allLeads?.filter(l => l.estado === 'contactado').length || 0,
-        asignado: allLeads?.filter(l => l.estado === 'asignado').length || 0,
-        cerrado: allLeads?.filter(l => l.estado === 'cerrado').length || 0,
-      };
-
-      const countryCounts: Record<string, number> = {};
-      allLeads?.forEach(l => {
-        countryCounts[l.pais] = (countryCounts[l.pais] || 0) + 1;
-      });
-
-      const topCountries = Object.entries(countryCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
-
-      return {
-        todayLeads,
-        weekLeads,
-        totalLeads: allLeads?.length || 0,
-        statusCounts,
-        topCountries,
-        recentLeads: allLeads?.slice(0, 5) || [],
-      };
-    },
-    enabled: !!agentId || isAdmin,
+  const { data: leads, isLoading } = useFirebaseLeads({
+    agentId,
+    lineLeaderId: isLineLeader ? agentId : null,
+    isAdmin,
   });
 
-  const { data: agentInfo } = useQuery({
-    queryKey: ['agent-info', agentId],
-    queryFn: async () => {
-      if (!agentId) return null;
-      const { data } = await supabase
-        .from('agentes')
-        .select('nombre, ref_code, pais')
-        .eq('id', agentId)
-        .single();
-      return data;
-    },
-    enabled: !!agentId,
-  });
+  // Calculate stats from Firestore leads
+  const stats = (() => {
+    if (!leads) return null;
+
+    const today = startOfDay(new Date());
+    const sevenDaysAgo = subDays(today, 7);
+
+    const todayLeads = leads.filter(l => 
+      new Date(l.createdAt) >= today
+    ).length;
+
+    const weekLeads = leads.filter(l => 
+      new Date(l.createdAt) >= sevenDaysAgo
+    ).length;
+
+    // Map Firebase status to display counts
+    const statusCounts = {
+      nuevo: leads.filter(l => l.status === 'NUEVO').length,
+      contactado: leads.filter(l => l.status === 'CONTACTADO').length,
+      aprobado: leads.filter(l => l.status === 'APROBADO').length,
+      onboarded: leads.filter(l => l.status === 'ONBOARDED').length,
+    };
+
+    const countryCounts: Record<string, number> = {};
+    leads.forEach(l => {
+      countryCounts[l.country] = (countryCounts[l.country] || 0) + 1;
+    });
+
+    const topCountries = Object.entries(countryCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    return {
+      todayLeads,
+      weekLeads,
+      totalLeads: leads.length,
+      statusCounts,
+      topCountries,
+    };
+  })();
 
   const copyLink = () => {
-    if (agentInfo?.ref_code) {
-      const link = `${window.location.origin}/?ref=${agentInfo.ref_code}`;
+    if (userData?.refCode) {
+      const link = getReferralUrl(userData.refCode);
       navigator.clipboard.writeText(link);
       toast.success('Link copiado');
     }
   };
 
   const conversionRate = stats?.totalLeads 
-    ? Math.round((stats.statusCounts.cerrado / stats.totalLeads) * 100) 
+    ? Math.round((stats.statusCounts.onboarded / stats.totalLeads) * 100) 
     : 0;
 
   return (
@@ -95,10 +76,10 @@ const AppDashboard = () => {
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            {agentInfo?.nombre ? `Bienvenido, ${agentInfo.nombre}` : 'Resumen de tu actividad'}
+            {userData?.name ? `Bienvenido, ${userData.name}` : 'Resumen de tu actividad'}
           </p>
         </div>
-        {agentInfo?.ref_code && (
+        {userData?.refCode && (
           <Button onClick={copyLink} variant="outline" className="gap-2">
             <Copy className="w-4 h-4" />
             Copiar mi link
@@ -117,7 +98,7 @@ const AppDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-display font-bold text-primary">
-              {stats?.todayLeads || 0}
+              {isLoading ? '...' : stats?.todayLeads || 0}
             </div>
           </CardContent>
         </Card>
@@ -131,7 +112,7 @@ const AppDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-display font-bold text-gold">
-              {stats?.weekLeads || 0}
+              {isLoading ? '...' : stats?.weekLeads || 0}
             </div>
           </CardContent>
         </Card>
@@ -145,7 +126,7 @@ const AppDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-display font-bold">
-              {stats?.totalLeads || 0}
+              {isLoading ? '...' : stats?.totalLeads || 0}
             </div>
           </CardContent>
         </Card>
@@ -175,8 +156,8 @@ const AppDashboard = () => {
             {[
               { label: 'Nuevos', value: stats?.statusCounts.nuevo || 0, color: 'bg-primary' },
               { label: 'Contactados', value: stats?.statusCounts.contactado || 0, color: 'bg-gold' },
-              { label: 'Asignados', value: stats?.statusCounts.asignado || 0, color: 'bg-accent' },
-              { label: 'Cerrados', value: stats?.statusCounts.cerrado || 0, color: 'bg-muted' },
+              { label: 'Aprobados', value: stats?.statusCounts.aprobado || 0, color: 'bg-accent' },
+              { label: 'Onboarded', value: stats?.statusCounts.onboarded || 0, color: 'bg-primary' },
             ].map((item, i) => (
               <div key={i} className="space-y-1">
                 <div className="flex justify-between text-sm">

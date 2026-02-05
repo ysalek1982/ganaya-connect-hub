@@ -258,6 +258,16 @@ serve(async (req) => {
     }
 
     const refCodeData = parseFirestoreFields(refCodeDoc.fields as Record<string, unknown>);
+    
+    // Check if refCode is active
+    if (refCodeData.active === false) {
+      console.log(`RefCode ${refCode} is inactive`);
+      return new Response(
+        JSON.stringify({ agentInfo: null, error: 'RefCode inactive' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     const agentUid = refCodeData.agentUid as string;
 
     // Get agent profile
