@@ -10,9 +10,14 @@ type FirestoreValue = Record<string, unknown>;
 
 const initFirebaseAdmin = async () => {
   const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON");
-  if (!serviceAccountJson) throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON not configured");
+  if (!serviceAccountJson) {
+    console.error("[get-chat-logs] FIREBASE_SERVICE_ACCOUNT_JSON not configured");
+    throw new Error("FIREBASE_SERVICE_ACCOUNT_JSON not configured");
+  }
 
   const serviceAccount = JSON.parse(serviceAccountJson);
+  console.info("[get-chat-logs] Initializing Firebase Admin for project:", serviceAccount.project_id);
+
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
   const claims = {
@@ -111,6 +116,8 @@ const verifyFirebaseIdToken = async (
   projectId: string,
   idToken: string,
 ): Promise<{ uid: string; email: string } | null> => {
+  console.info("[get-chat-logs] Verifying ID token...");
+
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:lookup`,
     {
@@ -124,12 +131,14 @@ const verifyFirebaseIdToken = async (
   );
 
   if (!response.ok) {
-    console.error("[get-chat-logs] Token verification failed:", await response.text());
+    const errorText = await response.text();
+    console.error("[get-chat-logs] Token verification failed:", errorText);
     return null;
   }
 
   const data = await response.json();
   if (data.users && data.users[0]) {
+    console.info("[get-chat-logs] Token verified for user:", data.users[0].localId);
     return {
       uid: data.users[0].localId,
       email: data.users[0].email || "",
@@ -138,22 +147,42 @@ const verifyFirebaseIdToken = async (
   return null;
 };
 
-const requireAdmin = async (
+// Verify user has staff role (ADMIN, LINE_LEADER, or AGENT)
+const requireStaffRole = async (
   accessToken: string,
   projectId: string,
   idToken: string,
 ): Promise<{ uid: string; email: string }> => {
   const verified = await verifyFirebaseIdToken(accessToken, projectId, idToken);
-  if (!verified) throw new Error("UNAUTHORIZED");
+  if (!verified) {
+    console.error("[get-chat-logs] Token verification returned null");
+    throw new Error("UNAUTHORIZED");
+  }
+
+  console.info("[get-chat-logs] Checking role for user:", verified.uid);
 
   const userDocRes = await fetch(
     `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${verified.uid}`,
     { headers: { "Authorization": `Bearer ${accessToken}` } },
   );
-  if (!userDocRes.ok) throw new Error("FORBIDDEN");
+
+  if (!userDocRes.ok) {
+    console.error("[get-chat-logs] User doc fetch failed:", userDocRes.status);
+    throw new Error("FORBIDDEN");
+  }
+
   const userDoc = await userDocRes.json();
   const parsed = parseFirestoreDoc(userDoc);
-  if (parsed.role !== "ADMIN") throw new Error("FORBIDDEN");
+  const role = parsed.role as string;
+
+  console.info("[get-chat-logs] User role:", role);
+
+  // Allow ADMIN, LINE_LEADER, or AGENT roles
+  const allowedRoles = ["ADMIN", "LINE_LEADER", "AGENT"];
+  if (!allowedRoles.includes(role)) {
+    console.error("[get-chat-logs] Role not authorized:", role);
+    throw new Error("FORBIDDEN");
+  }
 
   return verified;
 };
@@ -175,15 +204,18 @@ serve(async (req) => {
     const { accessToken, projectId } = await initFirebaseAdmin();
 
     try {
-      await requireAdmin(accessToken, projectId, idToken);
+      await requireStaffRole(accessToken, projectId, idToken);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "UNAUTHORIZED";
       const status = msg === "FORBIDDEN" ? 403 : 401;
+      console.error("[get-chat-logs] Auth error:", msg);
       return new Response(JSON.stringify({ error: status === 403 ? "No autorizado" : "Sesión inválida" }), {
         status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.info("[get-chat-logs] Querying chat_logs for leadId:", leadId);
 
     // IMPORTANT: Firestore requires a composite index for (where leadId == X) + (orderBy createdAt).
     // To avoid manual index setup, we query by leadId only and sort/limit on the server.
@@ -218,6 +250,8 @@ serve(async (req) => {
     }
 
     const results = await response.json();
+    console.info("[get-chat-logs] Query returned", Array.isArray(results) ? results.length : 0, "results");
+
     const logs = (results as Array<Record<string, unknown>>)
       .map((r: any) => (r.document ? r.document : null))
       .filter(Boolean)
