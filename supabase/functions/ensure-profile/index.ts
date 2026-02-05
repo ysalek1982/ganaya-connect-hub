@@ -8,6 +8,16 @@ const corsHeaders = {
 // Admin bootstrap email from environment or hardcoded
 const ADMIN_BOOTSTRAP_EMAIL = Deno.env.get("ADMIN_BOOTSTRAP_EMAIL") || "ysalek@gmail.com";
 
+// Generate unique refCode: AGT-XXXXXX
+const generateRefCode = (): string => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let suffix = "";
+  for (let i = 0; i < 6; i++) {
+    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `AGT-${suffix}`;
+};
+
 // Firebase Admin SDK initialization
 const initFirebaseAdmin = async () => {
   const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON");
@@ -180,7 +190,9 @@ const createUserDoc = async (
   projectId: string,
   uid: string,
   email: string,
-  role: string
+  role: string,
+  refCode: string | null,
+  referralUrl: string | null
 ): Promise<void> => {
   const now = new Date().toISOString();
   
@@ -193,8 +205,8 @@ const createUserDoc = async (
     isActive: { booleanValue: true },
     lineLeaderId: { nullValue: null },
     canRecruitSubagents: { booleanValue: role === 'ADMIN' },
-    refCode: { nullValue: null },
-    referralUrl: { nullValue: null },
+    refCode: refCode ? { stringValue: refCode } : { nullValue: null },
+    referralUrl: referralUrl ? { stringValue: referralUrl } : { nullValue: null },
     whatsapp: { nullValue: null },
     city: { nullValue: null },
     needsPasswordReset: { booleanValue: false },
@@ -217,6 +229,41 @@ const createUserDoc = async (
     const error = await response.json();
     console.error("[Firestore] Create user failed:", error);
     throw new Error(error.error?.message || "Failed to create user document");
+  }
+};
+
+// Create refCode document
+const createRefCodeDoc = async (
+  accessToken: string,
+  projectId: string,
+  refCode: string,
+  agentUid: string
+): Promise<void> => {
+  const now = new Date().toISOString();
+  
+  const fields: Record<string, unknown> = {
+    agentUid: { stringValue: agentUid },
+    lineLeaderId: { nullValue: null },
+    active: { booleanValue: true },
+    createdAt: { timestampValue: now },
+  };
+
+  const response = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/refCodes?documentId=${refCode}`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    console.error("[Firestore] Create refCode failed:", error);
+    // Don't throw - user was created, just refCode failed
   }
 };
 
@@ -261,17 +308,34 @@ serve(async (req) => {
     const isAdmin = email.toLowerCase() === ADMIN_BOOTSTRAP_EMAIL.toLowerCase();
     const role = isAdmin ? "ADMIN" : "AGENT";
 
-    console.log("[ensure-profile] Creating user with role:", role);
+    // Generate refCode for non-admin users
+    let refCode: string | null = null;
+    let referralUrl: string | null = null;
+    
+    if (role !== "ADMIN") {
+      refCode = generateRefCode();
+      const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || "https://ganaya.bet";
+      referralUrl = `${siteUrl}/?ref=${refCode}`;
+    }
+
+    console.log("[ensure-profile] Creating user with role:", role, "refCode:", refCode);
 
     // Create user document
-    await createUserDoc(accessToken, projectId, uid, email, role);
+    await createUserDoc(accessToken, projectId, uid, email, role, refCode, referralUrl);
     console.log("[ensure-profile] User document created successfully");
+
+    // Create refCode document if generated
+    if (refCode) {
+      await createRefCodeDoc(accessToken, projectId, refCode, uid);
+      console.log("[ensure-profile] RefCode document created:", refCode);
+    }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         created: true,
         role,
+        refCode,
         message: `User profile created with role: ${role}` 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

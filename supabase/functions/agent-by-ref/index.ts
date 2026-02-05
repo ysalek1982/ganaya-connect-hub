@@ -295,8 +295,8 @@ serve(async (req) => {
       if (linkDoc && linkDoc.fields) {
         const linkData = parseFirestoreFields(linkDoc.fields as Record<string, unknown>);
         
-        // Only use if link belongs to this agent and is active
-        if (linkData.agentUid === agentUid && linkData.isActive) {
+        // Only use if link belongs to this agent and is explicitly active (default true if undefined)
+        if (linkData.agentUid === agentUid && linkData.isActive !== false) {
           if (linkData.whatsappOverride) {
             whatsapp = linkData.whatsappOverride as string;
           }

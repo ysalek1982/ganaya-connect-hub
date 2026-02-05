@@ -533,7 +533,7 @@ serve(async (req) => {
     const refCode = generateRefCode();
     
     // Build referral URL
-    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || "https://ganaya-connect-hub.lovable.app";
+    const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || "https://ganaya.bet";
     const referralUrl = `${siteUrl}/?ref=${refCode}`;
 
     // Create user document in Firestore
