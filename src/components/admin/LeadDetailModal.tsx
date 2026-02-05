@@ -3,7 +3,7 @@ import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
-import { MessageSquare, User, MapPin, Phone, Mail, Calendar, Target, Award, CheckCircle, XCircle, HelpCircle, Trash2, Loader2 } from 'lucide-react';
+import { MessageSquare, User, MapPin, Phone, Mail, Calendar, Target, Award, CheckCircle, XCircle, HelpCircle, Trash2, Loader2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -60,26 +60,53 @@ const LeadDetailModal = ({ lead, onClose, getAgentName, onLeadUpdated }: LeadDet
   const [isDeleting, setIsDeleting] = useState(false);
   const [chatLogs, setChatLogs] = useState<FirestoreChatLog[] | null>(null);
   const [chatLogsLoading, setChatLogsLoading] = useState(false);
+  const [chatLogsError, setChatLogsError] = useState<string | null>(null);
 
   // Fetch chat logs via backend (avoids Firestore client rule issues)
   useEffect(() => {
     const fetchChatLogs = async () => {
       if (!lead?.id) {
         setChatLogs(null);
+        setChatLogsError(null);
         return;
       }
 
       setChatLogsLoading(true);
+      setChatLogsError(null);
       try {
-        const idToken = await auth.currentUser?.getIdToken();
-        if (!idToken) throw new Error('No session');
+        // Wait for auth to be ready and get fresh token
+        const user = auth.currentUser;
+        if (!user) {
+          setChatLogsError('Sesión no iniciada en Firebase');
+          setChatLogs([]);
+          return;
+        }
+
+        // Force refresh token to ensure it's valid
+        const idToken = await user.getIdToken(true);
+        if (!idToken) {
+          setChatLogsError('No se pudo obtener token de sesión');
+          setChatLogs([]);
+          return;
+        }
 
         const { data, error } = await supabase.functions.invoke('get-chat-logs', {
           body: { leadId: lead.id, idToken },
         });
 
-        if (error) throw error;
-        if (!data?.success) throw new Error(data?.error || 'No se pudieron cargar los logs');
+        if (error) {
+          console.error('[LeadDetailModal] Supabase invoke error:', error);
+          setChatLogsError('Error de conexión con el servidor');
+          setChatLogs([]);
+          return;
+        }
+
+        if (!data?.success) {
+          console.error('[LeadDetailModal] Backend error:', data?.error);
+          setChatLogsError(data?.error || 'Error al cargar historial');
+          setChatLogs([]);
+          return;
+        }
 
         const logs: FirestoreChatLog[] = (data.logs || []).map((l: any) => ({
           id: String(l.id || ''),
@@ -91,8 +118,9 @@ const LeadDetailModal = ({ lead, onClose, getAgentName, onLeadUpdated }: LeadDet
         }));
 
         setChatLogs(logs);
-      } catch (error) {
+      } catch (error: any) {
         console.error('[LeadDetailModal] Error fetching chat logs:', error);
+        setChatLogsError(error?.message || 'Error inesperado');
         setChatLogs([]);
       } finally {
         setChatLogsLoading(false);
@@ -390,6 +418,14 @@ const LeadDetailModal = ({ lead, onClose, getAgentName, onLeadUpdated }: LeadDet
             {chatLogsLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : chatLogsError ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <AlertTriangle className="w-8 h-8 text-destructive mb-2" />
+                <p className="text-destructive font-medium">{chatLogsError}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Intenta refrescar la página o vuelve a iniciar sesión.
+                </p>
               </div>
             ) : chatLogs && chatLogs.length > 0 ? (
               <ScrollArea className="h-[400px] pr-4">
