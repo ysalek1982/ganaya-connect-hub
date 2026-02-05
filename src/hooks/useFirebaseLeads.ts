@@ -5,6 +5,7 @@ import {
   where, 
   getDocs, 
   doc, 
+  getDoc,
   addDoc,
   updateDoc,
   Timestamp,
@@ -139,8 +140,39 @@ export const useAddFirebaseLead = () => {
   return useMutation({
     mutationFn: async (lead: Omit<FirebaseLead, 'id' | 'createdAt'>) => {
       const leadsRef = collection(db, 'leads');
+      
+      // Build upline array for multi-level visibility (up to 5 levels)
+      const upline: string[] = [];
+      
+      if (lead.assignedAgentId) {
+        upline.push(lead.assignedAgentId);
+        
+        // Traverse up the lineLeaderId chain
+        let currentUid = lead.assignedAgentId;
+        for (let i = 0; i < 4; i++) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', currentUid));
+            if (userDoc.exists()) {
+              const lineLeaderId = userDoc.data().lineLeaderId;
+              if (lineLeaderId) {
+                upline.push(lineLeaderId);
+                currentUid = lineLeaderId;
+              } else {
+                break;
+              }
+            } else {
+              break;
+            }
+          } catch (e) {
+            console.warn('[useAddFirebaseLead] Error building upline:', e);
+            break;
+          }
+        }
+      }
+      
       const docRef = await addDoc(leadsRef, {
         ...lead,
+        upline,
         createdAt: Timestamp.now(),
       });
       return docRef.id;
