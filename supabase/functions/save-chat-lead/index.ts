@@ -684,9 +684,12 @@ serve(async (req) => {
 
     if (refCode) {
       const refCodeDoc = await getRefCodeDoc(accessToken, projectId, refCode);
-      if (refCodeDoc && refCodeDoc.active !== false) {
+      // Only assign to agent if refCode exists AND is explicitly active (not false)
+      if (refCodeDoc && refCodeDoc.active === true) {
         assignedAgentId = refCodeDoc.agentUid ? String(refCodeDoc.agentUid) : null;
         assignedLineLeaderId = refCodeDoc.lineLeaderId ? String(refCodeDoc.lineLeaderId) : null;
+      } else if (refCodeDoc) {
+        console.log("[save-chat-lead] RefCode found but inactive, ignoring assignment");
       }
     }
 
