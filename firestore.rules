@@ -151,10 +151,15 @@ service cloud.firestore {
       );
     }
     
-    // Chat logs (if needed)
-    match /chatLogs/{logId} {
+    // Chat logs - linked to leads
+    match /chat_logs/{logId} {
       allow create: if true;
-      allow read: if isAuthenticated() && isAdmin();
+      // Anyone who can read the linked lead can read the chat log
+      allow read: if isAuthenticated() && (
+        isAdmin() ||
+        isLineLeader() ||
+        isAgent()
+      );
       allow update, delete: if false;
     }
     
