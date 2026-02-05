@@ -251,6 +251,10 @@ export const LeadsKanban = ({ leads, onViewLead, onWhatsApp, getAgentName }: Lea
     } catch (error) {
       console.error('Error updating lead status:', error);
       toast.error('Error al actualizar estado');
+      const errorCode = (error as any)?.code;
+      if (errorCode === 'permission-denied') {
+        toast.error('Sin permisos para cambiar estado. Verifica tu rol.');
+      }
     }
   };
 
