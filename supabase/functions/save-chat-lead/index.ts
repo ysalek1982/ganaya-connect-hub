@@ -51,6 +51,11 @@ interface ScoreBreakdownItem {
   maxPoints: number;
 }
 
+interface ChatTranscriptMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 interface SaveLeadRequest {
   mergedData: Record<string, unknown>;
   debug?: Record<string, unknown>;
@@ -60,7 +65,8 @@ interface SaveLeadRequest {
   country: string | null;
   scoreTotal?: number;
   tier?: string | null;
-  tracking?: Record<string, string>; // UTM params
+  tracking?: Record<string, string>;
+  transcript?: ChatTranscriptMessage[];
 }
 
 // ============ FIREBASE ADMIN ============
@@ -219,7 +225,6 @@ async function loadConfig(
   configId?: string
 ): Promise<ChatConfig | null> {
   try {
-    // If specific configId provided, load that one
     if (configId && configId !== 'default') {
       const response = await fetch(
         `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/chat_configs/${configId}`,
@@ -245,7 +250,6 @@ async function loadConfig(
       }
     }
 
-    // Otherwise load active config
     const query = {
       structuredQuery: {
         from: [{ collectionId: "chat_configs" }],
@@ -532,7 +536,6 @@ async function buildUplineArray(
   while (currentLeaderId && level < maxLevels) {
     upline.push(currentLeaderId);
     
-    // Fetch the leader's document to get their lineLeaderId
     const leaderDoc = await getAgentDoc(accessToken, projectId, currentLeaderId);
     if (!leaderDoc) break;
     
@@ -575,6 +578,61 @@ async function createLeadDocument(
   return name.split('/').pop() || '';
 }
 
+// ============ SAVE CHAT LOG TO SUPABASE ============
+
+async function saveChatLog(
+  leadId: string,
+  transcript: ChatTranscriptMessage[],
+  name: string,
+  country: string,
+  scoreTotal: number,
+  tier: string
+): Promise<void> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.log("[save-chat-lead] Supabase credentials not found, skipping chat log");
+      return;
+    }
+
+    const aiSummary = `Postulación de ${name} desde ${country}. Score: ${scoreTotal}/100. Tier: ${tier}.`;
+    
+    let aiRecommendation = 'Perfil básico. Evaluar interés y capacitación necesaria antes de onboarding.';
+    if (tier === 'PROMETEDOR') {
+      aiRecommendation = 'Perfil prometedor. Contactar con prioridad alta para onboarding rápido.';
+    } else if (tier === 'POTENCIAL') {
+      aiRecommendation = 'Potencial agente. Contactar para evaluar motivación y disponibilidad real.';
+    }
+
+    const chatLogResponse = await fetch(`${supabaseUrl}/rest/v1/chat_logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`,
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        lead_id: leadId,
+        transcript: transcript,
+        ai_summary: aiSummary,
+        ai_recommendation: aiRecommendation,
+      }),
+    });
+
+    if (chatLogResponse.ok) {
+      console.log("[save-chat-lead] Chat log saved to Supabase");
+    } else {
+      const errorText = await chatLogResponse.text();
+      console.error("[save-chat-lead] Failed to save chat log:", errorText);
+    }
+  } catch (chatLogError) {
+    console.error("[save-chat-lead] Error saving chat log:", chatLogError);
+  }
+}
+
 // ============ MAIN HANDLER ============
 
 serve(async (req) => {
@@ -584,19 +642,16 @@ serve(async (req) => {
 
   try {
     const body = await req.json() as SaveLeadRequest;
-    const { mergedData, intent, refCode, campaignId, country, tracking } = body;
+    const { mergedData, intent, refCode, campaignId, country, tracking, transcript } = body;
 
-    console.log("[save-chat-lead] Processing lead:", { intent, refCode, campaignId, country, tracking });
+    console.log("[save-chat-lead] Processing lead:", { intent, refCode, campaignId, country, tracking, hasTranscript: !!transcript });
 
-    // Initialize Firebase Admin
     const { accessToken, projectId } = await initFirebaseAdmin();
 
-    // Extract answers from mergedData - support both question.id and storeKey formats
     const answers = (mergedData.answers || mergedData) as Record<string, unknown>;
     const chatConfigId = mergedData.chatConfigId as string | undefined;
     const chatConfigVersion = mergedData.chatConfigVersion as number | undefined;
 
-    // Load config for recalculating score
     const config = await loadConfig(accessToken, projectId, chatConfigId);
     
     let scoreTotal: number;
@@ -604,27 +659,23 @@ serve(async (req) => {
     let scoreBreakdown: ScoreBreakdownItem[];
 
     if (config && config.questions.length > 0) {
-      // Recalculate score server-side using config
       const recalculated = recalculateScore(answers, config);
       scoreTotal = recalculated.scoreTotal;
       tier = recalculated.tier;
       scoreBreakdown = recalculated.scoreBreakdown;
       console.log("[save-chat-lead] Recalculated score from config:", { scoreTotal, tier });
     } else {
-      // Use values from frontend if no config available
       scoreTotal = (mergedData.scoreTotal as number) || (body.scoreTotal as number) || 0;
       tier = (mergedData.tier as string) || body.tier || 'NOVATO';
       scoreBreakdown = (mergedData.scoreBreakdown as ScoreBreakdownItem[]) || [];
       console.log("[save-chat-lead] Using frontend score (no config):", { scoreTotal, tier });
     }
 
-    // Extract applicant info with robust fallbacks for both id and storeKey
     const name = answers.name || answers.nombre || mergedData.name || mergedData.nombre || 'Sin nombre';
     const applicantCountry = answers.country || answers.pais || mergedData.country || mergedData.pais || country || 'No especificado';
     const whatsapp = answers.whatsapp || answers.telefono || answers.phone || mergedData.whatsapp || mergedData.telefono || '';
     const age18 = answers.age18 ?? mergedData.age18 ?? null;
 
-    // Assignment logic
     let assignedAgentId: string | null = null;
     let assignedLineLeaderId: string | null = null;
 
@@ -644,11 +695,9 @@ serve(async (req) => {
       }
     }
 
-    // Build upline array for multi-level network visibility (up to 5 levels)
     const upline = await buildUplineArray(accessToken, projectId, assignedAgentId, assignedLineLeaderId, 5);
     console.log("[save-chat-lead] Built upline array:", upline);
 
-    // Build lead document - status is ALWAYS 'NUEVO', use isAssigned for assignment tracking
     const leadDoc = {
       createdAt: new Date(),
       type: 'AGENT_RECRUITMENT',
@@ -660,9 +709,9 @@ serve(async (req) => {
       campaignId: campaignId || null,
       assignedAgentId,
       assignedLineLeaderId,
-      upline, // Multi-level network visibility
-      isAssigned: !!assignedAgentId, // Boolean flag for assignment
-      status: 'NUEVO', // Always NUEVO on creation
+      upline,
+      isAssigned: !!assignedAgentId,
+      status: 'NUEVO',
       scoreTotal,
       tier,
       scoreBreakdown,
@@ -675,7 +724,7 @@ serve(async (req) => {
         country: String(applicantCountry),
         age18: age18,
       },
-      tracking: tracking || {}, // UTM and campaign tracking
+      tracking: tracking || {},
       rawJson: mergedData,
       origen: 'chat_ia',
     };
@@ -683,6 +732,11 @@ serve(async (req) => {
     console.log("[save-chat-lead] Creating lead document...");
     const leadId = await createLeadDocument(accessToken, projectId, leadDoc);
     console.log("[save-chat-lead] Lead created with ID:", leadId);
+
+    // Save chat transcript to Supabase if available
+    if (transcript && transcript.length > 0) {
+      await saveChatLog(leadId, transcript, String(name), String(applicantCountry), scoreTotal, tier);
+    }
 
     return new Response(
       JSON.stringify({ 
