@@ -578,9 +578,11 @@ async function createLeadDocument(
   return name.split('/').pop() || '';
 }
 
-// ============ SAVE CHAT LOG TO SUPABASE ============
+// ============ SAVE CHAT LOG TO FIRESTORE ============
 
-async function saveChatLog(
+async function saveChatLogToFirestore(
+  accessToken: string,
+  projectId: string,
   leadId: string,
   transcript: ChatTranscriptMessage[],
   name: string,
@@ -589,14 +591,6 @@ async function saveChatLog(
   tier: string
 ): Promise<void> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
-    if (!supabaseUrl || !supabaseKey) {
-      console.log("[save-chat-lead] Supabase credentials not found, skipping chat log");
-      return;
-    }
-
     const aiSummary = `Postulación de ${name} desde ${country}. Score: ${scoreTotal}/100. Tier: ${tier}.`;
     
     let aiRecommendation = 'Perfil básico. Evaluar interés y capacitación necesaria antes de onboarding.';
@@ -606,26 +600,35 @@ async function saveChatLog(
       aiRecommendation = 'Potencial agente. Contactar para evaluar motivación y disponibilidad real.';
     }
 
-    const chatLogResponse = await fetch(`${supabaseUrl}/rest/v1/chat_logs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Prefer': 'return=minimal',
-      },
-      body: JSON.stringify({
-        lead_id: leadId,
-        transcript: transcript,
-        ai_summary: aiSummary,
-        ai_recommendation: aiRecommendation,
-      }),
-    });
+    const chatLogData = {
+      leadId,
+      transcript,
+      aiSummary,
+      aiRecommendation,
+      createdAt: new Date(),
+    };
 
-    if (chatLogResponse.ok) {
-      console.log("[save-chat-lead] Chat log saved to Supabase");
+    const fields: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(chatLogData)) {
+      fields[key] = toFirestoreValue(value);
+    }
+
+    const response = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/chat_logs`,
+      {
+        method: "POST",
+        headers: { 
+          "Authorization": `Bearer ${accessToken}`, 
+          "Content-Type": "application/json" 
+        },
+        body: JSON.stringify({ fields }),
+      }
+    );
+
+    if (response.ok) {
+      console.log("[save-chat-lead] Chat log saved to Firestore");
     } else {
-      const errorText = await chatLogResponse.text();
+      const errorText = await response.text();
       console.error("[save-chat-lead] Failed to save chat log:", errorText);
     }
   } catch (chatLogError) {
@@ -735,7 +738,7 @@ serve(async (req) => {
 
     // Save chat transcript to Supabase if available
     if (transcript && transcript.length > 0) {
-      await saveChatLog(leadId, transcript, String(name), String(applicantCountry), scoreTotal, tier);
+      await saveChatLogToFirestore(accessToken, projectId, leadId, transcript, String(name), String(applicantCountry), scoreTotal, tier);
     }
 
     return new Response(
