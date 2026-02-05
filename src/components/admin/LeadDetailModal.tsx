@@ -1,7 +1,5 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { doc, updateDoc, deleteDoc, serverTimestamp, collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format } from 'date-fns';
 import { MessageSquare, User, MapPin, Phone, Mail, Calendar, Target, Award, CheckCircle, XCircle, HelpCircle, Trash2, Loader2 } from 'lucide-react';
@@ -38,12 +36,13 @@ interface ChatMessage {
   content: string;
 }
 
-interface ChatLog {
+interface FirestoreChatLog {
   id: string;
+  leadId: string;
   transcript: ChatMessage[] | null;
-  ai_summary: string | null;
-  ai_recommendation: string | null;
-  created_at: string;
+  aiSummary: string | null;
+  aiRecommendation: string | null;
+  createdAt: Date;
 }
 
 interface ScoreBreakdownItem {
@@ -58,22 +57,48 @@ const LeadDetailModal = ({ lead, onClose, getAgentName, onLeadUpdated }: LeadDet
   const { isAdmin } = useFirebaseAuth();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [chatLogs, setChatLogs] = useState<FirestoreChatLog[] | null>(null);
+  const [chatLogsLoading, setChatLogsLoading] = useState(false);
 
-  // Fetch chat logs for this lead
-  const { data: chatLogs } = useQuery({
-    queryKey: ['chat-logs', lead?.id],
-    queryFn: async () => {
-      if (!lead?.id) return null;
-      const { data, error } = await supabase
-        .from('chat_logs')
-        .select('*')
-        .eq('lead_id', lead.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as unknown as ChatLog[];
-    },
-    enabled: !!lead?.id,
-  });
+  // Fetch chat logs from Firebase Firestore
+  useEffect(() => {
+    const fetchChatLogs = async () => {
+      if (!lead?.id) {
+        setChatLogs(null);
+        return;
+      }
+
+      setChatLogsLoading(true);
+      try {
+        const chatLogsRef = collection(db, 'chat_logs');
+        const q = query(chatLogsRef, where('leadId', '==', lead.id));
+        const snapshot = await getDocs(q);
+        
+        const logs: FirestoreChatLog[] = snapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            leadId: data.leadId || '',
+            transcript: data.transcript || null,
+            aiSummary: data.aiSummary || null,
+            aiRecommendation: data.aiRecommendation || null,
+            createdAt: data.createdAt?.toDate?.() || new Date(),
+          };
+        });
+
+        // Sort by createdAt descending
+        logs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        setChatLogs(logs);
+      } catch (error) {
+        console.error('[LeadDetailModal] Error fetching chat logs:', error);
+        setChatLogs([]);
+      } finally {
+        setChatLogsLoading(false);
+      }
+    };
+
+    fetchChatLogs();
+  }, [lead?.id]);
 
   const handleStatusChange = async (newStatus: LeadStatus) => {
     if (!lead?.id) return;
@@ -360,14 +385,18 @@ const LeadDetailModal = ({ lead, onClose, getAgentName, onLeadUpdated }: LeadDet
           </TabsContent>
 
           <TabsContent value="chat" className="mt-4">
-            {chatLogs && chatLogs.length > 0 ? (
+            {chatLogsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : chatLogs && chatLogs.length > 0 ? (
               <ScrollArea className="h-[400px] pr-4">
                 <div className="space-y-4">
                   {chatLogs.map((log) => (
                     <div key={log.id} className="space-y-3">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <MessageSquare className="w-3 h-3" />
-                        {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm')}
+                        {format(log.createdAt, 'dd/MM/yyyy HH:mm')}
                       </div>
 
                       {log.transcript && log.transcript.map((msg, idx) => (
@@ -386,17 +415,17 @@ const LeadDetailModal = ({ lead, onClose, getAgentName, onLeadUpdated }: LeadDet
                         </div>
                       ))}
 
-                      {log.ai_summary && (
+                      {log.aiSummary && (
                         <div className="p-3 rounded-lg bg-gold/10 border border-gold/20">
                           <p className="text-xs text-gold mb-1">Resumen IA</p>
-                          <p className="text-sm">{log.ai_summary}</p>
+                          <p className="text-sm">{log.aiSummary}</p>
                         </div>
                       )}
 
-                      {log.ai_recommendation && (
+                      {log.aiRecommendation && (
                         <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
                           <p className="text-xs text-primary mb-1">Recomendación IA</p>
-                          <p className="text-sm">{log.ai_recommendation}</p>
+                          <p className="text-sm">{log.aiRecommendation}</p>
                         </div>
                       )}
                     </div>
