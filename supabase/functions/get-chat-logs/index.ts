@@ -2,7 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 type FirestoreValue = Record<string, unknown>;
@@ -184,6 +185,8 @@ serve(async (req) => {
       });
     }
 
+    // IMPORTANT: Firestore requires a composite index for (where leadId == X) + (orderBy createdAt).
+    // To avoid manual index setup, we query by leadId only and sort/limit on the server.
     const structuredQuery = {
       from: [{ collectionId: "chat_logs" }],
       where: {
@@ -193,8 +196,8 @@ serve(async (req) => {
           value: { stringValue: leadId },
         },
       },
-      orderBy: [{ field: { fieldPath: "createdAt" }, direction: "DESCENDING" }],
-      limit: 50,
+      // Fetch more than needed, then sort/limit locally.
+      limit: 200,
     };
 
     const response = await fetch(
@@ -225,7 +228,16 @@ serve(async (req) => {
         return { id, ...parsed };
       });
 
-    return new Response(JSON.stringify({ success: true, logs }), {
+    const sortedLogs = logs
+      .slice()
+      .sort((a: any, b: any) => {
+        const aTime = a?.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a?.createdAt || 0).getTime();
+        const bTime = b?.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b?.createdAt || 0).getTime();
+        return bTime - aTime;
+      })
+      .slice(0, 50);
+
+    return new Response(JSON.stringify({ success: true, logs: sortedLogs }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
