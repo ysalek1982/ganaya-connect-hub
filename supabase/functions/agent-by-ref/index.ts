@@ -259,8 +259,10 @@ serve(async (req) => {
 
     const refCodeData = parseFirestoreFields(refCodeDoc.fields as Record<string, unknown>);
     
-    // Check if refCode is active
-    if (refCodeData.active === false) {
+    // Check if refCode is active (must be explicitly true to be active)
+    // If active field is missing or false, treat as inactive for security
+    const isActive = refCodeData.active === true;
+    if (!isActive) {
       console.log(`RefCode ${refCode} is inactive`);
       return new Response(
         JSON.stringify({ agentInfo: null, error: 'RefCode inactive' }),
