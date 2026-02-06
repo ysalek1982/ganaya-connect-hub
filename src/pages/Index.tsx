@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { HeaderAgents } from '@/components/landing/HeaderAgents';
 import { HeroAgents } from '@/components/landing/HeroAgents';
+import { ProblemSection } from '@/components/landing/ProblemSection';
+import { OpportunitySection } from '@/components/landing/OpportunitySection';
 import { VideoSection } from '@/components/landing/VideoSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
@@ -8,7 +10,10 @@ import { ForWhoSection } from '@/components/landing/ForWhoSection';
 import { RequirementsSection } from '@/components/landing/RequirementsSection';
 import { FlowSection } from '@/components/landing/FlowSection';
 import { CommissionsSection } from '@/components/landing/CommissionsSection';
+import { CompetitiveSection } from '@/components/landing/CompetitiveSection';
 import { GrowthSection } from '@/components/landing/GrowthSection';
+import { AcquisitionSection } from '@/components/landing/AcquisitionSection';
+import { NextStepsSection } from '@/components/landing/NextStepsSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { CTAFinalSection } from '@/components/landing/CTAFinalSection';
 import { MobileStickyNavAgents } from '@/components/landing/MobileStickyNavAgents';
@@ -19,7 +24,6 @@ import AgentChatDrawer from '@/components/landing/AgentChatDrawer';
 const Index = () => {
   const [chatOpen, setChatOpen] = useState(false);
 
-  // Set meta tags for agent recruitment
   useEffect(() => {
     document.title = 'Programa de Agentes | Ganaya.bet - Comisiones hasta 40%';
     const metaDesc = document.querySelector('meta[name="description"]');
@@ -34,7 +38,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
-      {/* Subtle global ambient effect */}
       <div className="fixed inset-0 pointer-events-none z-0 opacity-30">
         <StadiumLights />
       </div>
@@ -43,24 +46,27 @@ const Index = () => {
       
       <main className="relative z-10">
         <HeroAgents onOpenChat={handleOpenChat} />
+        <ProblemSection />
+        <OpportunitySection />
         <VideoSection />
-        <HowItWorksSection />
+        <HowItWorksSection onOpenChat={handleOpenChat} />
         <BenefitsSection onOpenChat={handleOpenChat} />
         <ForWhoSection />
         <RequirementsSection />
         <FlowSection />
         <CommissionsSection />
+        <CompetitiveSection />
         <GrowthSection />
+        <AcquisitionSection />
+        <NextStepsSection onOpenChat={handleOpenChat} />
         <FAQSection />
         <CTAFinalSection onOpenChat={handleOpenChat} />
       </main>
       
       <Footer />
 
-      {/* Agent Chat Drawer - ONLY opens on user action, no auto-open */}
       <AgentChatDrawer open={chatOpen} onOpenChange={setChatOpen} />
 
-      {/* Mobile sticky CTA */}
       <MobileStickyNavAgents onOpenChat={handleOpenChat} />
     </div>
   );
