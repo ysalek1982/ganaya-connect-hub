@@ -24,6 +24,7 @@ const AppSubagents = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showCreatedModal, setShowCreatedModal] = useState(false);
   const [createdData, setCreatedData] = useState<CreateSubagentResult | null>(null);
+  const [createdName, setCreatedName] = useState('');
   const [newAgent, setNewAgent] = useState({ 
     nombre: '', 
     email: '',
@@ -56,10 +57,10 @@ const AppSubagents = () => {
       {
         onSuccess: (result) => {
           if (result.success) {
+            setCreatedName(newAgent.nombre);
             setShowAddModal(false);
             setCreatedData({
               ...result,
-              // Add name for the modal message
               email: result.email || newAgent.email,
             });
             setShowCreatedModal(true);
@@ -321,7 +322,7 @@ const AppSubagents = () => {
           tempPassword: createdData.tempPassword || '',
           refCode: createdData.refCode || '',
           referralUrl: createdData.referralUrl,
-          name: newAgent.nombre,
+          name: createdName,
         } : null}
       />
     </div>

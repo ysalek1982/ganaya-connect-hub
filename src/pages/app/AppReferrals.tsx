@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
+import { getPublicSiteUrl } from '@/lib/siteUrl';
 import { Copy, Link, QrCode, Download, Globe, Check, Share2, Plus, Trash2, Edit2, MoreVertical, MessageCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,7 @@ const AppReferrals = () => {
     isActive: true,
   });
 
-  const baseUrl = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
+  const baseUrl = getPublicSiteUrl();
   
   const buildLink = (linkId?: string, country?: string) => {
     if (!userData?.refCode) return '';
