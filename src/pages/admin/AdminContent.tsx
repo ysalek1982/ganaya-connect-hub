@@ -22,6 +22,11 @@ import {
   defaultVsl,
   defaultSectionTitles,
   defaultSocialProof,
+  defaultProblemSection,
+  defaultOpportunitySection,
+  defaultCompetitiveSection,
+  defaultAcquisitionSection,
+  defaultNextStepsSection,
 } from '@/hooks/useLandingContent';
 
 const invokeBootstrapAdmin = async <T,>(payload: Record<string, unknown>): Promise<T> => {
@@ -62,6 +67,11 @@ const AdminContent = () => {
         sectionTitles: { ...defaultSectionTitles, ...(loaded.sectionTitles || {}) },
         socialProof: { ...defaultSocialProof, ...(loaded.socialProof || {}) },
         sectionsEnabled: { ...defaultLandingContent.sectionsEnabled, ...(loaded.sectionsEnabled || {}) },
+        problemSection: { ...defaultProblemSection, ...(loaded.problemSection || {}) },
+        opportunitySection: { ...defaultOpportunitySection, ...(loaded.opportunitySection || {}) },
+        competitiveSection: { ...defaultCompetitiveSection, ...(loaded.competitiveSection || {}) },
+        acquisitionSection: { ...defaultAcquisitionSection, ...(loaded.acquisitionSection || {}) },
+        nextStepsSection: { ...defaultNextStepsSection, ...(loaded.nextStepsSection || {}) },
       };
     },
   });
@@ -178,7 +188,7 @@ const AdminContent = () => {
       </div>
 
       <Tabs defaultValue="hero" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-6">
+        <TabsList className="grid w-full grid-cols-6 mb-6">
           <TabsTrigger value="hero">
             <FileText className="w-4 h-4 mr-2" />
             Hero
@@ -190,6 +200,10 @@ const AdminContent = () => {
           <TabsTrigger value="video">
             <Video className="w-4 h-4 mr-2" />
             Video
+          </TabsTrigger>
+          <TabsTrigger value="content">
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Contenido
           </TabsTrigger>
           <TabsTrigger value="titles">
             <Layout className="w-4 h-4 mr-2" />
@@ -515,7 +529,417 @@ const AdminContent = () => {
           </Card>
         </TabsContent>
 
-        {/* Section Titles */}
+        {/* Contenido de Secciones Nuevas */}
+        <TabsContent value="content" className="space-y-6">
+          {/* Problem Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>El Problema</CardTitle>
+              <CardDescription>Pain points que motivan a los postulantes</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input
+                    value={formData.problemSection?.title || ''}
+                    onChange={(e) => setFormData({ ...formData, problemSection: { ...formData.problemSection, title: e.target.value } })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subtítulo</Label>
+                  <Input
+                    value={formData.problemSection?.subtitle || ''}
+                    onChange={(e) => setFormData({ ...formData, problemSection: { ...formData.problemSection, subtitle: e.target.value } })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Problemas (items)</Label>
+                  <Button variant="outline" size="sm" onClick={() => setFormData({
+                    ...formData,
+                    problemSection: { ...formData.problemSection, items: [...(formData.problemSection?.items || []), { title: '', description: '' }] }
+                  })}>
+                    <Plus className="w-4 h-4 mr-1" /> Agregar
+                  </Button>
+                </div>
+                {(formData.problemSection?.items || []).map((item, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={item.title}
+                      onChange={(e) => {
+                        const items = [...(formData.problemSection?.items || [])];
+                        items[index] = { ...items[index], title: e.target.value };
+                        setFormData({ ...formData, problemSection: { ...formData.problemSection, items } });
+                      }}
+                      placeholder="Título"
+                      className="w-1/3"
+                    />
+                    <Input
+                      value={item.description}
+                      onChange={(e) => {
+                        const items = [...(formData.problemSection?.items || [])];
+                        items[index] = { ...items[index], description: e.target.value };
+                        setFormData({ ...formData, problemSection: { ...formData.problemSection, items } });
+                      }}
+                      placeholder="Descripción"
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      const items = (formData.problemSection?.items || []).filter((_, i) => i !== index);
+                      setFormData({ ...formData, problemSection: { ...formData.problemSection, items } });
+                    }}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Opportunity Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Oportunidad LATAM</CardTitle>
+              <CardDescription>Estadísticas del mercado</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input
+                    value={formData.opportunitySection?.title || ''}
+                    onChange={(e) => setFormData({ ...formData, opportunitySection: { ...formData.opportunitySection, title: e.target.value } })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subtítulo</Label>
+                  <Input
+                    value={formData.opportunitySection?.subtitle || ''}
+                    onChange={(e) => setFormData({ ...formData, opportunitySection: { ...formData.opportunitySection, subtitle: e.target.value } })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Estadísticas</Label>
+                  <Button variant="outline" size="sm" onClick={() => setFormData({
+                    ...formData,
+                    opportunitySection: { ...formData.opportunitySection, stats: [...(formData.opportunitySection?.stats || []), { value: '', label: '', sublabel: '' }] }
+                  })}>
+                    <Plus className="w-4 h-4 mr-1" /> Agregar
+                  </Button>
+                </div>
+                {(formData.opportunitySection?.stats || []).map((stat, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={stat.value}
+                      onChange={(e) => {
+                        const stats = [...(formData.opportunitySection?.stats || [])];
+                        stats[index] = { ...stats[index], value: e.target.value };
+                        setFormData({ ...formData, opportunitySection: { ...formData.opportunitySection, stats } });
+                      }}
+                      placeholder="Valor (ej: +25%)"
+                      className="w-1/4"
+                    />
+                    <Input
+                      value={stat.label}
+                      onChange={(e) => {
+                        const stats = [...(formData.opportunitySection?.stats || [])];
+                        stats[index] = { ...stats[index], label: e.target.value };
+                        setFormData({ ...formData, opportunitySection: { ...formData.opportunitySection, stats } });
+                      }}
+                      placeholder="Label"
+                      className="w-1/3"
+                    />
+                    <Input
+                      value={stat.sublabel}
+                      onChange={(e) => {
+                        const stats = [...(formData.opportunitySection?.stats || [])];
+                        stats[index] = { ...stats[index], sublabel: e.target.value };
+                        setFormData({ ...formData, opportunitySection: { ...formData.opportunitySection, stats } });
+                      }}
+                      placeholder="Sublabel"
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      const stats = (formData.opportunitySection?.stats || []).filter((_, i) => i !== index);
+                      setFormData({ ...formData, opportunitySection: { ...formData.opportunitySection, stats } });
+                    }}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Competitive Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ventajas Competitivas</CardTitle>
+              <CardDescription>Tablas comparativas</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input
+                    value={formData.competitiveSection?.title || ''}
+                    onChange={(e) => setFormData({ ...formData, competitiveSection: { ...formData.competitiveSection, title: e.target.value } })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subtítulo</Label>
+                  <Input
+                    value={formData.competitiveSection?.subtitle || ''}
+                    onChange={(e) => setFormData({ ...formData, competitiveSection: { ...formData.competitiveSection, subtitle: e.target.value } })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <Label>VS Empleos tradicionales</Label>
+                {(formData.competitiveSection?.vsEmployment || []).map((row, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={row.traditional}
+                      onChange={(e) => {
+                        const rows = [...(formData.competitiveSection?.vsEmployment || [])];
+                        rows[index] = { ...rows[index], traditional: e.target.value };
+                        setFormData({ ...formData, competitiveSection: { ...formData.competitiveSection, vsEmployment: rows } });
+                      }}
+                      placeholder="Tradicional"
+                    />
+                    <Input
+                      value={row.ganaya}
+                      onChange={(e) => {
+                        const rows = [...(formData.competitiveSection?.vsEmployment || [])];
+                        rows[index] = { ...rows[index], ganaya: e.target.value };
+                        setFormData({ ...formData, competitiveSection: { ...formData.competitiveSection, vsEmployment: rows } });
+                      }}
+                      placeholder="Ganaya"
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      const rows = (formData.competitiveSection?.vsEmployment || []).filter((_, i) => i !== index);
+                      setFormData({ ...formData, competitiveSection: { ...formData.competitiveSection, vsEmployment: rows } });
+                    }}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setFormData({
+                  ...formData,
+                  competitiveSection: { ...formData.competitiveSection, vsEmployment: [...(formData.competitiveSection?.vsEmployment || []), { traditional: '', ganaya: '' }] }
+                })}>
+                  <Plus className="w-4 h-4 mr-1" /> Agregar fila
+                </Button>
+              </div>
+              <div className="space-y-3">
+                <Label>VS Otras plataformas</Label>
+                {(formData.competitiveSection?.vsPlatforms || []).map((row, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={row.traditional}
+                      onChange={(e) => {
+                        const rows = [...(formData.competitiveSection?.vsPlatforms || [])];
+                        rows[index] = { ...rows[index], traditional: e.target.value };
+                        setFormData({ ...formData, competitiveSection: { ...formData.competitiveSection, vsPlatforms: rows } });
+                      }}
+                      placeholder="Otra plataforma"
+                    />
+                    <Input
+                      value={row.ganaya}
+                      onChange={(e) => {
+                        const rows = [...(formData.competitiveSection?.vsPlatforms || [])];
+                        rows[index] = { ...rows[index], ganaya: e.target.value };
+                        setFormData({ ...formData, competitiveSection: { ...formData.competitiveSection, vsPlatforms: rows } });
+                      }}
+                      placeholder="Ganaya"
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      const rows = (formData.competitiveSection?.vsPlatforms || []).filter((_, i) => i !== index);
+                      setFormData({ ...formData, competitiveSection: { ...formData.competitiveSection, vsPlatforms: rows } });
+                    }}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={() => setFormData({
+                  ...formData,
+                  competitiveSection: { ...formData.competitiveSection, vsPlatforms: [...(formData.competitiveSection?.vsPlatforms || []), { traditional: '', ganaya: '' }] }
+                })}>
+                  <Plus className="w-4 h-4 mr-1" /> Agregar fila
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Acquisition Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Métodos de Captación</CardTitle>
+              <CardDescription>Estrategias de adquisición de clientes</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input
+                    value={formData.acquisitionSection?.title || ''}
+                    onChange={(e) => setFormData({ ...formData, acquisitionSection: { ...formData.acquisitionSection, title: e.target.value } })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subtítulo</Label>
+                  <Input
+                    value={formData.acquisitionSection?.subtitle || ''}
+                    onChange={(e) => setFormData({ ...formData, acquisitionSection: { ...formData.acquisitionSection, subtitle: e.target.value } })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label>Métodos</Label>
+                  <Button variant="outline" size="sm" onClick={() => setFormData({
+                    ...formData,
+                    acquisitionSection: { ...formData.acquisitionSection, methods: [...(formData.acquisitionSection?.methods || []), { title: '', description: '', tips: [''] }] }
+                  })}>
+                    <Plus className="w-4 h-4 mr-1" /> Agregar método
+                  </Button>
+                </div>
+                {(formData.acquisitionSection?.methods || []).map((method, mIndex) => (
+                  <div key={mIndex} className="p-4 rounded-lg border border-border/50 space-y-3">
+                    <div className="flex gap-2">
+                      <Input
+                        value={method.title}
+                        onChange={(e) => {
+                          const methods = [...(formData.acquisitionSection?.methods || [])];
+                          methods[mIndex] = { ...methods[mIndex], title: e.target.value };
+                          setFormData({ ...formData, acquisitionSection: { ...formData.acquisitionSection, methods } });
+                        }}
+                        placeholder="Título del método"
+                        className="w-1/3"
+                      />
+                      <Input
+                        value={method.description}
+                        onChange={(e) => {
+                          const methods = [...(formData.acquisitionSection?.methods || [])];
+                          methods[mIndex] = { ...methods[mIndex], description: e.target.value };
+                          setFormData({ ...formData, acquisitionSection: { ...formData.acquisitionSection, methods } });
+                        }}
+                        placeholder="Descripción"
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => {
+                        const methods = (formData.acquisitionSection?.methods || []).filter((_, i) => i !== mIndex);
+                        setFormData({ ...formData, acquisitionSection: { ...formData.acquisitionSection, methods } });
+                      }}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                    <div className="pl-4 space-y-2">
+                      <Label className="text-xs">Tips</Label>
+                      {(method.tips || []).map((tip, tIndex) => (
+                        <div key={tIndex} className="flex gap-2">
+                          <Input
+                            value={tip}
+                            onChange={(e) => {
+                              const methods = [...(formData.acquisitionSection?.methods || [])];
+                              const tips = [...(methods[mIndex].tips || [])];
+                              tips[tIndex] = e.target.value;
+                              methods[mIndex] = { ...methods[mIndex], tips };
+                              setFormData({ ...formData, acquisitionSection: { ...formData.acquisitionSection, methods } });
+                            }}
+                            placeholder={`Tip ${tIndex + 1}`}
+                          />
+                          <Button variant="ghost" size="icon" onClick={() => {
+                            const methods = [...(formData.acquisitionSection?.methods || [])];
+                            methods[mIndex] = { ...methods[mIndex], tips: methods[mIndex].tips.filter((_, i) => i !== tIndex) };
+                            setFormData({ ...formData, acquisitionSection: { ...formData.acquisitionSection, methods } });
+                          }}>
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button variant="outline" size="sm" onClick={() => {
+                        const methods = [...(formData.acquisitionSection?.methods || [])];
+                        methods[mIndex] = { ...methods[mIndex], tips: [...(methods[mIndex].tips || []), ''] };
+                        setFormData({ ...formData, acquisitionSection: { ...formData.acquisitionSection, methods } });
+                      }}>
+                        <Plus className="w-3 h-3 mr-1" /> Tip
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Next Steps Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Próximos Pasos</CardTitle>
+              <CardDescription>Pasos para comenzar a operar</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input
+                    value={formData.nextStepsSection?.title || ''}
+                    onChange={(e) => setFormData({ ...formData, nextStepsSection: { ...formData.nextStepsSection, title: e.target.value } })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Subtítulo</Label>
+                  <Input
+                    value={formData.nextStepsSection?.subtitle || ''}
+                    onChange={(e) => setFormData({ ...formData, nextStepsSection: { ...formData.nextStepsSection, subtitle: e.target.value } })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Pasos</Label>
+                  <Button variant="outline" size="sm" onClick={() => setFormData({
+                    ...formData,
+                    nextStepsSection: { ...formData.nextStepsSection, steps: [...(formData.nextStepsSection?.steps || []), { title: '', description: '' }] }
+                  })}>
+                    <Plus className="w-4 h-4 mr-1" /> Agregar
+                  </Button>
+                </div>
+                {(formData.nextStepsSection?.steps || []).map((step, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={step.title}
+                      onChange={(e) => {
+                        const steps = [...(formData.nextStepsSection?.steps || [])];
+                        steps[index] = { ...steps[index], title: e.target.value };
+                        setFormData({ ...formData, nextStepsSection: { ...formData.nextStepsSection, steps } });
+                      }}
+                      placeholder="Título"
+                      className="w-1/3"
+                    />
+                    <Input
+                      value={step.description}
+                      onChange={(e) => {
+                        const steps = [...(formData.nextStepsSection?.steps || [])];
+                        steps[index] = { ...steps[index], description: e.target.value };
+                        setFormData({ ...formData, nextStepsSection: { ...formData.nextStepsSection, steps } });
+                      }}
+                      placeholder="Descripción"
+                    />
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      const steps = (formData.nextStepsSection?.steps || []).filter((_, i) => i !== index);
+                      setFormData({ ...formData, nextStepsSection: { ...formData.nextStepsSection, steps } });
+                    }}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="titles" className="space-y-6">
           <Card>
             <CardHeader>
@@ -594,6 +1018,8 @@ const AdminContent = () => {
             <CardContent>
               <div className="grid gap-4">
                 {[
+                  { key: 'problem', label: 'El Problema', desc: 'Pain points del mercado laboral' },
+                  { key: 'opportunity', label: 'Oportunidad LATAM', desc: 'Estadísticas del mercado' },
                   { key: 'video', label: 'Video VSL', desc: 'Video explicativo de 90 segundos' },
                   { key: 'howItWorks', label: 'Cómo Funciona', desc: '3 pasos para empezar' },
                   { key: 'benefits', label: 'Beneficios', desc: 'Comisiones y ventajas' },
@@ -601,7 +1027,10 @@ const AdminContent = () => {
                   { key: 'requirements', label: 'Requisitos', desc: 'Qué necesitas para empezar' },
                   { key: 'flow', label: 'Flujo de Trabajo', desc: 'Cómo opera un agente' },
                   { key: 'commissions', label: 'Comisiones', desc: 'Estructura de pagos' },
+                  { key: 'competitive', label: 'Ventajas Competitivas', desc: 'Comparativa vs empleos y plataformas' },
                   { key: 'growth', label: 'Crecimiento', desc: 'Red y sub-agentes' },
+                  { key: 'acquisition', label: 'Métodos de Captación', desc: 'Estrategias para conseguir clientes' },
+                  { key: 'nextSteps', label: 'Próximos Pasos', desc: '4 pasos para comenzar' },
                   { key: 'faq', label: 'Preguntas Frecuentes', desc: 'Dudas comunes' },
                 ].map(({ key, label, desc }) => (
                   <div
