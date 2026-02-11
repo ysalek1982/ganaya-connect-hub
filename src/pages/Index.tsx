@@ -17,6 +17,7 @@ import { NextStepsSection } from '@/components/landing/NextStepsSection';
 import { FAQSection } from '@/components/landing/FAQSection';
 import { CTAFinalSection } from '@/components/landing/CTAFinalSection';
 import { MobileStickyNavAgents } from '@/components/landing/MobileStickyNavAgents';
+import { SectionDivider } from '@/components/landing/SectionDivider';
 import { Footer } from '@/components/layout/Footer';
 import { StadiumLights } from '@/components/home/StadiumLights';
 import AgentChatDrawer from '@/components/landing/AgentChatDrawer';
@@ -32,9 +33,7 @@ const Index = () => {
     }
   }, []);
 
-  const handleOpenChat = () => {
-    setChatOpen(true);
-  };
+  const handleOpenChat = () => setChatOpen(true);
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
@@ -46,27 +45,39 @@ const Index = () => {
       
       <main className="relative z-10">
         <HeroAgents onOpenChat={handleOpenChat} />
+        <SectionDivider variant="primary" />
         <ProblemSection />
+        <SectionDivider variant="subtle" />
         <OpportunitySection />
+        <SectionDivider variant="primary" />
         <VideoSection />
+        <SectionDivider variant="subtle" />
         <HowItWorksSection onOpenChat={handleOpenChat} />
+        <SectionDivider variant="primary" />
         <BenefitsSection onOpenChat={handleOpenChat} />
+        <SectionDivider variant="gold" />
         <ForWhoSection />
+        <SectionDivider variant="subtle" />
         <RequirementsSection />
+        <SectionDivider variant="primary" />
         <FlowSection />
+        <SectionDivider variant="gold" />
         <CommissionsSection />
+        <SectionDivider variant="subtle" />
         <CompetitiveSection />
+        <SectionDivider variant="gold" />
         <GrowthSection />
+        <SectionDivider variant="primary" />
         <AcquisitionSection />
+        <SectionDivider variant="subtle" />
         <NextStepsSection onOpenChat={handleOpenChat} />
+        <SectionDivider variant="primary" />
         <FAQSection />
         <CTAFinalSection onOpenChat={handleOpenChat} />
       </main>
       
       <Footer />
-
       <AgentChatDrawer open={chatOpen} onOpenChange={setChatOpen} />
-
       <MobileStickyNavAgents onOpenChat={handleOpenChat} />
     </div>
   );

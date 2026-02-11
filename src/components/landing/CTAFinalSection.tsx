@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, MessageCircle, Shield, AlertTriangle } from 'lucide-react';
+import { ArrowRight, MessageCircle, Shield, AlertTriangle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLandingContent } from '@/hooks/useLandingContent';
 
@@ -9,54 +9,62 @@ interface CTAFinalSectionProps {
 
 export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
   const { data: content } = useLandingContent();
-  
-  // Get CTA text from CMS
   const ctaText = content?.ctaPrimaryText || 'Postularme ahora';
+
   return (
-    <section id="postular" className="py-24 relative overflow-hidden">
-      {/* Background glow */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.05] to-background" />
+    <section id="postular" className="py-32 relative overflow-hidden">
+      {/* Multi-layer background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.06] to-background" />
       
-      {/* Centered glow effect */}
+      {/* Animated glow orb */}
       <motion.div
-        animate={{ opacity: [0.08, 0.15, 0.08], scale: [1, 1.05, 1] }}
-        transition={{ duration: 6, repeat: Infinity }}
-        className="absolute inset-0"
-        style={{
-          background: `radial-gradient(ellipse 50% 40% at 50% 50%, hsl(var(--primary) / 0.15) 0%, transparent 70%)`,
-        }}
+        animate={{ opacity: [0.1, 0.2, 0.1], scale: [1, 1.08, 1] }}
+        transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full"
+        style={{ background: `radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 60%)` }}
       />
+      
+      {/* Side accent orbs */}
+      <div className="absolute top-1/4 left-10 w-32 h-32 bg-primary/[0.06] rounded-full blur-[80px]" />
+      <div className="absolute bottom-1/4 right-10 w-32 h-32 bg-gold/[0.06] rounded-full blur-[80px]" />
       
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
+          transition={{ type: 'spring', stiffness: 80 }}
           className="max-w-3xl mx-auto text-center"
         >
-          <span className="inline-block px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold mb-8 uppercase tracking-wide"
+          >
+            <Sparkles className="w-4 h-4" />
             Último paso
-          </span>
+          </motion.div>
           
-          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
+          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-black mb-7 leading-[1.1]">
             <span className="text-gradient-primary">¿Listo para empezar?</span>
           </h2>
           
-          <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-xl mx-auto leading-relaxed">
             Completá tu postulación en 2 minutos. Te contactamos por WhatsApp para coordinar los siguientes pasos.
           </p>
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="mb-10"
+            className="mb-12"
           >
             <Button 
               variant="hero" 
               size="xl" 
               onClick={onOpenChat}
-              className="min-w-[300px] shadow-xl shadow-primary/30 text-lg"
+              className="min-w-[300px] shadow-2xl shadow-primary/30 text-lg"
             >
               <MessageCircle className="w-5 h-5" />
               {ctaText}
@@ -65,14 +73,18 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
           </motion.div>
 
           {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-muted-foreground/70">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-primary/70" />
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground/70">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-primary/70" />
+              </div>
               <span>Datos protegidos</span>
             </div>
-            <div className="hidden sm:block w-px h-4 bg-border" />
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-gold/70" />
+            <div className="hidden sm:block w-px h-5 bg-border/50" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-gold/10 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4 text-gold/70" />
+              </div>
               <span>+18 · Juego responsable</span>
             </div>
           </div>
