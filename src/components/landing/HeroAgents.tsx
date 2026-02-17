@@ -33,7 +33,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
   const bulletIcons = [Zap, Users, Shield];
 
   return (
-    <section id="inicio" className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-20 pb-16">
+    <section id="inicio" className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-20 pb-24 md:pb-16">
       {/* Dynamic background from CMS */}
       <HeroBackground />
       
@@ -60,7 +60,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="font-display text-[2.75rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-[1.1] tracking-tight"
+            className="font-display text-[2.25rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-[1.08] tracking-tight"
           >
             {heroTitle.includes('Agente') ? (
               <>
@@ -86,7 +86,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-lg sm:text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed"
+            className="text-base sm:text-xl md:text-2xl text-muted-foreground mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed"
           >
             {heroSubtitle}
           </motion.p>
@@ -97,7 +97,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-10"
+              className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-8 sm:mb-10"
             >
               {heroBullets.slice(0, 3).map((bullet, i) => {
                 const Icon = bulletIcons[i] || Zap;

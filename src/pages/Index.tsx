@@ -76,6 +76,9 @@ const Index = () => {
         <CTAFinalSection onOpenChat={handleOpenChat} />
       </main>
       
+      {/* Extra bottom padding for mobile sticky CTA */}
+      <div className="h-20 md:hidden" />
+      
       <Footer />
       <AgentChatDrawer open={chatOpen} onOpenChange={setChatOpen} />
       <MobileStickyNavAgents onOpenChat={handleOpenChat} />
