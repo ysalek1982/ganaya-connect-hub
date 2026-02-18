@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { format } from 'date-fns';
-import { Search, Download, Eye, Check, UserPlus, ArrowUpDown, LayoutGrid, List, MessageCircle, Filter } from 'lucide-react';
+import { format, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { Search, Download, Eye, Check, UserPlus, ArrowUpDown, LayoutGrid, List, MessageCircle, Filter, CalendarDays, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,6 +26,8 @@ const AdminLeads = () => {
   const [search, setSearch] = useState('');
   const [filterPais, setFilterPais] = useState<string>('all');
   const [filterTier, setFilterTier] = useState<LeadTier | 'all'>('all');
+  const [filterStatus, setFilterStatus] = useState<LeadStatus | 'all'>('all');
+  const [filterDateRange, setFilterDateRange] = useState<string>('all');
   const [filterAgente, setFilterAgente] = useState<string>('all');
   const [sortByScore, setSortByScore] = useState(false);
   const [selectedLead, setSelectedLead] = useState<(FirebaseLead & { id: string }) | null>(null);
@@ -132,8 +134,21 @@ const AdminLeads = () => {
       const matchesPais = filterPais === 'all' || lead.country === filterPais;
       const matchesTier = filterTier === 'all' || lead.tier === filterTier;
       const matchesAgente = filterAgente === 'all' || lead.assignedAgentId === filterAgente;
+      const matchesStatus = filterStatus === 'all' || lead.status === filterStatus;
 
-      return matchesSearch && matchesPais && matchesTier && matchesAgente;
+      // Date range filter
+      let matchesDate = true;
+      if (filterDateRange !== 'all') {
+        const now = new Date();
+        const daysMap: Record<string, number> = { '1': 1, '7': 7, '30': 30, '90': 90 };
+        const days = daysMap[filterDateRange];
+        if (days) {
+          const start = startOfDay(subDays(now, days));
+          matchesDate = lead.createdAt >= start;
+        }
+      }
+
+      return matchesSearch && matchesPais && matchesTier && matchesAgente && matchesStatus && matchesDate;
     });
 
     if (sortByScore) {
@@ -141,7 +156,7 @@ const AdminLeads = () => {
     }
 
     return result;
-  }, [leads, search, filterPais, filterTier, filterAgente, sortByScore]);
+  }, [leads, search, filterPais, filterTier, filterAgente, filterStatus, filterDateRange, sortByScore]);
 
   const getAgentName = (agentUid: string | null) => {
     if (!agentUid || !agents) return '-';
@@ -169,19 +184,26 @@ const AdminLeads = () => {
   };
 
   const exportCSV = () => {
-    const headers = ['Fecha', 'Nombre', 'País', 'Contacto', 'Estado', 'Reclutador', 'Tier', 'Score'];
+    const headers = ['Fecha', 'Nombre', 'País', 'Ciudad', 'WhatsApp', 'Email', 'Estado', 'Reclutador', 'Tier', 'Score', 'Ref Code', 'UTM Source', 'UTM Medium', 'UTM Campaign'];
     const rows = filteredLeads.map(l => [
-      format(l.createdAt, 'dd/MM/yyyy'),
-      l.name,
+      format(l.createdAt, 'dd/MM/yyyy HH:mm'),
+      `"${l.name}"`,
       l.country,
+      l.city || '',
       l.contact.whatsapp || '',
+      l.contact.email || '',
       l.status,
-      getAgentName(l.assignedAgentId),
+      `"${getAgentName(l.assignedAgentId)}"`,
       l.tier || '',
       l.scoreTotal || 0,
+      l.refCode || '',
+      (l.rawJson?.utm_source as string) || '',
+      (l.rawJson?.utm_medium as string) || '',
+      (l.rawJson?.utm_campaign as string) || '',
     ]);
-    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const bom = '\uFEFF';
+    const csv = bom + [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -251,7 +273,22 @@ const AdminLeads = () => {
             className="pl-10"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as LeadStatus | 'all')}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="Estado" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos los estados</SelectItem>
+              <SelectItem value="NUEVO">Nuevo</SelectItem>
+              <SelectItem value="CONTACTADO">Contactado</SelectItem>
+              <SelectItem value="APROBADO">Aprobado</SelectItem>
+              <SelectItem value="ONBOARDED">Onboarded</SelectItem>
+              <SelectItem value="RECHAZADO">Rechazado</SelectItem>
+              <SelectItem value="DESCARTADO">Descartado</SelectItem>
+            </SelectContent>
+          </Select>
+
           <Select value={filterPais} onValueChange={setFilterPais}>
             <SelectTrigger className="w-36">
               <SelectValue placeholder="País" />
@@ -260,11 +297,27 @@ const AdminLeads = () => {
               <SelectItem value="all">Todos los países</SelectItem>
               <SelectItem value="Paraguay">Paraguay</SelectItem>
               <SelectItem value="Argentina">Argentina</SelectItem>
+              <SelectItem value="Bolivia">Bolivia</SelectItem>
               <SelectItem value="Colombia">Colombia</SelectItem>
               <SelectItem value="Ecuador">Ecuador</SelectItem>
+              <SelectItem value="Perú">Perú</SelectItem>
               <SelectItem value="Chile">Chile</SelectItem>
               <SelectItem value="México">México</SelectItem>
               <SelectItem value="USA">USA</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filterDateRange} onValueChange={setFilterDateRange}>
+            <SelectTrigger className="w-36">
+              <CalendarDays className="w-4 h-4 mr-1" />
+              <SelectValue placeholder="Fecha" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todo el tiempo</SelectItem>
+              <SelectItem value="1">Hoy</SelectItem>
+              <SelectItem value="7">Últimos 7 días</SelectItem>
+              <SelectItem value="30">Últimos 30 días</SelectItem>
+              <SelectItem value="90">Últimos 90 días</SelectItem>
             </SelectContent>
           </Select>
 
@@ -302,6 +355,28 @@ const AdminLeads = () => {
               {sortByScore ? 'Por score' : 'Por fecha'}
             </Button>
           )}
+
+          {(filterStatus !== 'all' || filterPais !== 'all' || filterTier !== 'all' || filterAgente !== 'all' || filterDateRange !== 'all') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-10 text-muted-foreground"
+              onClick={() => {
+                setFilterStatus('all');
+                setFilterPais('all');
+                setFilterTier('all');
+                setFilterAgente('all');
+                setFilterDateRange('all');
+              }}
+            >
+              <X className="w-4 h-4 mr-1" />
+              Limpiar filtros
+            </Button>
+          )}
+
+          <Badge variant="outline" className="h-7 ml-auto">
+            {filteredLeads.length} resultado{filteredLeads.length !== 1 ? 's' : ''}
+          </Badge>
         </div>
       </div>
 
