@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { HeaderAgents } from '@/components/landing/HeaderAgents';
 import { HeroAgents } from '@/components/landing/HeroAgents';
+import { SocialProofStrip } from '@/components/landing/SocialProofStrip';
 import { ProblemSection } from '@/components/landing/ProblemSection';
 import { OpportunitySection } from '@/components/landing/OpportunitySection';
 import { VideoSection } from '@/components/landing/VideoSection';
@@ -11,6 +12,7 @@ import { RequirementsSection } from '@/components/landing/RequirementsSection';
 import { FlowSection } from '@/components/landing/FlowSection';
 import { CommissionsSection } from '@/components/landing/CommissionsSection';
 import { CompetitiveSection } from '@/components/landing/CompetitiveSection';
+import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
 import { GrowthSection } from '@/components/landing/GrowthSection';
 import { AcquisitionSection } from '@/components/landing/AcquisitionSection';
 import { NextStepsSection } from '@/components/landing/NextStepsSection';
@@ -45,6 +47,7 @@ const Index = () => {
       
       <main className="relative z-10">
         <HeroAgents onOpenChat={handleOpenChat} />
+        <SocialProofStrip />
         <SectionDivider variant="primary" />
         <ProblemSection />
         <SectionDivider variant="subtle" />
@@ -66,12 +69,14 @@ const Index = () => {
         <SectionDivider variant="subtle" />
         <CompetitiveSection />
         <SectionDivider variant="gold" />
+        <TestimonialsSection />
+        <SectionDivider variant="primary" />
         <GrowthSection />
-        <SectionDivider variant="primary" />
-        <AcquisitionSection />
         <SectionDivider variant="subtle" />
-        <NextStepsSection onOpenChat={handleOpenChat} />
+        <AcquisitionSection />
         <SectionDivider variant="primary" />
+        <NextStepsSection onOpenChat={handleOpenChat} />
+        <SectionDivider variant="subtle" />
         <FAQSection />
         <CTAFinalSection onOpenChat={handleOpenChat} />
       </main>
