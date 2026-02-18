@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, MessageCircle, Shield, AlertTriangle, Sparkles } from 'lucide-react';
+import { ArrowRight, MessageCircle, Shield, AlertTriangle, Sparkles, Clock, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLandingContent } from '@/hooks/useLandingContent';
 
@@ -50,9 +50,27 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
             <span className="text-gradient-primary">¿Listo para empezar?</span>
           </h2>
           
-          <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed">
             Completá tu postulación en 2 minutos. Te contactamos por WhatsApp para coordinar los siguientes pasos.
           </p>
+
+          {/* Urgency strip */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="inline-flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10 px-5 py-3 rounded-xl bg-gold/10 border border-gold/20"
+          >
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="w-4 h-4 text-gold" />
+              <span className="text-foreground font-medium">Cupos limitados por zona</span>
+            </div>
+            <div className="hidden sm:block w-px h-5 bg-gold/30" />
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="w-4 h-4 text-gold" />
+              <span className="text-foreground font-medium">+150 agentes ya activos</span>
+            </div>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -70,6 +88,7 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
               {ctaText}
               <ArrowRight className="w-5 h-5" />
             </Button>
+            <p className="mt-3 text-xs text-muted-foreground/60">Sin compromiso · 2 minutos · 100% gratis</p>
           </motion.div>
 
           {/* Trust badges */}
