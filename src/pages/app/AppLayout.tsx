@@ -16,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
+import BottomTabBar from '@/components/app/BottomTabBar';
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -167,7 +168,7 @@ const AppLayout = () => {
           )}
         </header>
 
-        <div className="p-4 md:p-8 pb-24 md:pb-8">
+        <div className="p-4 md:p-8 pb-20 md:pb-8">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 10 }}
@@ -178,6 +179,9 @@ const AppLayout = () => {
           </motion.div>
         </div>
       </main>
+
+      {/* Mobile bottom tab bar */}
+      <BottomTabBar />
     </div>
   );
 };
