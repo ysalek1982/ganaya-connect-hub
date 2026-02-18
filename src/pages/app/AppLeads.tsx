@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { Search, Eye, Copy, Plus, Phone, MessageCircle, ChevronDown, Filter, X } from 'lucide-react';
+import { Search, Eye, Copy, Plus, Phone, MessageCircle, ChevronDown, Filter, X, StickyNote } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -33,6 +34,7 @@ const AppLeads = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState<FirebaseLead | null>(null);
   const [newLead, setNewLead] = useState({ nombre: '', whatsapp: '', pais: 'Paraguay' });
+  const [noteText, setNoteText] = useState('');
 
   const { data: leads, isLoading } = useFirebaseLeads({
     agentId,
@@ -254,7 +256,7 @@ const AppLeads = () => {
                           </Button>
                         </>
                       )}
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setSelectedLead(lead)}>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setSelectedLead(lead); setNoteText(''); }}>
                         <Eye className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -372,6 +374,50 @@ const AppLeads = () => {
                   <code className="text-primary font-mono">{selectedLead.refCode}</code>
                 </div>
               )}
+
+              {/* Notes section */}
+              <div className="pt-2 border-t border-border">
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Notas de seguimiento</Label>
+                <Textarea
+                  placeholder="Escribe una nota sobre este lead..."
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  rows={3}
+                  className="text-sm"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 gap-1.5"
+                  disabled={!noteText.trim() || updateLeadMutation.isPending}
+                  onClick={() => {
+                    if (!selectedLead.id || !noteText.trim()) return;
+                    const existing = (selectedLead.rawJson?.notes as string) || '';
+                    const timestamp = format(new Date(), 'dd/MM HH:mm');
+                    const updated = existing
+                      ? `${existing}\n[${timestamp}] ${noteText.trim()}`
+                      : `[${timestamp}] ${noteText.trim()}`;
+                    updateLeadMutation.mutate(
+                      { id: selectedLead.id, data: { rawJson: { ...selectedLead.rawJson, notes: updated } } },
+                      {
+                        onSuccess: () => {
+                          toast.success('Nota guardada');
+                          setNoteText('');
+                          setSelectedLead({ ...selectedLead, rawJson: { ...selectedLead.rawJson, notes: updated } });
+                        },
+                      }
+                    );
+                  }}
+                >
+                  <StickyNote className="w-3.5 h-3.5" />
+                  Guardar nota
+                </Button>
+                {(selectedLead.rawJson?.notes as string) && (
+                  <pre className="mt-3 text-xs text-muted-foreground whitespace-pre-wrap bg-muted/40 p-3 rounded-lg max-h-32 overflow-y-auto">
+                    {selectedLead.rawJson.notes as string}
+                  </pre>
+                )}
+              </div>
 
               {/* Quick actions */}
               {selectedLead.contact.whatsapp && (

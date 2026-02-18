@@ -8,6 +8,25 @@ import { useFirebaseLeads } from '@/hooks/useFirebaseLeads';
 import { toast } from 'sonner';
 import { getReferralUrl } from '@/lib/siteUrl';
 
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  NUEVO: { bg: 'bg-primary/15', text: 'text-primary' },
+  CONTACTADO: { bg: 'bg-gold/15', text: 'text-gold' },
+  APROBADO: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
+  ONBOARDED: { bg: 'bg-primary/15', text: 'text-primary' },
+  RECHAZADO: { bg: 'bg-red-500/15', text: 'text-red-400' },
+  DESCARTADO: { bg: 'bg-muted', text: 'text-muted-foreground' },
+};
+
+const timeAgo = (date: Date): string => {
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diff < 60) return 'hace un momento';
+  if (diff < 3600) return `hace ${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `hace ${Math.floor(diff / 3600)}h`;
+  if (diff < 604800) return `hace ${Math.floor(diff / 86400)}d`;
+  return `hace ${Math.floor(diff / 604800)}sem`;
+};
+
 const AppDashboard = () => {
   const { userData, isAdmin, isLineLeader, agentId } = useFirebaseAuth();
 
@@ -63,6 +82,8 @@ const AppDashboard = () => {
       toast.success('Link copiado');
     }
   };
+
+  const recentLeads = leads?.slice(0, 5) || [];
 
   const conversionRate = stats?.totalLeads
     ? Math.round((stats.statusCounts.onboarded / stats.totalLeads) * 100)
@@ -235,6 +256,43 @@ const AppDashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Activity */}
+      <Card className="glass-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="w-4 h-4 text-primary" />
+            Actividad reciente
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentLeads.length > 0 ? (
+            <div className="space-y-3">
+              {recentLeads.map((lead) => {
+                const statusCfg = STATUS_COLORS[lead.status] || { bg: 'bg-muted', text: 'text-muted-foreground' };
+                return (
+                  <div key={lead.id} className="flex items-center gap-3 py-1">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-bold text-primary">
+                        {lead.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{lead.name}</p>
+                      <p className="text-xs text-muted-foreground">{lead.country} · {timeAgo(lead.createdAt)}</p>
+                    </div>
+                    <Badge variant="outline" className={`text-xs shrink-0 ${statusCfg.bg} ${statusCfg.text} border-transparent`}>
+                      {lead.status.toLowerCase()}
+                    </Badge>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">Sin actividad reciente</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Message Templates */}
       <Card className="glass-card">
