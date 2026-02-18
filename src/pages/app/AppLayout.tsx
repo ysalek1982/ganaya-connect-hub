@@ -149,17 +149,25 @@ const AppLayout = () => {
       {/* Main content */}
       <main className="flex-1 min-h-screen">
         {/* Mobile header */}
-        <header className="md:hidden p-4 border-b border-border flex items-center justify-between">
-          <button onClick={() => setSidebarOpen(true)}>
-            <Menu className="w-6 h-6" />
+        <header className="md:hidden sticky top-0 z-30 bg-background/90 backdrop-blur-md border-b border-border/50 px-4 h-14 flex items-center justify-between">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
+          >
+            <Menu className="w-5 h-5" />
           </button>
-          <span className="font-display font-bold">
+          <span className="font-display font-bold text-base">
             <span className="text-gradient-primary">Ganaya</span>.app
           </span>
-          <div className="w-6" />
+          {/* Ref code badge */}
+          {userData?.refCode && (
+            <code className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded font-mono">
+              {userData.refCode}
+            </code>
+          )}
         </header>
 
-        <div className="p-4 md:p-8">
+        <div className="p-4 md:p-8 pb-24 md:pb-8">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 10 }}
