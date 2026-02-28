@@ -1,25 +1,45 @@
-import { motion } from 'framer-motion';
-import { Percent, Users, ArrowDown, TrendingUp, Sparkles, Crown } from 'lucide-react';
+import { motion, useSpring, useTransform, useMotionValue } from 'framer-motion';
+import { Percent, Users, ArrowDown, TrendingUp, Sparkles, Crown, DollarSign } from 'lucide-react';
 import { useLandingContent } from '@/hooks/useLandingContent';
+import { Slider } from '@/components/ui/slider';
+import { useState, useEffect, useRef } from 'react';
 
 const tiers = [
-  { range: '$1 - $500', rate: '25%', active: false },
-  { range: '$501 - $750', rate: '30%', active: false },
-  { range: '$751 - $1,000', rate: '35%', active: false },
-  { range: '+$1,001', rate: '40%', active: true },
+  { min: 1, max: 500, rate: 25 },
+  { min: 501, max: 750, rate: 30 },
+  { min: 751, max: 1000, rate: 35 },
+  { min: 1001, max: 2000, rate: 40 },
 ];
+
+const getTier = (amount: number) => tiers.find(t => amount >= t.min && amount <= t.max) || tiers[tiers.length - 1];
+
+const AnimatedNumber = ({ value, prefix = '', suffix = '' }: { value: number; prefix?: string; suffix?: string }) => {
+  const spring = useSpring(0, { stiffness: 100, damping: 20 });
+  const display = useTransform(spring, (v) => `${prefix}${Math.round(v).toLocaleString()}${suffix}`);
+  
+  useEffect(() => {
+    spring.set(value);
+  }, [value, spring]);
+  
+  return <motion.span className="tabular-nums">{display}</motion.span>;
+};
 
 export const CommissionsSection = () => {
   const { data: content } = useLandingContent();
+  const [amount, setAmount] = useState(500);
   if (content?.sectionsEnabled?.commissions === false) return null;
   const disclaimerShort = content?.socialProof?.disclaimerShort || '* Resultados dependen de tu gestión y actividad. Pago mensual según política.';
+
+  const currentTier = getTier(amount);
+  const commission = Math.round(amount * (currentTier.rate / 100));
+  const networkBonus = Math.round(commission * 0.12); // 7% + 5% cascade simplified
+  const totalEstimated = commission + networkBonus;
 
   return (
     <section id="comisiones" className="py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.04] to-background" />
-      {/* Dramatic ambient glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/[0.06] rounded-full blur-[150px]" />
-      
+
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -35,12 +55,12 @@ export const CommissionsSection = () => {
             <span className="text-gradient-primary">Comisiones</span> escalables
           </h2>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
-            Calculadas sobre el positivo mensual de tu operación
+            Arrastrá el slider para calcular tu ganancia estimada
           </p>
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
-          {/* Commission tiers */}
+          {/* Interactive Calculator */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -53,38 +73,84 @@ export const CommissionsSection = () => {
                 <Percent className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-display text-xl font-bold">Escala de comisiones</h3>
-                <p className="text-sm text-muted-foreground">Mientras más operes, más ganás</p>
+                <h3 className="font-display text-xl font-bold">Calculadora de comisiones</h3>
+                <p className="text-sm text-muted-foreground">Ajustá el monto y mirá tu ganancia</p>
               </div>
             </div>
-            
-            <div className="space-y-3">
-              {tiers.map((tier, index) => (
-                <motion.div
-                  key={tier.range}
-                  initial={{ opacity: 0, x: -15 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className={`flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${
-                    tier.active 
-                      ? 'bg-primary/15 border-primary/40 shadow-lg shadow-primary/10' 
-                      : 'bg-card/50 border-border/50 hover:border-primary/20 hover:bg-card/70'
+
+            {/* Slider */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-muted-foreground">Positivo mensual</span>
+                <motion.span
+                  className="font-display text-2xl font-black text-primary"
+                  layout
+                >
+                  <AnimatedNumber value={amount} prefix="$" />
+                </motion.span>
+              </div>
+              <Slider
+                value={[amount]}
+                onValueChange={(v) => setAmount(v[0])}
+                min={50}
+                max={2000}
+                step={50}
+                className="my-4"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground/60">
+                <span>$50</span>
+                <span>$2,000</span>
+              </div>
+            </div>
+
+            {/* Tier indicator */}
+            <div className="space-y-3 mb-6">
+              {tiers.map((tier) => (
+                <div
+                  key={tier.rate}
+                  className={`flex items-center justify-between p-3.5 rounded-xl border transition-all duration-300 ${
+                    currentTier.rate === tier.rate
+                      ? 'bg-primary/15 border-primary/40 shadow-lg shadow-primary/10 scale-[1.02]'
+                      : 'bg-card/30 border-border/30 opacity-50'
                   }`}
                 >
-                  <span className="text-foreground/80 font-medium">{tier.range}</span>
+                  <span className="text-foreground/80 text-sm font-medium">
+                    ${tier.min.toLocaleString()} – ${tier.max === 2000 ? '1,001+' : tier.max.toLocaleString()}
+                  </span>
                   <div className="flex items-center gap-2">
-                    {tier.active && <Sparkles className="w-4 h-4 text-primary animate-pulse" />}
-                    <span className={`font-display text-2xl font-black ${tier.active ? 'text-primary' : 'text-foreground'}`}>
-                      {tier.rate}
+                    {currentTier.rate === tier.rate && <Sparkles className="w-4 h-4 text-primary animate-pulse" />}
+                    <span className={`font-display text-xl font-black ${currentTier.rate === tier.rate ? 'text-primary' : 'text-foreground/50'}`}>
+                      {tier.rate}%
                     </span>
                   </div>
-                </motion.div>
+                </div>
               ))}
+            </div>
+
+            {/* Results */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center p-3 rounded-xl bg-primary/10 border border-primary/20">
+                <p className="text-[10px] uppercase text-muted-foreground mb-1">Comisión</p>
+                <p className="font-display text-lg font-black text-primary">
+                  <AnimatedNumber value={commission} prefix="$" />
+                </p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-gold/10 border border-gold/20">
+                <p className="text-[10px] uppercase text-muted-foreground mb-1">Bono red</p>
+                <p className="font-display text-lg font-black text-gold">
+                  <AnimatedNumber value={networkBonus} prefix="+$" />
+                </p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-primary/15 border border-primary/30">
+                <p className="text-[10px] uppercase text-muted-foreground mb-1">Total est.</p>
+                <p className="font-display text-lg font-black text-primary">
+                  <AnimatedNumber value={totalEstimated} prefix="$" />
+                </p>
+              </div>
             </div>
           </motion.div>
 
-          {/* Cascade bonus */}
+          {/* Cascade bonus - kept similar */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -117,13 +183,17 @@ export const CommissionsSection = () => {
                   <p className="text-sm text-muted-foreground">Referidos directos</p>
                 </div>
               </motion.div>
-              
+
               <div className="flex justify-center">
-                <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center">
+                <motion.div
+                  animate={{ y: [0, 4, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                  className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center"
+                >
                   <ArrowDown className="w-4 h-4 text-muted-foreground/50" />
-                </div>
+                </motion.div>
               </div>
-              
+
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
@@ -141,7 +211,6 @@ export const CommissionsSection = () => {
               </motion.div>
             </div>
 
-            {/* Example */}
             <div className="p-4 rounded-xl bg-[hsl(var(--surface-2))] border border-border/50">
               <div className="flex items-center gap-2 mb-2">
                 <TrendingUp className="w-4 h-4 text-primary" />
