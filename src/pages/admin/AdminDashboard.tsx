@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Users, UserCheck, TrendingUp, Globe, BarChart3, Zap, ArrowUp, Clock } from 'lucide-react';
+import { Users, UserCheck, TrendingUp, Globe, BarChart3, Zap, ArrowUp, Clock, Megaphone, Trophy } from 'lucide-react';
 import { startOfDay, subDays, format, eachDayOfInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   NUEVO: { bg: 'bg-primary/15', text: 'text-primary' },
@@ -16,6 +16,16 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   RECHAZADO: { bg: 'bg-red-500/15', text: 'text-red-400' },
   DESCARTADO: { bg: 'bg-muted', text: 'text-muted-foreground' },
 };
+
+const UTM_COLORS = [
+  'hsl(var(--primary))',
+  'hsl(var(--gold))',
+  'hsl(210 100% 60%)',
+  'hsl(280 70% 60%)',
+  'hsl(160 70% 50%)',
+  'hsl(30 90% 55%)',
+  'hsl(340 70% 55%)',
+];
 
 const timeAgo = (date: Date): string => {
   const diff = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -46,10 +56,13 @@ const AdminDashboard = () => {
           country: data.country as string || 'Desconocido',
           status: data.status as string || 'NUEVO',
           createdAt: data.createdAt?.toDate?.() || new Date(),
+          utmSource: (data.rawJson?.utm_source as string) || (data.utm_source as string) || null,
+          utmMedium: (data.rawJson?.utm_medium as string) || (data.utm_medium as string) || null,
+          refCode: data.refCode as string | null,
+          assignedAgentId: data.assignedAgentId as string | null,
         };
       });
 
-      // Sort by date desc
       allLeads.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
       const leadsToday = allLeads.filter(l => l.createdAt >= today).length;
@@ -57,7 +70,6 @@ const AdminDashboard = () => {
       const leadsPrevWeek = allLeads.filter(l => l.createdAt >= twoWeeksAgo && l.createdAt < weekAgo).length;
       const weekDelta = leadsWeek - leadsPrevWeek;
 
-      // Status counts
       const statusCounts: Record<string, number> = {};
       allLeads.forEach(l => {
         statusCounts[l.status] = (statusCounts[l.status] || 0) + 1;
@@ -66,29 +78,81 @@ const AdminDashboard = () => {
       const onboarded = statusCounts['ONBOARDED'] || 0;
       const conversionRate = allLeads.length > 0 ? Math.round((onboarded / allLeads.length) * 100) : 0;
 
-      // Active agents
       const usersSnapshot = await getDocs(query(usersRef, where('isActive', '==', true)));
       const totalAgentes = usersSnapshot.size;
 
-      // Country breakdown
+      // Build agent map for leaderboard
+      const agentMap: Record<string, string> = {};
+      usersSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        agentMap[doc.id] = (data.name as string) || (data.displayName as string) || doc.id;
+      });
+
       const countryStats: Record<string, number> = {};
       allLeads.forEach(l => {
         countryStats[l.country] = (countryStats[l.country] || 0) + 1;
       });
 
-      // Weekly chart data (last 7 days)
+      // Weekly chart data
       const days = eachDayOfInterval({ start: weekAgo, end: today });
       const weeklyChart = days.map(day => {
         const dayStart = startOfDay(day);
         const dayEnd = new Date(dayStart.getTime() + 86400000);
         const count = allLeads.filter(l => l.createdAt >= dayStart && l.createdAt < dayEnd).length;
-        return {
-          day: format(day, 'EEE', { locale: es }),
-          leads: count,
-        };
+        return { day: format(day, 'EEE', { locale: es }), leads: count };
       });
 
-      // Recent 8 leads
+      // UTM source breakdown
+      const utmSourceCounts: Record<string, number> = {};
+      allLeads.forEach(l => {
+        const src = l.utmSource || 'directo';
+        utmSourceCounts[src] = (utmSourceCounts[src] || 0) + 1;
+      });
+      const utmSourceChart = Object.entries(utmSourceCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 7)
+        .map(([name, value]) => ({ name, value }));
+
+      // UTM medium breakdown
+      const utmMediumCounts: Record<string, number> = {};
+      allLeads.forEach(l => {
+        const med = l.utmMedium || 'none';
+        utmMediumCounts[med] = (utmMediumCounts[med] || 0) + 1;
+      });
+      const utmMediumChart = Object.entries(utmMediumCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, value]) => ({ name, value }));
+
+      // Top recruiters leaderboard
+      const recruiterCounts: Record<string, { total: number; onboarded: number }> = {};
+      allLeads.forEach(l => {
+        if (l.refCode) {
+          if (!recruiterCounts[l.refCode]) recruiterCounts[l.refCode] = { total: 0, onboarded: 0 };
+          recruiterCounts[l.refCode].total++;
+          if (l.status === 'ONBOARDED') recruiterCounts[l.refCode].onboarded++;
+        }
+      });
+
+      // Map refCodes to agent names
+      const refCodeToAgent: Record<string, string> = {};
+      usersSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const rc = data.refCode as string;
+        if (rc) refCodeToAgent[rc] = (data.name as string) || (data.displayName as string) || rc;
+      });
+
+      const topRecruiters = Object.entries(recruiterCounts)
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, 6)
+        .map(([refCode, counts], i) => ({
+          rank: i + 1,
+          name: refCodeToAgent[refCode] || refCode,
+          refCode,
+          total: counts.total,
+          onboarded: counts.onboarded,
+        }));
+
       const recentLeads = allLeads.slice(0, 8);
 
       return {
@@ -102,6 +166,9 @@ const AdminDashboard = () => {
         countryStats,
         weeklyChart,
         recentLeads,
+        utmSourceChart,
+        utmMediumChart,
+        topRecruiters,
       };
     },
   });
@@ -109,6 +176,7 @@ const AdminDashboard = () => {
   const countryFlags: Record<string, string> = {
     Paraguay: '🇵🇾', Argentina: '🇦🇷', Colombia: '🇨🇴', Ecuador: '🇪🇨',
     Chile: '🇨🇱', México: '🇲🇽', USA: '🇺🇸', España: '🇪🇸',
+    Bolivia: '🇧🇴', Perú: '🇵🇪',
   };
 
   const statCards = [
@@ -120,6 +188,8 @@ const AdminDashboard = () => {
     { label: 'Conversión', value: `${stats?.conversionRate || 0}%`, icon: UserCheck, color: 'text-accent', bgColor: 'bg-accent/10' },
     { label: 'Agentes activos', value: stats?.totalAgentes || 0, icon: Users, color: 'text-primary', bgColor: 'bg-primary/10' },
   ];
+
+  const medalEmojis = ['🥇', '🥈', '🥉'];
 
   return (
     <div className="space-y-6">
@@ -205,7 +275,7 @@ const AdminDashboard = () => {
                   </div>
                   <div className="h-2 bg-muted rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-700 ${cfg.bg.replace('/15', '/60').replace('/20', '/60')}`}
+                      className="h-full rounded-full transition-all duration-700"
                       style={{
                         width: `${Math.max((count / total) * 100, count > 0 ? 4 : 0)}%`,
                         backgroundColor: status === 'NUEVO' ? 'hsl(var(--primary))' :
@@ -220,6 +290,108 @@ const AdminDashboard = () => {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* UTM Metrics + Top Recruiters */}
+      <div className="grid lg:grid-cols-3 gap-4">
+        {/* UTM Source Pie */}
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-primary" />
+              Fuentes de tráfico
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats?.utmSourceChart && stats.utmSourceChart.length > 0 ? (
+              <div className="flex flex-col items-center">
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={stats.utmSourceChart}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={75}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {stats.utmSourceChart.map((_, i) => (
+                        <Cell key={i} fill={UTM_COLORS[i % UTM_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: 'hsl(var(--card))',
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center mt-1">
+                  {stats.utmSourceChart.map((entry, i) => (
+                    <div key={entry.name} className="flex items-center gap-1.5 text-xs">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: UTM_COLORS[i % UTM_COLORS.length] }} />
+                      <span className="text-muted-foreground">{entry.name}</span>
+                      <span className="font-semibold">{entry.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-12">Sin datos UTM</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Top Recruiters Leaderboard */}
+        <Card className="glass-card lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-gold" />
+              Top reclutadores
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats?.topRecruiters && stats.topRecruiters.length > 0 ? (
+              <div className="space-y-2">
+                {stats.topRecruiters.map((r) => {
+                  const maxTotal = stats.topRecruiters[0]?.total || 1;
+                  return (
+                    <div key={r.refCode} className="flex items-center gap-3">
+                      <span className="text-lg w-7 text-center shrink-0">
+                        {r.rank <= 3 ? medalEmojis[r.rank - 1] : <span className="text-xs text-muted-foreground font-mono">#{r.rank}</span>}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-sm font-medium truncate">{r.name}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant="outline" className="text-xs h-5">{r.total} leads</Badge>
+                            {r.onboarded > 0 && (
+                              <Badge variant="outline" className="text-xs h-5 bg-primary/10 text-primary border-primary/20">
+                                {r.onboarded} onboard
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gold/60 rounded-full transition-all duration-700"
+                            style={{ width: `${(r.total / maxTotal) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-12">Sin referidos aún</p>
+            )}
           </CardContent>
         </Card>
       </div>
