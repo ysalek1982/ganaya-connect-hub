@@ -1,11 +1,13 @@
 import { motion, useInView } from 'framer-motion';
-import { Users, Globe, TrendingUp } from 'lucide-react';
+import { Users, Globe, TrendingUp, Star, Shield } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
 
 const metrics = [
   { icon: Users, value: 150, suffix: '+', label: 'Agentes activos' },
   { icon: Globe, value: 7, suffix: '', label: 'Países' },
   { icon: TrendingUp, value: 40, suffix: '%', label: 'Comisión máxima' },
+  { icon: Star, value: 98, suffix: '%', label: 'Satisfacción' },
+  { icon: Shield, value: 24, suffix: '/7', label: 'Soporte' },
 ];
 
 const AnimatedNum = ({ target, inView, suffix }: { target: number; inView: boolean; suffix: string }) => {
@@ -25,6 +27,9 @@ const AnimatedNum = ({ target, inView, suffix }: { target: number; inView: boole
   return <span className="tabular-nums">{val}{suffix}</span>;
 };
 
+// Double the items for seamless infinite scroll
+const marqueeItems = [...metrics, ...metrics];
+
 export const SocialProofStrip = () => {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true });
@@ -38,23 +43,30 @@ export const SocialProofStrip = () => {
       className="relative z-10 -mt-12 mb-8"
     >
       <div className="container mx-auto px-4">
-        <div className="max-w-3xl mx-auto flex items-center justify-center gap-6 sm:gap-12 py-5 px-6 rounded-2xl bg-card/70 backdrop-blur-md border border-border/50 shadow-lg shadow-black/5">
-          {metrics.map((m, i) => (
-            <div key={m.label} className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 hidden sm:flex items-center justify-center">
-                <m.icon className="w-4 h-4 text-primary" />
+        <div className="max-w-4xl mx-auto overflow-hidden py-5 px-2 rounded-2xl bg-card/70 backdrop-blur-md border border-border/50 shadow-lg shadow-black/5">
+          {/* Fade edges */}
+          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-card/70 to-transparent z-10 pointer-events-none rounded-l-2xl" />
+          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-card/70 to-transparent z-10 pointer-events-none rounded-r-2xl" />
+          
+          <motion.div
+            className="flex gap-8 sm:gap-12 items-center"
+            animate={{ x: ['0%', '-50%'] }}
+            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+          >
+            {marqueeItems.map((m, i) => (
+              <div key={`${m.label}-${i}`} className="flex items-center gap-2.5 shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <m.icon className="w-4 h-4 text-primary" />
+                </div>
+                <div className="text-left">
+                  <p className="font-display text-xl sm:text-2xl font-black text-primary leading-none">
+                    <AnimatedNum target={m.value} inView={inView} suffix={m.suffix} />
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground font-medium whitespace-nowrap">{m.label}</p>
+                </div>
               </div>
-              <div className="text-center sm:text-left">
-                <p className="font-display text-xl sm:text-2xl font-black text-primary leading-none">
-                  <AnimatedNum target={m.value} inView={inView} suffix={m.suffix} />
-                </p>
-                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium">{m.label}</p>
-              </div>
-              {i < metrics.length - 1 && (
-                <div className="hidden sm:block w-px h-8 bg-border/50 ml-4 sm:ml-6" />
-              )}
-            </div>
-          ))}
+            ))}
+          </motion.div>
         </div>
       </div>
     </motion.div>

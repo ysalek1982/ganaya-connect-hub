@@ -1,18 +1,50 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, ArrowRight, Users, Zap, Shield, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FloatingParticles } from '@/components/home/FloatingParticles';
 import { HeroBackground } from '@/components/landing/HeroBackground';
 import { TrustBadges } from '@/components/landing/TrustBadges';
 import { useLandingContent } from '@/hooks/useLandingContent';
+import { useState, useEffect, useCallback } from 'react';
 
 interface HeroAgentsProps {
   onOpenChat: () => void;
 }
 
+const rotatingPhrases = [
+  'Comisiones escalables hasta 40%',
+  'Bonos por red de sub-agentes',
+  '100% desde tu celular',
+  'Sin inversión inicial',
+  'Soporte y capacitación incluidos',
+];
+
+const useTypewriter = (text: string, speed = 40) => {
+  const [displayed, setDisplayed] = useState('');
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    setDisplayed('');
+    setDone(false);
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) {
+        clearInterval(interval);
+        setDone(true);
+      }
+    }, speed);
+    return () => clearInterval(interval);
+  }, [text, speed]);
+
+  return { displayed, done };
+};
+
 export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
   const { data: content } = useLandingContent();
-  
+  const [phraseIndex, setPhraseIndex] = useState(0);
+
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
@@ -20,24 +52,49 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
     }
   };
 
-  // Use CMS content with fallbacks
+  // Rotate phrases
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPhraseIndex((prev) => (prev + 1) % rotatingPhrases.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const heroTitle = content?.heroTitle || 'Genera ingresos como Agente Ganaya.bet';
-  const heroSubtitle = content?.heroSubtitle || 'Comisiones escalables hasta 40% + bonos por red. 100% desde tu celular.';
   const heroBullets = content?.heroBullets || [];
   const ctaPrimary = content?.ctaPrimaryText || 'Postularme ahora';
   const ctaSecondary = content?.hero?.heroCTASecondaryText || content?.ctaSecondaryText || 'Ver cómo funciona';
   const heroEyebrow = content?.hero?.heroEyebrow || 'PROGRAMA DE AGENTES';
   const disclaimerText = content?.disclaimerText || '+18 · Programa de agentes · Juego responsable';
 
-  // Feature icons for bullets
+  const { displayed, done } = useTypewriter(heroTitle, 35);
   const bulletIcons = [Zap, Users, Shield];
+
+  // Split typed text around "Agente" for gradient
+  const renderTypedTitle = () => {
+    const agentIdx = displayed.indexOf('Agente');
+    if (agentIdx === -1) {
+      return (
+        <>
+          <span className="text-foreground">{displayed}</span>
+          {!done && <span className="inline-block w-[3px] h-[0.85em] bg-primary ml-1 animate-pulse align-middle" />}
+        </>
+      );
+    }
+    const before = displayed.slice(0, agentIdx);
+    const after = displayed.slice(agentIdx);
+    return (
+      <>
+        <span className="text-foreground">{before}</span>
+        <span className="text-gradient-primary">{after}</span>
+        {!done && <span className="inline-block w-[3px] h-[0.85em] bg-primary ml-1 animate-pulse align-middle" />}
+      </>
+    );
+  };
 
   return (
     <section id="inicio" className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-20 pb-24 md:pb-16">
-      {/* Dynamic background from CMS */}
       <HeroBackground />
-      
-      {/* Floating particles (respects prefers-reduced-motion) */}
       <FloatingParticles count={10} />
 
       <div className="container mx-auto px-4 relative z-10">
@@ -55,43 +112,55 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             <span className="text-sm font-medium text-primary">{heroEyebrow}</span>
           </motion.div>
 
-          {/* Main Title - from CMS */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="font-display text-[2.25rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-[1.08] tracking-tight"
+          {/* Live agents counter */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.05 }}
+            className="flex items-center justify-center gap-2 mb-6"
           >
-            {heroTitle.includes('Agente') ? (
-              <>
-                <span className="text-foreground">{heroTitle.split('Agente')[0]}</span>
-                <span className="text-gradient-primary">Agente</span>
-                <span className="text-foreground">{heroTitle.split('Agente')[1]}</span>
-              </>
-            ) : (
-              <span className="text-foreground">{heroTitle}</span>
-            )}
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute h-full w-full rounded-full bg-primary opacity-60"></span>
+              <span className="relative rounded-full h-2.5 w-2.5 bg-primary"></span>
+            </span>
+            <span className="text-xs font-medium text-primary/80">23 agentes conectados ahora</span>
+          </motion.div>
+
+          {/* Main Title - Typewriter */}
+          <motion.h1
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="font-display text-[2.25rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-[1.08] tracking-tight min-h-[2.5em]"
+          >
+            {renderTypedTitle()}
           </motion.h1>
 
-          {/* Glow line under H1 */}
+          {/* Glow line */}
           <motion.div
             initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
+            animate={{ scaleX: done ? 1 : 0 }}
             transition={{ delay: 0.2, duration: 0.6 }}
             className="mx-auto mb-6 h-1 w-32 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"
           />
 
-          {/* Subtitle - from CMS */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-base sm:text-xl md:text-2xl text-muted-foreground mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed"
-          >
-            {heroSubtitle}
-          </motion.p>
+          {/* Rotating subtitle with AnimatePresence */}
+          <div className="h-10 sm:h-12 flex items-center justify-center mb-8 sm:mb-10">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={phraseIndex}
+                initial={{ opacity: 0, y: 15, filter: 'blur(4px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: -15, filter: 'blur(4px)' }}
+                transition={{ duration: 0.4 }}
+                className="text-base sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+              >
+                {rotatingPhrases[phraseIndex]}
+              </motion.p>
+            </AnimatePresence>
+          </div>
 
-          {/* Feature pills from CMS bullets */}
+          {/* Feature pills */}
           {heroBullets.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -102,13 +171,14 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
               {heroBullets.slice(0, 3).map((bullet, i) => {
                 const Icon = bulletIcons[i] || Zap;
                 return (
-                  <div 
+                  <motion.div
                     key={i}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card/60 border border-border/50 backdrop-blur-sm"
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card/60 border border-border/50 backdrop-blur-sm cursor-default"
                   >
                     <Icon className="w-4 h-4 text-primary" />
                     <span className="text-sm font-medium text-foreground/90">{bullet}</span>
-                  </div>
+                  </motion.div>
                 );
               })}
             </motion.div>
@@ -121,9 +191,9 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             transition={{ delay: 0.4 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Button 
-              variant="hero" 
-              size="xl" 
+            <Button
+              variant="hero"
+              size="xl"
               onClick={onOpenChat}
               className="w-full sm:w-auto min-w-[260px] text-lg font-bold"
             >
@@ -131,9 +201,9 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
               {ctaPrimary}
               <ArrowRight className="w-5 h-5" />
             </Button>
-            <Button 
-              variant="glass" 
-              size="lg" 
+            <Button
+              variant="glass"
+              size="lg"
               onClick={() => scrollToSection('como-funciona')}
               className="w-full sm:w-auto"
             >
@@ -142,10 +212,8 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             </Button>
           </motion.div>
 
-          {/* Trust badges from CMS */}
           <TrustBadges />
 
-          {/* Disclaimer text - from CMS */}
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

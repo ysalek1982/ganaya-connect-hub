@@ -1,7 +1,8 @@
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { MessageSquare, UserCheck, Link2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLandingContent } from '@/hooks/useLandingContent';
+import { useRef } from 'react';
 
 interface HowItWorksSectionProps {
   onOpenChat?: () => void;
@@ -15,13 +16,18 @@ const steps = [
 
 export const HowItWorksSection = ({ onOpenChat }: HowItWorksSectionProps) => {
   const { data: content } = useLandingContent();
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ['start 0.7', 'end 0.5'],
+  });
+
   if (content?.sectionsEnabled?.howItWorks === false) return null;
-  const ctaText = content?.ctaPrimaryText || 'Postularme ahora';
 
   return (
-    <section id="como-funciona" className="py-28 relative overflow-hidden">
+    <section id="como-funciona" ref={sectionRef} className="py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-[hsl(var(--surface-1))] to-background" />
-      
+
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -40,61 +46,109 @@ export const HowItWorksSection = ({ onOpenChat }: HowItWorksSectionProps) => {
           </p>
         </motion.div>
 
-        <div className="max-w-5xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-6 lg:gap-8 relative">
-            {/* Connector line for desktop */}
-            <div className="hidden md:block absolute top-16 left-[20%] right-[20%] h-px bg-gradient-to-r from-primary/40 via-primary/20 to-primary/40" />
-            
-            {steps.map((item, index) => (
-              <motion.div
-                key={item.step}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.15, type: 'spring', stiffness: 100 }}
-                className="relative group"
-              >
-                <div className="bg-card/60 backdrop-blur-sm rounded-2xl p-7 lg:p-8 border border-border/50 hover:border-primary/40 transition-all duration-500 h-full hover:-translate-y-1">
-                  {/* Step number - large and prominent */}
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="relative">
-                      <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30 group-hover:shadow-primary/50 transition-shadow">
-                        <span className="font-display font-black text-primary-foreground text-xl">{item.step}</span>
-                      </div>
-                      {/* Glow ring */}
-                      <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-md -z-10 group-hover:bg-primary/30 transition-colors" />
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                      <item.icon className="w-5 h-5 text-primary" />
-                    </div>
-                  </div>
-                  
-                  <h3 className="font-display text-xl font-bold text-foreground mb-3">
-                    {item.title}
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+        {/* Vertical stepper */}
+        <div className="max-w-2xl mx-auto relative">
+          {/* Progress bar track */}
+          <div className="absolute left-7 md:left-8 top-0 bottom-0 w-0.5 bg-border/30" />
+          {/* Animated progress fill */}
+          <motion.div
+            className="absolute left-7 md:left-8 top-0 w-0.5 bg-primary origin-top rounded-full"
+            style={{ scaleY: scrollYProgress, height: '100%' }}
+          />
 
-          {onOpenChat && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mt-14"
-            >
-              <Button variant="hero" size="lg" onClick={onOpenChat}>
-                Comenzar postulación
-                <ArrowRight className="w-4 h-4" />
-              </Button>
-            </motion.div>
-          )}
+          <div className="space-y-8">
+            {steps.map((item, index) => {
+              const stepStart = index / steps.length;
+              const stepEnd = (index + 0.5) / steps.length;
+
+              return (
+                <StepItem
+                  key={item.step}
+                  item={item}
+                  index={index}
+                  scrollProgress={scrollYProgress}
+                  stepStart={stepStart}
+                  stepEnd={stepEnd}
+                />
+              );
+            })}
+          </div>
         </div>
+
+        {onOpenChat && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mt-14"
+          >
+            <Button variant="hero" size="lg" onClick={onOpenChat}>
+              Comenzar postulación
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </motion.div>
+        )}
       </div>
     </section>
+  );
+};
+
+const StepItem = ({
+  item,
+  index,
+  scrollProgress,
+  stepStart,
+  stepEnd,
+}: {
+  item: (typeof steps)[0];
+  index: number;
+  scrollProgress: any;
+  stepStart: number;
+  stepEnd: number;
+}) => {
+  const isActive = useTransform(scrollProgress, (v: number) => v > stepStart);
+  const opacity = useTransform(scrollProgress, [stepStart, stepEnd], [0.4, 1]);
+  const scale = useTransform(scrollProgress, [stepStart, stepEnd], [0.95, 1]);
+
+  return (
+    <motion.div
+      style={{ opacity, scale }}
+      className="relative flex items-start gap-6 pl-2"
+    >
+      {/* Step circle */}
+      <motion.div
+        className="relative z-10 shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-colors duration-500"
+        style={{
+          backgroundColor: useTransform(scrollProgress, (v: number) =>
+            v > stepStart ? 'hsl(160, 84%, 45%)' : 'hsl(220, 15%, 10%)'
+          ),
+          borderColor: useTransform(scrollProgress, (v: number) =>
+            v > stepStart ? 'hsl(160, 84%, 45%)' : 'hsl(220, 14%, 20%)'
+          ),
+        }}
+      >
+        <span className="font-display font-black text-lg text-primary-foreground">{item.step}</span>
+        {/* Glow ring when active */}
+        <motion.div
+          className="absolute inset-0 rounded-2xl blur-md -z-10"
+          style={{
+            backgroundColor: useTransform(scrollProgress, (v: number) =>
+              v > stepStart ? 'hsl(160, 84%, 45%, 0.3)' : 'transparent'
+            ),
+          }}
+        />
+      </motion.div>
+
+      {/* Content */}
+      <div className="pb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+            <item.icon className="w-4 h-4 text-primary" />
+          </div>
+          <h3 className="font-display text-xl font-bold text-foreground">{item.title}</h3>
+        </div>
+        <p className="text-muted-foreground leading-relaxed ml-12">{item.description}</p>
+      </div>
+    </motion.div>
   );
 };
