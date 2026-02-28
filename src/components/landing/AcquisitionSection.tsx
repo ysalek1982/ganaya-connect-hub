@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion';
-import { Users, MessageCircle, CheckCircle2, Target } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Users, MessageCircle, CheckCircle2, Target, ChevronRight } from 'lucide-react';
 import { useLandingContent } from '@/hooks/useLandingContent';
 
 interface AcquisitionMethod {
@@ -23,6 +24,7 @@ const defaultMethods: AcquisitionMethod[] = [
 
 export const AcquisitionSection = () => {
   const { data: content } = useLandingContent();
+  const [expandedCard, setExpandedCard] = useState<number | null>(null);
   if (content?.sectionsEnabled?.acquisition === false) return null;
 
   const cms = content?.acquisitionSection;
@@ -57,6 +59,7 @@ export const AcquisitionSection = () => {
         <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {methods.map((method, index) => {
             const Icon = icons[index % icons.length];
+            const isExpanded = expandedCard === index;
             return (
               <motion.div
                 key={index}
@@ -64,38 +67,72 @@ export const AcquisitionSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.15, type: 'spring', stiffness: 100 }}
-                className="relative bg-card/60 backdrop-blur-sm rounded-2xl p-7 lg:p-8 border border-border/50 hover:border-gold/30 transition-all duration-500 hover:-translate-y-1"
+                className="relative bg-card/60 backdrop-blur-sm rounded-2xl border border-border/50 hover:border-gold/30 transition-all duration-500 overflow-hidden cursor-pointer group"
+                onClick={() => setExpandedCard(isExpanded ? null : index)}
+                whileHover={{ y: -4 }}
               >
                 {/* Top accent */}
                 <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
                 
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-gold/10 flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-gold" />
-                  </div>
-                  <div>
-                    <h3 className="font-display text-lg font-bold text-foreground">{method.title}</h3>
-                    <p className="text-sm text-muted-foreground">{method.description}</p>
-                  </div>
-                </div>
-
-                <ul className="space-y-3.5">
-                  {method.tips.map((tip, tipIndex) => (
-                    <motion.li
-                      key={tipIndex}
-                      initial={{ opacity: 0, x: -10 }}
-                      whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: index * 0.15 + tipIndex * 0.08 }}
-                      className="flex items-start gap-2.5"
+                <div className="p-7 lg:p-8">
+                  <div className="flex items-center gap-3 mb-4">
+                    <motion.div
+                      className="w-12 h-12 rounded-2xl bg-gold/10 flex items-center justify-center"
+                      animate={isExpanded ? { rotate: [0, -5, 5, 0] } : {}}
+                      transition={{ duration: 0.5 }}
                     >
+                      <Icon className="w-6 h-6 text-gold" />
+                    </motion.div>
+                    <div className="flex-1">
+                      <h3 className="font-display text-lg font-bold text-foreground">{method.title}</h3>
+                      <p className="text-sm text-muted-foreground">{method.description}</p>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: isExpanded ? 90 : 0 }}
+                      transition={{ type: 'spring', stiffness: 300 }}
+                    >
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </motion.div>
+                  </div>
+
+                  {/* Always show first tip, animate the rest */}
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2.5">
                       <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
                       </div>
-                      <span className="text-sm text-muted-foreground leading-relaxed">{tip}</span>
-                    </motion.li>
-                  ))}
-                </ul>
+                      <span className="text-sm text-muted-foreground leading-relaxed">{method.tips[0]}</span>
+                    </div>
+
+                    <AnimatePresence>
+                      {isExpanded && method.tips.slice(1).map((tip, tipIndex) => (
+                        <motion.div
+                          key={tipIndex}
+                          initial={{ opacity: 0, height: 0, y: -10 }}
+                          animate={{ opacity: 1, height: 'auto', y: 0 }}
+                          exit={{ opacity: 0, height: 0, y: -10 }}
+                          transition={{ delay: tipIndex * 0.08, duration: 0.3 }}
+                          className="flex items-start gap-2.5 overflow-hidden"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                          </div>
+                          <span className="text-sm text-muted-foreground leading-relaxed">{tip}</span>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+
+                  {!isExpanded && method.tips.length > 1 && (
+                    <motion.p
+                      className="text-xs text-gold mt-3 font-medium"
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      Toca para ver {method.tips.length - 1} tips más →
+                    </motion.p>
+                  )}
+                </div>
               </motion.div>
             );
           })}
