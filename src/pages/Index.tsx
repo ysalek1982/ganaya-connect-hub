@@ -24,9 +24,13 @@ import { Footer } from '@/components/layout/Footer';
 import { StadiumLights } from '@/components/home/StadiumLights';
 import AgentChatDrawer from '@/components/landing/AgentChatDrawer';
 import { CursorGlow } from '@/components/landing/CursorGlow';
+import { ScrollToTop } from '@/components/landing/ScrollToTop';
+import { motion, useScroll, useSpring } from 'framer-motion';
 
 const Index = () => {
   const [chatOpen, setChatOpen] = useState(false);
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
   useEffect(() => {
     document.title = 'Programa de Agentes | Ganaya.bet - Comisiones hasta 40%';
@@ -40,6 +44,12 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
+      {/* Global scroll progress bar */}
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary via-[hsl(var(--gold))] to-primary z-[60] origin-left"
+        style={{ scaleX }}
+      />
+
       <CursorGlow />
       <div className="fixed inset-0 pointer-events-none z-0 opacity-30">
         <StadiumLights />
@@ -83,12 +93,12 @@ const Index = () => {
         <CTAFinalSection onOpenChat={handleOpenChat} />
       </main>
       
-      {/* Extra bottom padding for mobile sticky CTA */}
       <div className="h-20 md:hidden" />
       
       <Footer />
       <AgentChatDrawer open={chatOpen} onOpenChange={setChatOpen} />
       <MobileStickyNavAgents onOpenChat={handleOpenChat} />
+      <ScrollToTop />
     </div>
   );
 };
