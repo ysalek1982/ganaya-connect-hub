@@ -23,6 +23,7 @@ import { SectionDivider } from '@/components/landing/SectionDivider';
 import { Footer } from '@/components/layout/Footer';
 import { StadiumLights } from '@/components/home/StadiumLights';
 import AgentChatDrawer from '@/components/landing/AgentChatDrawer';
+import { CursorGlow } from '@/components/landing/CursorGlow';
 
 const Index = () => {
   const [chatOpen, setChatOpen] = useState(false);
@@ -39,6 +40,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
+      <CursorGlow />
       <div className="fixed inset-0 pointer-events-none z-0 opacity-30">
         <StadiumLights />
       </div>
