@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion';
+import { useRef } from 'react';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { Smartphone, Clock, Wallet, UserCheck, CheckCircle2, Lightbulb } from 'lucide-react';
 
 const requirements = [
@@ -7,6 +8,67 @@ const requirements = [
   { icon: Wallet, title: 'Banca operativa', description: 'Capital de trabajo para atender', note: 'Lo usás y lo recuperás' },
   { icon: UserCheck, title: 'Mayor de 18 años', description: 'Requisito indispensable', note: 'Juego responsable' },
 ];
+
+const ReqCard = ({ req, index }: { req: typeof requirements[0]; index: number }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.5);
+  const springX = useSpring(mouseX, { stiffness: 200, damping: 20 });
+  const springY = useSpring(mouseY, { stiffness: 200, damping: 20 });
+  const rotateX = useTransform(springY, [0, 1], [6, -6]);
+  const rotateY = useTransform(springX, [0, 1], [-6, 6]);
+  const glareX = useTransform(springX, [0, 1], ['-50%', '150%']);
+  const glareY = useTransform(springY, [0, 1], ['-50%', '150%']);
+
+  const handleMouse = (e: React.MouseEvent) => {
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    mouseX.set((e.clientX - rect.left) / rect.width);
+    mouseY.set((e.clientY - rect.top) / rect.height);
+  };
+
+  return (
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, scale: 0.8, rotateY: -15 }}
+      whileInView={{ opacity: 1, scale: 1, rotateY: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.12, type: 'spring', stiffness: 100 }}
+      onMouseMove={handleMouse}
+      onMouseLeave={() => { mouseX.set(0.5); mouseY.set(0.5); }}
+      style={{ rotateX, rotateY, transformStyle: 'preserve-3d', perspective: 800 }}
+      className="relative bg-card/60 backdrop-blur-sm rounded-2xl p-7 border border-border/50 hover:border-gold/30 transition-colors duration-500 group overflow-hidden"
+    >
+      {/* Glare overlay */}
+      <motion.div
+        className="absolute w-32 h-32 rounded-full bg-white/5 blur-2xl pointer-events-none"
+        style={{ left: glareX, top: glareY }}
+      />
+
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 rounded-b-full bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
+      
+      <motion.div
+        className="w-14 h-14 mb-6 rounded-2xl bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 transition-all duration-300"
+        whileHover={{ rotate: [0, -10, 10, 0], scale: 1.15 }}
+        transition={{ duration: 0.5 }}
+      >
+        <req.icon className="w-7 h-7 text-gold" />
+      </motion.div>
+      <h3 className="font-display text-base font-bold mb-2 text-foreground">{req.title}</h3>
+      <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{req.description}</p>
+      <motion.p
+        className="text-xs text-primary flex items-center gap-1.5 font-medium"
+        initial={{ opacity: 0, x: -10 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: index * 0.12 + 0.3 }}
+      >
+        <CheckCircle2 className="w-3.5 h-3.5" />
+        {req.note}
+      </motion.p>
+    </motion.div>
+  );
+};
 
 export const RequirementsSection = () => {
   return (
@@ -34,27 +96,7 @@ export const RequirementsSection = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto mb-10">
           {requirements.map((req, index) => (
-            <motion.div
-              key={req.title}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1, type: 'spring', stiffness: 100 }}
-              className="relative bg-card/60 backdrop-blur-sm rounded-2xl p-7 border border-border/50 hover:border-gold/30 transition-all duration-500 group hover:-translate-y-1"
-            >
-              {/* Top accent */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-0.5 rounded-b-full bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
-              
-              <div className="w-14 h-14 mb-6 rounded-2xl bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 group-hover:scale-110 transition-all duration-300">
-                <req.icon className="w-7 h-7 text-gold" />
-              </div>
-              <h3 className="font-display text-base font-bold mb-2 text-foreground">{req.title}</h3>
-              <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{req.description}</p>
-              <p className="text-xs text-primary flex items-center gap-1.5 font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                {req.note}
-              </p>
-            </motion.div>
+            <ReqCard key={req.title} req={req} index={index} />
           ))}
         </div>
 

@@ -1,11 +1,6 @@
-import { motion } from 'framer-motion';
-import { HelpCircle } from 'lucide-react';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { HelpCircle, ChevronDown } from 'lucide-react';
 import { useLandingContent } from '@/hooks/useLandingContent';
 
 const faqs = [
@@ -20,6 +15,62 @@ const faqs = [
   { question: '¿Qué hago si no tengo experiencia en casinos?', answer: 'No hay problema. Te capacitamos en todo lo necesario. Lo más importante es tu capacidad de comunicarte y atender personas, no tu conocimiento previo del rubro.' },
   { question: '¿Hay algún costo inicial?', answer: 'No cobramos inscripción ni cuotas. Solo necesitás tu banca operativa (capital de trabajo propio) para comenzar a operar.' },
 ];
+
+const FAQItem = ({ faq, index }: { faq: typeof faqs[0]; index: number }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -30 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.06, type: 'spring', stiffness: 120, damping: 20 }}
+    >
+      <motion.button
+        onClick={() => setOpen(!open)}
+        className={`w-full text-left rounded-xl border px-6 py-5 transition-all duration-300 group ${
+          open
+            ? 'bg-card/80 border-primary/40 shadow-lg shadow-primary/5'
+            : 'bg-card/40 border-border/50 hover:border-primary/20 hover:bg-card/60'
+        }`}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.995 }}
+      >
+        <div className="flex items-center gap-4">
+          {/* Number badge */}
+          <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+            open ? 'bg-primary text-primary-foreground shadow-md shadow-primary/30' : 'bg-muted text-muted-foreground'
+          }`}>
+            {String(index + 1).padStart(2, '0')}
+          </span>
+          <span className="flex-1 font-bold text-foreground text-left">{faq.question}</span>
+          <motion.div
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+          >
+            <ChevronDown className={`w-5 h-5 transition-colors ${open ? 'text-primary' : 'text-muted-foreground'}`} />
+          </motion.div>
+        </div>
+
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="pt-4 pl-12 text-muted-foreground leading-relaxed border-t border-border/30 mt-3">
+                {faq.answer}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.button>
+    </motion.div>
+  );
+};
 
 export const FAQSection = () => {
   const { data: content } = useLandingContent();
@@ -48,31 +99,11 @@ export const FAQSection = () => {
           </p>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="max-w-3xl mx-auto"
-        >
-          <Accordion type="single" collapsible className="space-y-3">
-            {faqs.map((faq, index) => (
-              <AccordionItem
-                key={index}
-                value={`item-${index}`}
-                className="bg-card/60 backdrop-blur-sm rounded-xl border border-border/50 px-6 data-[state=open]:border-primary/30 data-[state=open]:bg-card/80 transition-all duration-300"
-              >
-                <AccordionTrigger className="hover:no-underline py-5">
-                  <span className="text-left font-bold text-foreground">
-                    {faq.question}
-                  </span>
-                </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground pb-5 leading-relaxed">
-                  {faq.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </motion.div>
+        <div className="max-w-3xl mx-auto space-y-3">
+          {faqs.map((faq, index) => (
+            <FAQItem key={index} faq={faq} index={index} />
+          ))}
+        </div>
       </div>
     </section>
   );
