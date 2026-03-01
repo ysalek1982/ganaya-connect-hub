@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { COUNTRY_NAMES } from '@/lib/countries';
 import { Users, UserPlus, TrendingUp, Copy, ExternalLink } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,10 +15,7 @@ import SubagentCreatedModal from '@/components/app/SubagentCreatedModal';
 import { toast } from 'sonner';
 import { getReferralUrl, getPublicSiteUrl } from '@/lib/siteUrl';
 
-const COUNTRIES = [
-  'Paraguay', 'Argentina', 'Chile', 'Colombia', 'Ecuador', 
-  'México', 'USA', 'España'
-];
+const COUNTRIES = COUNTRY_NAMES;
 
 const AppSubagents = () => {
   const { userData, isAdmin, isLineLeader } = useFirebaseAuth();

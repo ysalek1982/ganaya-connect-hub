@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { COUNTRY_NAMES } from '@/lib/countries';
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { format, subDays, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
@@ -295,15 +296,9 @@ const AdminLeads = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los países</SelectItem>
-              <SelectItem value="Paraguay">Paraguay</SelectItem>
-              <SelectItem value="Argentina">Argentina</SelectItem>
-              <SelectItem value="Bolivia">Bolivia</SelectItem>
-              <SelectItem value="Colombia">Colombia</SelectItem>
-              <SelectItem value="Ecuador">Ecuador</SelectItem>
-              <SelectItem value="Perú">Perú</SelectItem>
-              <SelectItem value="Chile">Chile</SelectItem>
-              <SelectItem value="México">México</SelectItem>
-              <SelectItem value="USA">USA</SelectItem>
+              {COUNTRY_NAMES.map(c => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

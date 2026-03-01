@@ -42,6 +42,7 @@ const AdminDashboard = () => {
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-dashboard-stats'],
+    staleTime: 60000, // Cache 60s to avoid redundant Firestore reads
     queryFn: async () => {
       const leadsRef = collection(db, 'leads');
       const usersRef = collection(db, 'users');

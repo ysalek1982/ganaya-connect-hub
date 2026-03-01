@@ -71,10 +71,7 @@ service cloud.firestore {
       // Anyone can create leads (from chat widget)
       allow create: if true;
       
-      // Primary read: upline array contains the authenticated user
-      allow read: if isAuthenticated() && 
-        resource.data.upline != null && 
-        request.auth.uid in resource.data.upline;
+      // (upline rule removed – strict per-agent isolation)
       
       // Direct assignment: agent can see their own leads
       allow read: if isAuthenticated() && 
@@ -95,7 +92,6 @@ service cloud.firestore {
       
       // Update access for assigned agents
       allow update: if isAuthenticated() && (
-        (resource.data.upline != null && request.auth.uid in resource.data.upline) ||
         resource.data.assignedAgentId == request.auth.uid ||
         resource.data.assignedLineLeaderId == request.auth.uid
       );
