@@ -18,6 +18,34 @@ const generateRefCode = (): string => {
   return `AGT-${suffix}`;
 };
 
+const PRODUCTION_SITE_FALLBACK = "https://ganaya.bet";
+
+const isPreviewOrLocalHost = (hostname: string): boolean => {
+  const host = hostname.toLowerCase();
+  return (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host.endsWith(".lovableproject.com") ||
+    host.endsWith(".lovable.app")
+  );
+};
+
+const resolvePublicSiteUrl = (): string => {
+  const rawUrl = Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || "";
+  if (rawUrl) {
+    try {
+      const parsed = new URL(rawUrl);
+      if (!isPreviewOrLocalHost(parsed.hostname)) {
+        return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, "");
+      }
+    } catch {
+      // Ignore malformed env URL and fallback
+    }
+  }
+
+  return PRODUCTION_SITE_FALLBACK;
+};
+
 // Firebase Admin SDK initialization
 const initFirebaseAdmin = async () => {
   const serviceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT_JSON");
@@ -314,7 +342,7 @@ serve(async (req) => {
     
     if (role !== "ADMIN") {
       refCode = generateRefCode();
-      const siteUrl = Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || "https://ganaya.bet";
+      const siteUrl = resolvePublicSiteUrl();
       referralUrl = `${siteUrl}/?ref=${refCode}`;
     }
 
