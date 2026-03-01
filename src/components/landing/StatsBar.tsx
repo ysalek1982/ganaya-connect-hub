@@ -3,7 +3,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Users, Globe, DollarSign, TrendingUp } from 'lucide-react';
 
 const stats = [
-  { icon: Users, value: 150, suffix: '+', label: 'Agentes activos', prefix: '' },
+  { icon: Users, value: 1500, suffix: '+', label: 'Agentes activos', prefix: '' },
   { icon: Globe, value: 5, suffix: '', label: 'Países', prefix: '' },
   { icon: DollarSign, value: 40, suffix: '%', label: 'Comisión máxima', prefix: '' },
   { icon: TrendingUp, value: 98, suffix: '%', label: 'Satisfacción', prefix: '' },

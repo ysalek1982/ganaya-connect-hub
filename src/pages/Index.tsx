@@ -16,6 +16,7 @@ import { CompetitiveSection } from '@/components/landing/CompetitiveSection';
 import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
 import { GrowthSection } from '@/components/landing/GrowthSection';
 import { ResultsShowcase } from '@/components/landing/ResultsShowcase';
+import { IncomeComparison } from '@/components/landing/IncomeComparison';
 import { AcquisitionSection } from '@/components/landing/AcquisitionSection';
 import { NextStepsSection } from '@/components/landing/NextStepsSection';
 import { FAQSection } from '@/components/landing/FAQSection';
@@ -82,6 +83,7 @@ const Index = () => {
         <FlowSection />
         <SectionDivider variant="gold" />
         <CommissionsSection />
+        <IncomeComparison />
         <SectionDivider variant="subtle" />
         <CompetitiveSection />
         <SectionDivider variant="gold" />
