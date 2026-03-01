@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import { getReferralUrl, getPublicSiteUrl } from '@/lib/siteUrl';
 
 interface AgentCreatedModalProps {
   isOpen: boolean;
@@ -34,9 +35,8 @@ const AgentCreatedModal = ({ isOpen, onClose, agentData }: AgentCreatedModalProp
 
   const { email, tempPassword, refCode } = agentData;
   
-  // Build referral URL using PUBLIC_SITE_URL or fallback to origin
-  const baseUrl = import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin;
-  const referralUrl = `${baseUrl}/?ref=${refCode}`;
+  // Build referral URL using centralized siteUrl helper
+  const referralUrl = getReferralUrl(refCode);
 
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text);
@@ -46,7 +46,7 @@ const AgentCreatedModal = ({ isOpen, onClose, agentData }: AgentCreatedModalProp
   };
 
   const getCountryLink = (countryCode: string) => {
-    return `${baseUrl}/?ref=${refCode}&country=${countryCode}`;
+    return `${getPublicSiteUrl()}/?ref=${refCode}&country=${countryCode}`;
   };
 
   return (
