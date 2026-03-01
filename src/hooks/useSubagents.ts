@@ -86,12 +86,14 @@ export const useCreateSubagent = () => {
       
       const idToken = await user.getIdToken(true);
       
+      const { getPublicSiteUrl } = await import('@/lib/siteUrl');
       const { data: response, error } = await supabase.functions.invoke('create-agent-user', {
         body: {
           ...data,
           idToken,
           role: 'AGENT',
           canRecruitSubagents: false,
+          siteUrl: getPublicSiteUrl(),
         },
       });
       

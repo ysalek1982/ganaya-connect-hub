@@ -2,15 +2,16 @@
  * Returns the public site URL for generating referral links.
  * Priority: valid VITE_PUBLIC_SITE_URL > current non-preview origin > fallback ganaya.bet
  */
-const PRODUCTION_SITE_FALLBACK = 'https://ganaya.bet';
-
+/**
+ * Only exclude actual preview/dev environments.
+ * .lovable.app is a valid published domain and should NOT be excluded.
+ */
 const isPreviewOrLocalHost = (hostname: string): boolean => {
   const host = hostname.toLowerCase();
   return (
     host === 'localhost' ||
     host === '127.0.0.1' ||
-    host.endsWith('.lovableproject.com') ||
-    host.endsWith('.lovable.app')
+    host.endsWith('.lovableproject.com')
   );
 };
 
@@ -24,6 +25,7 @@ const normalizeAbsoluteUrl = (rawUrl: string): string | null => {
 };
 
 export const getPublicSiteUrl = (): string => {
+  // 1. If VITE_PUBLIC_SITE_URL is set and not a preview host, use it
   const envUrl = import.meta.env.VITE_PUBLIC_SITE_URL;
   if (envUrl) {
     const normalizedEnvUrl = normalizeAbsoluteUrl(envUrl);
@@ -35,12 +37,15 @@ export const getPublicSiteUrl = (): string => {
     }
   }
 
+  // 2. Use the current browser origin if it's not a preview/dev host
+  //    This covers custom domains AND .lovable.app published domains
   const currentHost = window.location.hostname;
   if (!isPreviewOrLocalHost(currentHost)) {
     return window.location.origin.replace(/\/$/, '');
   }
 
-  return PRODUCTION_SITE_FALLBACK;
+  // 3. Last resort: return current origin anyway (better than a wrong hardcoded domain)
+  return window.location.origin.replace(/\/$/, '');
 };
 
 /**
