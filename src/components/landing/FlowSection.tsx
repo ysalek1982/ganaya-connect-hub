@@ -27,12 +27,12 @@ const StepNode = ({ step, index }: { step: typeof steps[0]; index: number }) => 
       {/* Animated pulse ring */}
       <div className="relative">
         <motion.div
-          className={`absolute inset-0 rounded-2xl ${isPrimary ? 'bg-primary/20' : 'bg-gold/20'}`}
+          className={`absolute inset-0 rounded-xl sm:rounded-2xl ${isPrimary ? 'bg-primary/20' : 'bg-gold/20'}`}
           animate={isInView ? { scale: [1, 1.6, 1], opacity: [0.5, 0, 0.5] } : {}}
           transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className={`relative w-16 h-16 rounded-2xl border-2 flex items-center justify-center mb-5 z-10 transition-all duration-500 ${
+          className={`relative w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl border-2 flex items-center justify-center mb-3 sm:mb-5 z-10 transition-all duration-500 ${
             isPrimary ? 'border-primary bg-background' : 'border-gold bg-background'
           }`}
           animate={isInView ? { 
@@ -43,17 +43,17 @@ const StepNode = ({ step, index }: { step: typeof steps[0]; index: number }) => 
           transition={{ duration: 2, repeat: Infinity }}
           whileHover={{ scale: 1.15, rotate: 5 }}
         >
-          <step.icon className={`w-7 h-7 ${isPrimary ? 'text-primary' : 'text-gold'}`} />
+          <step.icon className={`w-5 h-5 sm:w-7 sm:h-7 ${isPrimary ? 'text-primary' : 'text-gold'}`} />
         </motion.div>
       </div>
       <motion.h3
-        className="font-bold text-sm text-foreground mb-1"
+        className="font-bold text-xs sm:text-sm text-foreground mb-0.5 sm:mb-1"
         animate={isInView ? { color: isPrimary ? 'hsl(160 84% 45%)' : 'hsl(38 92% 55%)' } : {}}
         transition={{ duration: 0.5 }}
       >
         {step.title}
       </motion.h3>
-      <p className="text-xs text-muted-foreground">{step.description}</p>
+      <p className="text-[10px] sm:text-xs text-muted-foreground">{step.description}</p>
     </motion.div>
   );
 };
@@ -64,7 +64,7 @@ export const FlowSection = () => {
   const lineWidth = useTransform(scrollYProgress, [0.2, 0.7], ['0%', '100%']);
 
   return (
-    <section id="flujo" ref={sectionRef} className="py-24 relative overflow-hidden">
+    <section id="flujo" ref={sectionRef} className="py-16 sm:py-24 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-card/30 to-background" />
       
       <div className="container mx-auto px-4 relative z-10">
@@ -72,12 +72,12 @@ export const FlowSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-14"
+          className="text-center mb-10 sm:mb-14"
         >
-          <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
             Tu <span className="text-gradient-primary">día a día</span> como agente
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+          <p className="text-muted-foreground text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
             Operación simple y 100% desde tu celular
           </p>
         </motion.div>
@@ -100,7 +100,7 @@ export const FlowSection = () => {
         </div>
 
         {/* Mobile cards */}
-        <div className="md:hidden space-y-3">
+        <div className="md:hidden space-y-2.5">
           {steps.map((step, index) => {
             const isPrimary = step.color === 'primary';
             return (
@@ -111,17 +111,17 @@ export const FlowSection = () => {
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.08, type: 'spring', stiffness: 120 }}
                 whileTap={{ scale: 0.97 }}
-                className="bg-card/60 backdrop-blur-sm rounded-xl p-4 flex items-center gap-4 border border-border/50"
+                className="bg-card/60 backdrop-blur-sm rounded-xl p-3.5 flex items-center gap-3 border border-border/50"
               >
-                <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center ${
+                <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${
                   isPrimary ? 'bg-primary/10' : 'bg-gold/10'
                 }`}>
-                  <step.icon className={`w-6 h-6 ${isPrimary ? 'text-primary' : 'text-gold'}`} />
+                  <step.icon className={`w-5 h-5 ${isPrimary ? 'text-primary' : 'text-gold'}`} />
                 </div>
                 <div>
-                  <span className="text-xs text-muted-foreground font-medium">Paso {index + 1}</span>
-                  <h3 className="font-bold text-foreground">{step.title}</h3>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                  <span className="text-[10px] text-muted-foreground font-medium">Paso {index + 1}</span>
+                  <h3 className="font-bold text-sm text-foreground">{step.title}</h3>
+                  <p className="text-xs text-muted-foreground">{step.description}</p>
                 </div>
               </motion.div>
             );
@@ -132,7 +132,7 @@ export const FlowSection = () => {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center mt-10 text-sm text-primary font-medium"
+          className="text-center mt-6 sm:mt-10 text-xs sm:text-sm text-primary font-medium"
         >
           💼 Tu éxito depende de tu dedicación y el tamaño de tu red
         </motion.p>

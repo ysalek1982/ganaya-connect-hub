@@ -1,9 +1,9 @@
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ArrowRight, MessageCircle, Shield, AlertTriangle, Sparkles, Clock, Users, Flame, Zap } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowRight, MessageCircle, Shield, AlertTriangle, Sparkles, Users, Flame, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLandingContent } from '@/hooks/useLandingContent';
 import { CountdownTimer } from '@/components/landing/CountdownTimer';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 interface CTAFinalSectionProps {
   onOpenChat: () => void;
@@ -61,19 +61,19 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
   }, []);
 
   return (
-    <section id="postular" className="py-32 relative overflow-hidden aurora-bg">
+    <section id="postular" className="py-20 sm:py-32 relative overflow-hidden aurora-bg">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.06] to-background" />
 
       {/* Animated glow orb */}
       <motion.div
         animate={{ opacity: [0.1, 0.2, 0.1], scale: [1, 1.08, 1] }}
         transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full"
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] rounded-full"
         style={{ background: `radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 60%)` }}
       />
 
-      <div className="absolute top-1/4 left-10 w-32 h-32 bg-primary/[0.06] rounded-full blur-[80px]" />
-      <div className="absolute bottom-1/4 right-10 w-32 h-32 bg-gold/[0.06] rounded-full blur-[80px]" />
+      <div className="absolute top-1/4 left-4 sm:left-10 w-20 sm:w-32 h-20 sm:h-32 bg-primary/[0.06] rounded-full blur-[80px]" />
+      <div className="absolute bottom-1/4 right-4 sm:right-10 w-20 sm:w-32 h-20 sm:h-32 bg-gold/[0.06] rounded-full blur-[80px]" />
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
@@ -87,19 +87,19 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
             initial={{ scale: 0.8, opacity: 0 }}
             whileInView={{ scale: 1, opacity: 1 }}
             viewport={{ once: true }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold mb-8 uppercase tracking-wide"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-semibold mb-6 sm:mb-8 uppercase tracking-wide"
           >
             <Sparkles className="w-4 h-4" />
             Último paso
           </motion.div>
 
-          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-black mb-4 leading-[1.1]">
+          <h2 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-3 sm:mb-4 leading-[1.1]">
             <span className="text-shimmer">¿Listo para empezar</span>
             <br />
             <span className="text-foreground">a generar ingresos?</span>
           </h2>
 
-          <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-xl mx-auto leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-5 sm:mb-6 max-w-xl mx-auto leading-relaxed">
             Completá tu postulación en 2 minutos. Te contactamos por WhatsApp para coordinar los siguientes pasos.
           </p>
 
@@ -108,28 +108,28 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8"
+            className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8"
           >
             <motion.div
               animate={{ scale: [1, 1.03, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/25 text-sm"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-destructive/10 border border-destructive/25 text-xs sm:text-sm"
             >
-              <Flame className="w-4 h-4 text-destructive" />
-              <span className="text-destructive font-bold">Solo 12 cupos en tu zona</span>
+              <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-destructive" />
+              <span className="text-destructive font-bold">Solo 12 cupos</span>
             </motion.div>
-            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gold/10 border border-gold/20 text-sm">
-              <Users className="w-4 h-4 text-gold" />
-              <span className="text-foreground font-medium">+1,500 agentes ya activos</span>
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gold/10 border border-gold/20 text-xs sm:text-sm">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold" />
+              <span className="text-foreground font-medium">+1,500 agentes</span>
             </div>
-            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-sm">
-              <Zap className="w-4 h-4 text-primary" />
-              <span className="text-foreground font-medium">Respuesta en &lt;1h</span>
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-xs sm:text-sm">
+              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+              <span className="text-foreground font-medium">Respuesta &lt;1h</span>
             </div>
           </motion.div>
 
           {/* Countdown timer */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <CountdownTimer />
           </div>
 
@@ -139,7 +139,7 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="mb-12 relative inline-block"
+            className="mb-8 sm:mb-12 relative inline-block"
           >
             {/* Particle container */}
             {particles.map((p) => (
@@ -161,7 +161,7 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
                 variant="hero"
                 size="xl"
                 onClick={handleClick}
-                className="min-w-[300px] shadow-2xl shadow-primary/30 text-lg relative overflow-hidden"
+                className="min-w-[260px] sm:min-w-[300px] shadow-2xl shadow-primary/30 text-base sm:text-lg relative overflow-hidden"
               >
                 {/* Ripple shine */}
                 <span className="absolute inset-0 shine-effect pointer-events-none" />
@@ -170,21 +170,21 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </motion.div>
-            <p className="mt-3 text-xs text-muted-foreground/60">Sin compromiso · 2 minutos · 100% gratis</p>
+            <p className="mt-2 sm:mt-3 text-[10px] sm:text-xs text-muted-foreground/60">Sin compromiso · 2 minutos · 100% gratis</p>
           </motion.div>
 
           {/* Trust badges */}
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-muted-foreground/70">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-primary/70" />
+          <div className="flex flex-wrap items-center justify-center gap-x-5 sm:gap-x-8 gap-y-2 sm:gap-y-3 text-xs sm:text-sm text-muted-foreground/70">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary/70" />
               </div>
               <span>Datos protegidos</span>
             </div>
             <div className="hidden sm:block w-px h-5 bg-border/50" />
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-gold/10 flex items-center justify-center">
-                <AlertTriangle className="w-4 h-4 text-gold/70" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gold/10 flex items-center justify-center">
+                <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gold/70" />
               </div>
               <span>+18 · Juego responsable</span>
             </div>

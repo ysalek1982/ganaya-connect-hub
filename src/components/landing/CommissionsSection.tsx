@@ -32,58 +32,58 @@ export const CommissionsSection = () => {
 
   const currentTier = getTier(amount);
   const commission = Math.round(amount * (currentTier.rate / 100));
-  const networkBonus = Math.round(commission * 0.12); // 7% + 5% cascade simplified
+  const networkBonus = Math.round(commission * 0.12);
   const totalEstimated = commission + networkBonus;
 
   return (
-    <section id="comisiones" className="py-28 relative overflow-hidden">
+    <section id="comisiones" className="py-16 sm:py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.04] to-background" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/[0.06] rounded-full blur-[150px]" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] sm:w-[600px] h-[300px] sm:h-[400px] bg-primary/[0.06] rounded-full blur-[150px]" />
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-sm font-semibold mb-6 uppercase tracking-wide">
+          <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs sm:text-sm font-semibold mb-4 sm:mb-6 uppercase tracking-wide">
             <Crown className="w-4 h-4" />
             Tu ganancia
           </span>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-5">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-5">
             <span className="text-gradient-primary">Comisiones</span> escalables
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-xl mx-auto leading-relaxed">
             Arrastrá el slider para calcular tu ganancia estimada
           </p>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
+        <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 max-w-5xl mx-auto">
           {/* Interactive Calculator */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ type: 'spring', stiffness: 80 }}
-            className="bg-card/60 backdrop-blur-sm rounded-2xl p-7 lg:p-8 border border-border/50"
+            className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 sm:p-7 lg:p-8 border border-border/50"
           >
-            <div className="flex items-center gap-3 mb-7">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <Percent className="w-6 h-6 text-primary" />
+            <div className="flex items-center gap-3 mb-5 sm:mb-7">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Percent className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-display text-xl font-bold">Calculadora de comisiones</h3>
-                <p className="text-sm text-muted-foreground">Ajustá el monto y mirá tu ganancia</p>
+                <h3 className="font-display text-lg sm:text-xl font-bold">Calculadora de comisiones</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">Ajustá el monto y mirá tu ganancia</p>
               </div>
             </div>
 
             {/* Slider */}
-            <div className="mb-8">
+            <div className="mb-6 sm:mb-8">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-muted-foreground">Positivo mensual</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">Positivo mensual</span>
                 <motion.span
-                  className="font-display text-2xl font-black text-primary"
+                  className="font-display text-xl sm:text-2xl font-black text-primary"
                   layout
                 >
                   <AnimatedNumber value={amount} prefix="$" />
@@ -104,22 +104,22 @@ export const CommissionsSection = () => {
             </div>
 
             {/* Tier indicator */}
-            <div className="space-y-3 mb-6">
+            <div className="space-y-2 sm:space-y-3 mb-5 sm:mb-6">
               {tiers.map((tier) => (
                 <div
                   key={tier.rate}
-                  className={`flex items-center justify-between p-3.5 rounded-xl border transition-all duration-300 ${
+                  className={`flex items-center justify-between p-2.5 sm:p-3.5 rounded-xl border transition-all duration-300 ${
                     currentTier.rate === tier.rate
                       ? 'bg-primary/15 border-primary/40 shadow-lg shadow-primary/10 scale-[1.02]'
                       : 'bg-card/30 border-border/30 opacity-50'
                   }`}
                 >
-                  <span className="text-foreground/80 text-sm font-medium">
+                  <span className="text-foreground/80 text-xs sm:text-sm font-medium">
                     ${tier.min.toLocaleString()} – ${tier.max === 2000 ? '1,001+' : tier.max.toLocaleString()}
                   </span>
-                  <div className="flex items-center gap-2">
-                    {currentTier.rate === tier.rate && <Sparkles className="w-4 h-4 text-primary animate-pulse" />}
-                    <span className={`font-display text-xl font-black ${currentTier.rate === tier.rate ? 'text-primary' : 'text-foreground/50'}`}>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    {currentTier.rate === tier.rate && <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary animate-pulse" />}
+                    <span className={`font-display text-lg sm:text-xl font-black ${currentTier.rate === tier.rate ? 'text-primary' : 'text-foreground/50'}`}>
                       {tier.rate}%
                     </span>
                   </div>
@@ -128,59 +128,59 @@ export const CommissionsSection = () => {
             </div>
 
             {/* Results */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center p-3 rounded-xl bg-primary/10 border border-primary/20">
-                <p className="text-[10px] uppercase text-muted-foreground mb-1">Comisión</p>
-                <p className="font-display text-lg font-black text-primary">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="text-center p-2 sm:p-3 rounded-xl bg-primary/10 border border-primary/20">
+                <p className="text-[9px] sm:text-[10px] uppercase text-muted-foreground mb-0.5 sm:mb-1">Comisión</p>
+                <p className="font-display text-sm sm:text-lg font-black text-primary">
                   <AnimatedNumber value={commission} prefix="$" />
                 </p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-gold/10 border border-gold/20">
-                <p className="text-[10px] uppercase text-muted-foreground mb-1">Bono red</p>
-                <p className="font-display text-lg font-black text-gold">
+              <div className="text-center p-2 sm:p-3 rounded-xl bg-gold/10 border border-gold/20">
+                <p className="text-[9px] sm:text-[10px] uppercase text-muted-foreground mb-0.5 sm:mb-1">Bono red</p>
+                <p className="font-display text-sm sm:text-lg font-black text-gold">
                   <AnimatedNumber value={networkBonus} prefix="+$" />
                 </p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-primary/15 border border-primary/30">
-                <p className="text-[10px] uppercase text-muted-foreground mb-1">Total est.</p>
-                <p className="font-display text-lg font-black text-primary">
+              <div className="text-center p-2 sm:p-3 rounded-xl bg-primary/15 border border-primary/30">
+                <p className="text-[9px] sm:text-[10px] uppercase text-muted-foreground mb-0.5 sm:mb-1">Total est.</p>
+                <p className="font-display text-sm sm:text-lg font-black text-primary">
                   <AnimatedNumber value={totalEstimated} prefix="$" />
                 </p>
               </div>
             </div>
           </motion.div>
 
-          {/* Cascade bonus - kept similar */}
+          {/* Cascade bonus */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ type: 'spring', stiffness: 80 }}
-            className="bg-card/60 backdrop-blur-sm rounded-2xl p-7 lg:p-8 border border-border/50"
+            className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 sm:p-7 lg:p-8 border border-border/50"
           >
-            <div className="flex items-center gap-3 mb-7">
-              <div className="w-12 h-12 rounded-2xl bg-gold/10 flex items-center justify-center">
-                <Users className="w-6 h-6 text-gold" />
+            <div className="flex items-center gap-3 mb-5 sm:mb-7">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gold/10 flex items-center justify-center">
+                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
               </div>
               <div>
-                <h3 className="font-display text-xl font-bold">Bono en cascada</h3>
-                <p className="text-sm text-muted-foreground">Gana por tu red de sub-agentes</p>
+                <h3 className="font-display text-lg sm:text-xl font-bold">Bono en cascada</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground">Gana por tu red de sub-agentes</p>
               </div>
             </div>
 
-            <div className="space-y-4 mb-7">
+            <div className="space-y-3 sm:space-y-4 mb-5 sm:mb-7">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
-                className="flex items-center gap-4 p-5 rounded-xl bg-primary/10 border border-primary/25"
+                className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl bg-primary/10 border border-primary/25"
               >
-                <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center font-display font-black text-primary text-2xl shadow-lg shadow-primary/10">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/20 flex items-center justify-center font-display font-black text-primary text-xl sm:text-2xl shadow-lg shadow-primary/10 shrink-0">
                   7%
                 </div>
                 <div>
-                  <p className="font-bold text-foreground text-lg">Línea 1</p>
-                  <p className="text-sm text-muted-foreground">Referidos directos</p>
+                  <p className="font-bold text-foreground text-base sm:text-lg">Línea 1</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Referidos directos</p>
                 </div>
               </motion.div>
 
@@ -188,9 +188,9 @@ export const CommissionsSection = () => {
                 <motion.div
                   animate={{ y: [0, 4, 0] }}
                   transition={{ duration: 1.5, repeat: Infinity }}
-                  className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted/50 flex items-center justify-center"
                 >
-                  <ArrowDown className="w-4 h-4 text-muted-foreground/50" />
+                  <ArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground/50" />
                 </motion.div>
               </div>
 
@@ -199,24 +199,24 @@ export const CommissionsSection = () => {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.1 }}
-                className="flex items-center gap-4 p-5 rounded-xl bg-gold/10 border border-gold/25"
+                className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl bg-gold/10 border border-gold/25"
               >
-                <div className="w-16 h-16 rounded-2xl bg-gold/20 flex items-center justify-center font-display font-black text-gold text-2xl shadow-lg shadow-gold/10">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-gold/20 flex items-center justify-center font-display font-black text-gold text-xl sm:text-2xl shadow-lg shadow-gold/10 shrink-0">
                   5%
                 </div>
                 <div>
-                  <p className="font-bold text-foreground text-lg">Línea 2</p>
-                  <p className="text-sm text-muted-foreground">Referidos de tus referidos</p>
+                  <p className="font-bold text-foreground text-base sm:text-lg">Línea 2</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Referidos de tus referidos</p>
                 </div>
               </motion.div>
             </div>
 
-            <div className="p-4 rounded-xl bg-[hsl(var(--surface-2))] border border-border/50">
-              <div className="flex items-center gap-2 mb-2">
+            <div className="p-3 sm:p-4 rounded-xl bg-[hsl(var(--surface-2))] border border-border/50">
+              <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                 <TrendingUp className="w-4 h-4 text-primary" />
-                <span className="text-sm font-bold text-foreground">Ejemplo</span>
+                <span className="text-xs sm:text-sm font-bold text-foreground">Ejemplo</span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 1 agente directo + 3 sub-agentes = <span className="text-foreground font-semibold">Ingreso Base + ~21% extra</span>
               </p>
             </div>
@@ -227,7 +227,7 @@ export const CommissionsSection = () => {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center mt-10 text-sm text-muted-foreground/70"
+          className="text-center mt-8 sm:mt-10 text-xs sm:text-sm text-muted-foreground/70"
         >
           {disclaimerShort}
         </motion.p>

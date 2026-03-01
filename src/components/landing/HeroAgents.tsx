@@ -117,7 +117,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
       ref={containerRef}
       onMouseMove={handleMouseMove}
       id="inicio"
-      className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-20 pb-24 md:pb-16"
+      className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-16 sm:pt-20 pb-20 sm:pb-24 md:pb-16"
     >
       <HeroBackground />
       <FloatingParticles count={10} />
@@ -128,13 +128,13 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8 backdrop-blur-sm"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 border border-primary/20 mb-5 sm:mb-8 backdrop-blur-sm"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative rounded-full h-2 w-2 bg-primary"></span>
             </span>
-            <span className="text-sm font-medium text-primary">{heroEyebrow}</span>
+            <span className="text-xs sm:text-sm font-medium text-primary">{heroEyebrow}</span>
           </motion.div>
 
           {/* Live agents counter + urgency */}
@@ -142,16 +142,16 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.05 }}
-            className="flex flex-wrap items-center justify-center gap-3 mb-6"
+            className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6"
           >
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-medium text-primary">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[11px] sm:text-xs font-medium text-primary">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute h-full w-full rounded-full bg-primary opacity-75"></span>
                 <span className="relative rounded-full h-2 w-2 bg-primary"></span>
               </span>
               +1,500 agentes activos en LATAM
             </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-xs font-semibold text-destructive">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-[11px] sm:text-xs font-semibold text-destructive">
               🔥 Solo 12 cupos disponibles en tu zona
             </span>
           </motion.div>
@@ -161,7 +161,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className="font-display text-[2.25rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-[1.08] tracking-tight min-h-[2.5em]"
+            className="font-display text-[1.75rem] leading-[1.15] sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 sm:mb-6 sm:leading-[1.08] tracking-tight min-h-[2.5em]"
           >
             {renderTypedTitle()}
           </motion.h1>
@@ -171,11 +171,11 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ scaleX: 0 }}
             animate={{ scaleX: done ? 1 : 0 }}
             transition={{ delay: 0.2, duration: 0.6 }}
-            className="mx-auto mb-6 h-1 w-32 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"
+            className="mx-auto mb-4 sm:mb-6 h-1 w-24 sm:w-32 rounded-full bg-gradient-to-r from-transparent via-primary to-transparent"
           />
 
           {/* Rotating subtitle with AnimatePresence */}
-          <div className="h-10 sm:h-12 flex items-center justify-center mb-8 sm:mb-10">
+          <div className="h-8 sm:h-12 flex items-center justify-center mb-6 sm:mb-10">
             <AnimatePresence mode="wait">
               <motion.p
                 key={phraseIndex}
@@ -183,7 +183,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                 exit={{ opacity: 0, y: -15, filter: 'blur(4px)' }}
                 transition={{ duration: 0.4 }}
-                className="text-base sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
+                className="text-sm sm:text-lg md:text-xl lg:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
               >
                 {rotatingPhrases[phraseIndex]}
               </motion.p>
@@ -196,7 +196,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-8 sm:mb-10"
+              className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-10"
             >
               {heroBullets.slice(0, 3).map((bullet, i) => {
                 const Icon = bulletIcons[i] || Zap;
@@ -204,10 +204,10 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
                   <motion.div
                     key={i}
                     whileHover={{ scale: 1.05, y: -2 }}
-                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card/60 border border-border/50 backdrop-blur-sm cursor-default"
+                    className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-card/60 border border-border/50 backdrop-blur-sm cursor-default"
                   >
                     <Icon className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-foreground/90">{bullet}</span>
+                    <span className="text-xs sm:text-sm font-medium text-foreground/90">{bullet}</span>
                   </motion.div>
                 );
               })}
@@ -219,13 +219,13 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4"
           >
             <Button
               variant="hero"
               size="xl"
               onClick={onOpenChat}
-              className="w-full sm:w-auto min-w-[260px] text-lg font-bold"
+              className="w-full sm:w-auto min-w-[240px] sm:min-w-[260px] text-base sm:text-lg font-bold"
             >
               <MessageCircle className="w-5 h-5" />
               {ctaPrimary}
@@ -247,7 +247,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="mt-6"
+            className="mt-5 sm:mt-6"
           >
             <EarningsTicker />
           </motion.div>
@@ -257,7 +257,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.55 }}
-            className="mt-6"
+            className="mt-5 sm:mt-6"
           >
             <CountdownTimer />
           </motion.div>
@@ -268,7 +268,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="mt-10 text-sm text-muted-foreground/70"
+            className="mt-6 sm:mt-10 text-xs sm:text-sm text-muted-foreground/70"
           >
             {disclaimerText}
           </motion.p>
