@@ -4,7 +4,7 @@ import { ArrowUpRight, Flame, Trophy, Target, Sparkles } from 'lucide-react';
 
 const results = [
   {
-    metric: '$48,500',
+    metric: '$1.35M',
     label: 'Comisiones pagadas este mes',
     change: '+34%',
     icon: Flame,
