@@ -37,16 +37,18 @@ export const SocialProofStrip = () => {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: 20 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ delay: 0.2 }}
+      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
+      transition={{ delay: 0.2, type: 'spring', stiffness: 80 }}
       className="relative z-10 -mt-12 mb-8"
     >
       <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto overflow-hidden py-5 px-2 rounded-2xl bg-card/70 backdrop-blur-md border border-border/50 shadow-lg shadow-black/5">
+        <div className="relative max-w-4xl mx-auto overflow-hidden py-5 px-2 rounded-2xl bg-card/70 backdrop-blur-md border border-border/50 shadow-xl shadow-primary/5">
+          {/* Glow top edge */}
+          <div className="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
           {/* Fade edges */}
-          <div className="absolute left-0 top-0 bottom-0 w-12 bg-gradient-to-r from-card/70 to-transparent z-10 pointer-events-none rounded-l-2xl" />
-          <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-card/70 to-transparent z-10 pointer-events-none rounded-r-2xl" />
+          <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-card/90 to-transparent z-10 pointer-events-none rounded-l-2xl" />
+          <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-card/90 to-transparent z-10 pointer-events-none rounded-r-2xl" />
           
           <motion.div
             className="flex gap-8 sm:gap-12 items-center"
@@ -55,9 +57,12 @@ export const SocialProofStrip = () => {
           >
             {marqueeItems.map((m, i) => (
               <div key={`${m.label}-${i}`} className="flex items-center gap-2.5 shrink-0">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
+                <motion.div
+                  whileHover={{ scale: 1.15, rotate: 5 }}
+                  className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center"
+                >
                   <m.icon className="w-4 h-4 text-primary" />
-                </div>
+                </motion.div>
                 <div className="text-left">
                   <p className="font-display text-xl sm:text-2xl font-black text-primary leading-none">
                     <AnimatedNum target={m.value} inView={inView} suffix={m.suffix} />

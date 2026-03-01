@@ -2,6 +2,7 @@ import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { ArrowRight, MessageCircle, Shield, AlertTriangle, Sparkles, Clock, Users, Flame, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLandingContent } from '@/hooks/useLandingContent';
+import { CountdownTimer } from '@/components/landing/CountdownTimer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface CTAFinalSectionProps {
@@ -126,6 +127,11 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
               <span className="text-foreground font-medium">Respuesta en &lt;1h</span>
             </div>
           </motion.div>
+
+          {/* Countdown timer */}
+          <div className="mb-8">
+            <CountdownTimer />
+          </div>
 
           {/* CTA Button with particles and shake */}
           <motion.div
