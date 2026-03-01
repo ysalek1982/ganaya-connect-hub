@@ -73,26 +73,12 @@ export const useFirebaseLeads = (options: {
           console.error('[useFirebaseLeads] Admin query error:', error);
         }
       } else if (agentId) {
-        // Query 1: leads where agent is in the upline array
-        try {
-          const uplineQuery = query(
-            leadsRef,
-            where('upline', 'array-contains', agentId),
-            limit(500)
-          );
-          const uplineSnapshot = await getDocs(uplineQuery);
-          addDocs(uplineSnapshot);
-          console.log('[useFirebaseLeads] Upline query returned', uplineSnapshot.size, 'leads for', agentId);
-        } catch (error) {
-          console.warn('[useFirebaseLeads] Upline query failed:', error);
-        }
-
-        // Query 2: leads assigned directly to this agent
+        // Query 1: leads assigned directly to this agent
         try {
           const agentQuery = query(
             leadsRef,
             where('assignedAgentId', '==', agentId),
-            limit(200)
+            limit(500)
           );
           const agentSnapshot = await getDocs(agentQuery);
           addDocs(agentSnapshot);
@@ -101,13 +87,13 @@ export const useFirebaseLeads = (options: {
           console.warn('[useFirebaseLeads] AssignedAgent query failed:', error);
         }
 
-        // Query 3: leads by refCode - matches leads that came via this agent's referral link
+        // Query 2: leads by refCode - matches leads that came via this agent's referral link
         if (refCode) {
           try {
             const refQuery = query(
               leadsRef,
               where('refCode', '==', refCode),
-              limit(200)
+              limit(500)
             );
             const refSnapshot = await getDocs(refQuery);
             addDocs(refSnapshot);
