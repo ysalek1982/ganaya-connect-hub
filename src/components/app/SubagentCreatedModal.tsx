@@ -24,7 +24,7 @@ const SubagentCreatedModal = ({ open, onClose, data }: SubagentCreatedModalProps
   if (!data) return null;
 
   const loginUrl = getLoginUrl();
-  const referralUrl = data.referralUrl || getReferralUrl(data.refCode);
+  const referralUrl = getReferralUrl(data.refCode);
 
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text);

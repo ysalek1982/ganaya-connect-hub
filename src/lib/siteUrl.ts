@@ -1,21 +1,46 @@
 /**
- * Returns the production site URL for generating referral links.
- * Priority: VITE_PUBLIC_SITE_URL env var > fallback to ganaya.bet
+ * Returns the public site URL for generating referral links.
+ * Priority: valid VITE_PUBLIC_SITE_URL > current non-preview origin > fallback ganaya.bet
  */
+const PRODUCTION_SITE_FALLBACK = 'https://ganaya.bet';
+
+const isPreviewOrLocalHost = (hostname: string): boolean => {
+  const host = hostname.toLowerCase();
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host.endsWith('.lovableproject.com') ||
+    host.endsWith('.lovable.app')
+  );
+};
+
+const normalizeAbsoluteUrl = (rawUrl: string): string | null => {
+  try {
+    const parsed = new URL(rawUrl);
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return null;
+  }
+};
+
 export const getPublicSiteUrl = (): string => {
-  // Check for configured public site URL
   const envUrl = import.meta.env.VITE_PUBLIC_SITE_URL;
   if (envUrl) {
-    return envUrl.replace(/\/$/, ''); // Remove trailing slash
+    const normalizedEnvUrl = normalizeAbsoluteUrl(envUrl);
+    if (normalizedEnvUrl) {
+      const envHost = new URL(normalizedEnvUrl).hostname;
+      if (!isPreviewOrLocalHost(envHost)) {
+        return normalizedEnvUrl;
+      }
+    }
   }
-  
-  // Production fallback - always use ganaya.bet in production
-  if (import.meta.env.PROD) {
-    return 'https://ganaya.bet';
+
+  const currentHost = window.location.hostname;
+  if (!isPreviewOrLocalHost(currentHost)) {
+    return window.location.origin.replace(/\/$/, '');
   }
-  
-  // Development fallback to current origin
-  return window.location.origin;
+
+  return PRODUCTION_SITE_FALLBACK;
 };
 
 /**
