@@ -41,64 +41,59 @@ service cloud.firestore {
     
     // Users collection
     match /users/{userId} {
-      // Any authenticated user can read their own document
       allow read: if isAuthenticated() && request.auth.uid == userId;
       
-      // Admin and Line Leaders can read all users (for agent listing)
       allow read: if isAuthenticated() && (
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'LINE_LEADER']
       );
       
-      // Effective leaders can read their subagents
       allow read: if isAuthenticated() && 
         resource.data.lineLeaderId == request.auth.uid;
       
-      // Users can update their own non-critical fields
       allow update: if isAuthenticated() && 
         request.auth.uid == userId &&
         !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(['role', 'refCode', 'lineLeaderId']);
       
-      // Admin can update any user (for editing/deactivating agents)
       allow update: if isAdmin();
       
-      // Line Leaders and effective leaders can update agents in their network
       allow update: if isEffectiveLeader() && 
         resource.data.lineLeaderId == request.auth.uid &&
         !request.resource.data.diff(resource.data).affectedKeys()
           .hasAny(['role', 'refCode', 'lineLeaderId']);
       
-      // Create and delete only via Cloud Functions (service account)
       allow create, delete: if false;
     }
     
     // Leads collection
     match /leads/{leadId} {
-      // Anyone can create leads (from chat)
+      // Anyone can create leads (from chat widget)
       allow create: if true;
       
-      // Read access based on role, upline array, and direct assignment
-      // Each condition is independent to avoid cascading failures
-      allow read: if isAuthenticated() && (
-        // Multi-level: anyone in the upline can see the lead (primary mechanism)
-        (resource.data.upline != null && request.auth.uid in resource.data.upline) ||
-        // Agents can see their directly assigned leads
-        resource.data.assignedAgentId == request.auth.uid ||
-        // Line leaders can see leads assigned to their network
-        resource.data.assignedLineLeaderId == request.auth.uid
-      );
+      // Primary read: upline array contains the authenticated user
+      allow read: if isAuthenticated() && 
+        resource.data.upline != null && 
+        request.auth.uid in resource.data.upline;
+      
+      // Direct assignment: agent can see their own leads
+      allow read: if isAuthenticated() && 
+        resource.data.assignedAgentId == request.auth.uid;
+      
+      // Line leader assignment
+      allow read: if isAuthenticated() && 
+        resource.data.assignedLineLeaderId == request.auth.uid;
+      
+      // RefCode match: agent can see leads that came through their referral code
+      // Uses the refCode field stored directly in the lead, matched against the agent's refCode
+      allow read: if isAuthenticated() && 
+        resource.data.refCode != null &&
+        resource.data.refCode == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.refCode;
       
       // Admin full read access (separate rule to avoid get() failures affecting other rules)
       allow read: if isAdmin();
       
-      // Agents with refCode can see leads that came through their referral
-      allow read: if isAuthenticated() && 
-        resource.data.refCode != null &&
-        exists(/databases/$(database)/documents/refCodes/$(resource.data.refCode)) &&
-        get(/databases/$(database)/documents/refCodes/$(resource.data.refCode)).data.agentUid == request.auth.uid;
-      
-      // Update access for status changes
+      // Update access for assigned agents
       allow update: if isAuthenticated() && (
         (resource.data.upline != null && request.auth.uid in resource.data.upline) ||
         resource.data.assignedAgentId == request.auth.uid ||
@@ -114,54 +109,42 @@ service cloud.firestore {
     
     // RefCodes collection - lookup table for referral codes
     match /refCodes/{refCode} {
-      // Public read for attribution lookup
       allow read: if true;
-      // Write only via Cloud Functions
       allow write: if false;
     }
     
-    // Referral Links collection - agents can manage their campaign links
+    // Referral Links collection
     match /referralLinks/{linkId} {
-      // Public read (only contains whatsapp override, contact label, message template - no secrets)
       allow read: if true;
       
-      // Agents and admins can create links for themselves
       allow create: if isAuthenticated() && 
         (isAdmin() || isAgent() || isLineLeader()) && 
         request.resource.data.agentUid == request.auth.uid;
       
-      // Agents can update/delete their own links, admins can update any
       allow update, delete: if isAuthenticated() && 
         (isAdmin() || resource.data.agentUid == request.auth.uid);
     }
     
-    // Tutorials collection - CMS for video tutorials
+    // Tutorials collection
     match /tutorials/{tutorialId} {
-      // Public can read published tutorials, admins can read all
-      // Agents can read their own unpublished tutorials
       allow read: if resource.data.isPublished == true || 
         isAdmin() ||
         (isAuthenticated() && resource.data.ownerType == 'AGENT' && resource.data.ownerUid == request.auth.uid);
       
-      // Admins can create any tutorial
-      // Agents can create tutorials for themselves
       allow create: if isAuthenticated() && (
         isAdmin() || 
         (request.resource.data.ownerType == 'AGENT' && request.resource.data.ownerUid == request.auth.uid)
       );
       
-      // Admins can update/delete any tutorial
-      // Agents can update/delete their own tutorials
       allow update, delete: if isAuthenticated() && (
         isAdmin() || 
         (resource.data.ownerType == 'AGENT' && resource.data.ownerUid == request.auth.uid)
       );
     }
     
-    // Chat logs - linked to leads
+    // Chat logs
     match /chat_logs/{logId} {
       allow create: if true;
-      // Anyone who can read the linked lead can read the chat log
       allow read: if isAuthenticated() && (
         isAdmin() ||
         isLineLeader() ||
@@ -175,9 +158,8 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
     
-    // Chat configs (admin only) - for configurable chat questions
+    // Chat configs (admin only)
     match /chat_configs/{configId} {
-      // Only admins can read and write chat configurations
       allow read, write: if isAdmin();
     }
     

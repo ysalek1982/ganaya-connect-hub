@@ -48,7 +48,7 @@ export const useFirebaseLeads = (options: {
   const { agentId, lineLeaderId, isAdmin, refCode } = options;
 
   return useQuery({
-    queryKey: ['firebase-leads', agentId, lineLeaderId, isAdmin],
+    queryKey: ['firebase-leads', agentId, lineLeaderId, isAdmin, refCode],
     queryFn: async (): Promise<FirebaseLead[]> => {
       const leadsRef = collection(db, 'leads');
       const allLeads: FirebaseLead[] = [];
@@ -84,7 +84,7 @@ export const useFirebaseLeads = (options: {
           addDocs(uplineSnapshot);
           console.log('[useFirebaseLeads] Upline query returned', uplineSnapshot.size, 'leads for', agentId);
         } catch (error) {
-          console.warn('[useFirebaseLeads] Upline query failed (trying fallbacks):', error);
+          console.warn('[useFirebaseLeads] Upline query failed:', error);
         }
 
         // Query 2: leads assigned directly to this agent
@@ -101,7 +101,7 @@ export const useFirebaseLeads = (options: {
           console.warn('[useFirebaseLeads] AssignedAgent query failed:', error);
         }
 
-        // Query 3: leads by refCode as additional fallback
+        // Query 3: leads by refCode - matches leads that came via this agent's referral link
         if (refCode) {
           try {
             const refQuery = query(
@@ -111,11 +111,13 @@ export const useFirebaseLeads = (options: {
             );
             const refSnapshot = await getDocs(refQuery);
             addDocs(refSnapshot);
-            console.log('[useFirebaseLeads] RefCode query returned', refSnapshot.size, 'leads for', refCode);
+            console.log('[useFirebaseLeads] RefCode query returned', refSnapshot.size, 'leads for refCode', refCode);
           } catch (error) {
             console.warn('[useFirebaseLeads] RefCode query failed:', error);
           }
         }
+
+        console.log('[useFirebaseLeads] Agent queries complete. agentId:', agentId, 'refCode:', refCode);
       } else {
         return [];
       }
