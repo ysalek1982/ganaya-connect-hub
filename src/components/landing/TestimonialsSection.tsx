@@ -32,9 +32,9 @@ const testimonials = [
     earnings: '$190/mes',
   },
   {
-    name: 'Ana P.',
-    country: 'Bolivia',
-    flag: '🇧🇴',
+    name: 'Sofía G.',
+    country: 'Ecuador',
+    flag: '🇪🇨',
     role: 'Agente desde 2024',
     quote: 'Nunca pensé que podía generar ingresos así desde mi casa. El equipo me capacitó y hoy mi red sigue creciendo.',
     highlight: 'Crecimiento desde casa',
@@ -42,8 +42,8 @@ const testimonials = [
   },
   {
     name: 'Marco T.',
-    country: 'Perú',
-    flag: '🇵🇪',
+    country: 'Estados Unidos',
+    flag: '🇺🇸',
     role: 'Agente desde 2025',
     quote: 'Las herramientas que te dan hacen todo más fácil. El dashboard es claro y siempre sé cuánto llevo ganado.',
     highlight: 'Herramientas intuitivas',

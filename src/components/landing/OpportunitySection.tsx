@@ -14,13 +14,10 @@ const defaultStats = [
 const MapDots = () => {
   const dots = [
     { x: 35, y: 25, label: '🇨🇴', delay: 0 },
-    { x: 28, y: 55, label: '🇵🇪', delay: 0.3 },
-    { x: 38, y: 70, label: '🇧🇴', delay: 0.5 },
-    { x: 42, y: 48, label: '🇧🇷', delay: 0.2 },
-    { x: 30, y: 85, label: '🇦🇷', delay: 0.6 },
-    { x: 32, y: 80, label: '🇨🇱', delay: 0.7 },
-    { x: 35, y: 42, label: '🇪🇨', delay: 0.4 },
+    { x: 35, y: 42, label: '🇪🇨', delay: 0.3 },
+    { x: 30, y: 85, label: '🇦🇷', delay: 0.5 },
     { x: 28, y: 90, label: '🇵🇾', delay: 0.1 },
+    { x: 55, y: 15, label: '🇺🇸', delay: 0.4 },
   ];
 
   return (
