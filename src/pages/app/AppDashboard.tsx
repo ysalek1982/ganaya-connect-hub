@@ -1,12 +1,13 @@
 import { subDays, startOfDay, eachDayOfInterval, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { TrendingUp, Users, UserCheck, BarChart3, MessageCircle, Copy, ArrowUp, Zap, Clock } from 'lucide-react';
+import { TrendingUp, Users, UserCheck, BarChart3, MessageCircle, Copy, ArrowUp, Zap, Clock, Network } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
-import { useFirebaseLeads } from '@/hooks/useFirebaseLeads';
+import { useFirebaseLeads, useFirebaseLeadCounts } from '@/hooks/useFirebaseLeads';
+import { useSubagents } from '@/hooks/useSubagents';
 import { toast } from 'sonner';
 import { getReferralUrl } from '@/lib/siteUrl';
 import { STATUS_COLORS, timeAgo } from '@/lib/lead-constants';
@@ -20,6 +21,18 @@ const AppDashboard = () => {
     isAdmin,
     refCode: userData?.refCode || null,
   });
+
+  // Sub-agent metrics (counts only)
+  const { data: subagents } = useSubagents();
+  const { data: leadCounts } = useFirebaseLeadCounts();
+
+  const subagentStats = (() => {
+    if (!subagents || subagents.length === 0) return null;
+    const totalSubagentLeads = subagents.reduce((sum, sa) => {
+      return sum + (leadCounts?.[sa.uid] || 0);
+    }, 0);
+    return { count: subagents.length, totalLeads: totalSubagentLeads };
+  })();
 
   const stats = (() => {
     if (!leads) return null;
@@ -293,6 +306,30 @@ const AppDashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Subagent Network Metrics */}
+      {subagentStats && (
+        <Card className="glass-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Network className="w-4 h-4 text-primary" />
+              Mi red de subagentes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 rounded-lg bg-primary/5">
+                <p className="font-display text-3xl font-bold text-primary">{subagentStats.count}</p>
+                <p className="text-xs text-muted-foreground mt-1">Subagentes</p>
+              </div>
+              <div className="text-center p-4 rounded-lg bg-gold/5">
+                <p className="font-display text-3xl font-bold text-gold">{subagentStats.totalLeads}</p>
+                <p className="text-xs text-muted-foreground mt-1">Leads de la red</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Activity */}
       <Card className="glass-card">
