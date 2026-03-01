@@ -25,6 +25,7 @@ import { StadiumLights } from '@/components/home/StadiumLights';
 import AgentChatDrawer from '@/components/landing/AgentChatDrawer';
 import { CursorGlow } from '@/components/landing/CursorGlow';
 import { ScrollToTop } from '@/components/landing/ScrollToTop';
+import { LiveNotifications } from '@/components/landing/LiveNotifications';
 import { motion, useScroll, useSpring } from 'framer-motion';
 
 const Index = () => {
@@ -99,6 +100,7 @@ const Index = () => {
       <AgentChatDrawer open={chatOpen} onOpenChange={setChatOpen} />
       <MobileStickyNavAgents onOpenChat={handleOpenChat} />
       <ScrollToTop />
+      <LiveNotifications />
     </div>
   );
 };

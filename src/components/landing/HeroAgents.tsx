@@ -112,18 +112,23 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             <span className="text-sm font-medium text-primary">{heroEyebrow}</span>
           </motion.div>
 
-          {/* Live agents counter */}
+          {/* Live agents counter + urgency */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.05 }}
-            className="flex items-center justify-center gap-2 mb-6"
+            className="flex flex-wrap items-center justify-center gap-3 mb-6"
           >
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute h-full w-full rounded-full bg-primary opacity-60"></span>
-              <span className="relative rounded-full h-2.5 w-2.5 bg-primary"></span>
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-medium text-primary">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              23 agentes conectados ahora
             </span>
-            <span className="text-xs font-medium text-primary/80">23 agentes conectados ahora</span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-xs font-semibold text-destructive">
+              🔥 Solo 12 cupos disponibles en tu zona
+            </span>
           </motion.div>
 
           {/* Main Title - Typewriter */}
