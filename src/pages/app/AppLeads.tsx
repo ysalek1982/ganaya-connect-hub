@@ -40,6 +40,7 @@ const AppLeads = () => {
     agentId,
     lineLeaderId: isLineLeader ? agentId : null,
     isAdmin,
+    refCode: userData?.refCode || null,
   });
 
   const addLeadMutation = useAddFirebaseLead();

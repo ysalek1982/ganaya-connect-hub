@@ -34,6 +34,7 @@ const AppDashboard = () => {
     agentId,
     lineLeaderId: isLineLeader ? agentId : null,
     isAdmin,
+    refCode: userData?.refCode || null,
   });
 
   const stats = (() => {
