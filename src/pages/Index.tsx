@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { HeaderAgents } from '@/components/landing/HeaderAgents';
 import { HeroAgents } from '@/components/landing/HeroAgents';
 import { SocialProofStrip } from '@/components/landing/SocialProofStrip';
+import { StatsBar } from '@/components/landing/StatsBar';
 import { ProblemSection } from '@/components/landing/ProblemSection';
 import { OpportunitySection } from '@/components/landing/OpportunitySection';
 import { VideoSection } from '@/components/landing/VideoSection';
@@ -14,6 +15,7 @@ import { CommissionsSection } from '@/components/landing/CommissionsSection';
 import { CompetitiveSection } from '@/components/landing/CompetitiveSection';
 import { TestimonialsSection } from '@/components/landing/TestimonialsSection';
 import { GrowthSection } from '@/components/landing/GrowthSection';
+import { ResultsShowcase } from '@/components/landing/ResultsShowcase';
 import { AcquisitionSection } from '@/components/landing/AcquisitionSection';
 import { NextStepsSection } from '@/components/landing/NextStepsSection';
 import { FAQSection } from '@/components/landing/FAQSection';
@@ -61,6 +63,7 @@ const Index = () => {
       <main className="relative z-10">
         <HeroAgents onOpenChat={handleOpenChat} />
         <SocialProofStrip />
+        <StatsBar />
         <SectionDivider variant="primary" />
         <ProblemSection />
         <SectionDivider variant="subtle" />
@@ -85,6 +88,7 @@ const Index = () => {
         <TestimonialsSection />
         <SectionDivider variant="primary" />
         <GrowthSection />
+        <ResultsShowcase />
         <SectionDivider variant="subtle" />
         <AcquisitionSection />
         <SectionDivider variant="primary" />

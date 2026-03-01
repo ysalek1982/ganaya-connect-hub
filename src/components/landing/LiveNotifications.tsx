@@ -6,11 +6,11 @@ const notifications = [
   { name: 'Carlos M.', country: 'Paraguay', flag: '🇵🇾', time: 'hace 2 min' },
   { name: 'Ana R.', country: 'Colombia', flag: '🇨🇴', time: 'hace 5 min' },
   { name: 'Diego L.', country: 'Argentina', flag: '🇦🇷', time: 'hace 8 min' },
-  { name: 'María P.', country: 'Bolivia', flag: '🇧🇴', time: 'hace 12 min' },
-  { name: 'José T.', country: 'Perú', flag: '🇵🇪', time: 'hace 15 min' },
-  { name: 'Valentina S.', country: 'Ecuador', flag: '🇪🇨', time: 'hace 18 min' },
-  { name: 'Marco V.', country: 'Chile', flag: '🇨🇱', time: 'hace 22 min' },
-  { name: 'Lucía G.', country: 'Paraguay', flag: '🇵🇾', time: 'hace 25 min' },
+  { name: 'Valentina S.', country: 'Ecuador', flag: '🇪🇨', time: 'hace 12 min' },
+  { name: 'Marco V.', country: 'Estados Unidos', flag: '🇺🇸', time: 'hace 15 min' },
+  { name: 'Lucía G.', country: 'Paraguay', flag: '🇵🇾', time: 'hace 18 min' },
+  { name: 'Sofía R.', country: 'Colombia', flag: '🇨🇴', time: 'hace 22 min' },
+  { name: 'Mateo F.', country: 'Argentina', flag: '🇦🇷', time: 'hace 25 min' },
 ];
 
 export const LiveNotifications = () => {

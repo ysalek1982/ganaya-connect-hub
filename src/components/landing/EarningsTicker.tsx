@@ -2,8 +2,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DollarSign } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
-const countries = ['🇵🇾', '🇨🇴', '🇦🇷', '🇧🇴', '🇵🇪', '🇪🇨', '🇨🇱', '🇧🇷'];
-const names = ['Carlos', 'Ana', 'Diego', 'María', 'José', 'Valentina', 'Marco', 'Lucía', 'Pedro', 'Sofía'];
+const countries = ['🇵🇾', '🇨🇴', '🇦🇷', '🇪🇨', '🇺🇸'];
+const names = ['Carlos', 'Ana', 'Diego', 'Valentina', 'Marco', 'Lucía', 'Pedro', 'Sofía', 'Mateo', 'Camila'];
 
 const generateEarning = () => ({
   id: Date.now() + Math.random(),
