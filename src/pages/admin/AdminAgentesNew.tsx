@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { Plus, Edit, Trash2, Search, Users, Link, QrCode } from 'lucide-react';
+import { getReferralUrl } from '@/lib/siteUrl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -66,8 +67,7 @@ const AdminAgentesNew = () => {
   };
 
   const copyRefLink = (refCode: string) => {
-    const baseUrl = window.location.origin;
-    const link = `${baseUrl}/?ref=${refCode}`;
+    const link = getReferralUrl(refCode);
     navigator.clipboard.writeText(link);
     toast.success('Link de referido copiado');
   };
