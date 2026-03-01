@@ -588,6 +588,124 @@ serve(async (req) => {
         );
       }
 
+      // --- Full Reset (Nuclear) ---
+      if (action === 'full_reset') {
+        console.log('[bootstrap-admin] FULL RESET requested');
+
+        const collectionsToWipe = ['leads', 'chat_logs', 'refCodes', 'referralLinks'];
+        const deleted: Record<string, number> = {};
+
+        // Delete all docs in each collection
+        for (const col of collectionsToWipe) {
+          let count = 0;
+          let hasMore = true;
+
+          while (hasMore) {
+            const results = await firestoreRunQuery(accessToken, projectId, {
+              from: [{ collectionId: col }],
+              select: { fields: [] }, // only need doc name
+              limit: 100,
+            });
+
+            const docNames = results
+              .map((r: any) => r.document?.name)
+              .filter(Boolean) as string[];
+
+            if (docNames.length === 0) {
+              hasMore = false;
+              break;
+            }
+
+            for (const docName of docNames) {
+              const path = docName.split('/documents/')[1];
+              if (path) {
+                await firestoreDeleteDoc(accessToken, projectId, path);
+                count++;
+              }
+            }
+
+            if (docNames.length < 100) hasMore = false;
+          }
+
+          deleted[col] = count;
+          console.log(`[bootstrap-admin] Deleted ${count} docs from ${col}`);
+        }
+
+        // Delete non-admin users from Firestore + Firebase Auth
+        let usersDeleted = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const results = await firestoreRunQuery(accessToken, projectId, {
+            from: [{ collectionId: 'users' }],
+            limit: 100,
+          });
+
+          const docs = results
+            .map((r: any) => {
+              if (!r.document) return null;
+              const parsed = parseFirestoreDoc(r.document);
+              const namePath = String(r.document.name || '');
+              const id = namePath.split('/').pop() || '';
+              return { id, role: parsed?.role };
+            })
+            .filter(Boolean) as Array<{ id: string; role: unknown }>;
+
+          const nonAdmins = docs.filter(d => d.role !== 'ADMIN');
+
+          if (nonAdmins.length === 0) {
+            hasMore = false;
+            break;
+          }
+
+          for (const u of nonAdmins) {
+            // Delete Firestore user doc
+            await firestoreDeleteDoc(accessToken, projectId, `users/${u.id}`);
+
+            // Delete Firebase Auth user
+            try {
+              await fetch(
+                `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts`,
+                {
+                  method: 'POST',
+                  headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ deleteAttribute: [], localId: u.id }),
+                }
+              );
+              // Try the delete endpoint
+              await fetch(
+                `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:delete`,
+                {
+                  method: 'POST',
+                  headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ localId: u.id }),
+                }
+              );
+            } catch (e) {
+              console.warn(`[bootstrap-admin] Could not delete auth user ${u.id}:`, e);
+            }
+
+            usersDeleted++;
+          }
+
+          if (docs.length < 100) hasMore = false;
+        }
+
+        deleted['users (non-admin)'] = usersDeleted;
+        console.log(`[bootstrap-admin] FULL RESET complete:`, deleted);
+
+        return new Response(
+          JSON.stringify({ success: true, deleted }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ error: 'Acción no soportada' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
