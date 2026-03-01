@@ -42,7 +42,7 @@ export const useFirebaseAgents = (options?: { lineLeaderId?: string }) => {
             createdAt: data.createdAt?.toDate?.() || new Date(0),
           };
         })
-        .filter((u) => u.role === 'AGENT' || u.role === 'LINE_LEADER') as FirebaseUser[];
+        .filter((u) => (u.role === 'AGENT' || u.role === 'LINE_LEADER') && u.isActive !== false) as FirebaseUser[];
 
       users.sort((a, b) => (b.createdAt?.getTime?.() || 0) - (a.createdAt?.getTime?.() || 0));
       return users;
