@@ -8,8 +8,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  Timestamp,
-  orderBy
+  Timestamp
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { ReferralLink } from '@/lib/firebase-types';
@@ -24,13 +23,12 @@ export const useReferralLinks = (agentUid: string | null) => {
       const linksRef = collection(db, 'referralLinks');
       const q = query(
         linksRef, 
-        where('agentUid', '==', agentUid),
-        orderBy('createdAt', 'desc')
+        where('agentUid', '==', agentUid)
       );
       
       const snapshot = await getDocs(q);
       
-      return snapshot.docs.map(docSnap => {
+      const links = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
         return {
           id: docSnap.id,
@@ -45,6 +43,10 @@ export const useReferralLinks = (agentUid: string | null) => {
           updatedAt: data.updatedAt?.toDate(),
         } as ReferralLink;
       });
+
+      // Sort client-side to avoid composite index requirement
+      links.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      return links;
     },
     enabled: !!agentUid,
   });
