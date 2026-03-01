@@ -78,28 +78,35 @@ service cloud.firestore {
       // Anyone can create leads (from chat)
       allow create: if true;
       
-      // Read access based on role and upline array
+      // Read access based on role, upline array, and direct assignment
+      // Each condition is independent to avoid cascading failures
       allow read: if isAuthenticated() && (
-        isAdmin() ||
+        // Multi-level: anyone in the upline can see the lead (primary mechanism)
+        (resource.data.upline != null && request.auth.uid in resource.data.upline) ||
+        // Agents can see their directly assigned leads
+        resource.data.assignedAgentId == request.auth.uid ||
         // Line leaders can see leads assigned to their network
-        (isLineLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
-        // Effective leaders (agents with canRecruitSubagents) can see their network leads
-        (isEffectiveLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
-        // Agents can see their assigned leads
-        (isAgent() && resource.data.assignedAgentId == request.auth.uid) ||
-        // Multi-level: anyone in the upline can see the lead
-        (resource.data.upline != null && request.auth.uid in resource.data.upline)
+        resource.data.assignedLineLeaderId == request.auth.uid
       );
+      
+      // Admin full read access (separate rule to avoid get() failures affecting other rules)
+      allow read: if isAdmin();
+      
+      // Agents with refCode can see leads that came through their referral
+      allow read: if isAuthenticated() && 
+        resource.data.refCode != null &&
+        exists(/databases/$(database)/documents/refCodes/$(resource.data.refCode)) &&
+        get(/databases/$(database)/documents/refCodes/$(resource.data.refCode)).data.agentUid == request.auth.uid;
       
       // Update access for status changes
       allow update: if isAuthenticated() && (
-        isAdmin() ||
-        (isLineLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
-        (isEffectiveLeader() && resource.data.assignedLineLeaderId == request.auth.uid) ||
-        (isAgent() && resource.data.assignedAgentId == request.auth.uid) ||
-        // Multi-level: anyone in the upline can update the lead
-        (resource.data.upline != null && request.auth.uid in resource.data.upline)
+        (resource.data.upline != null && request.auth.uid in resource.data.upline) ||
+        resource.data.assignedAgentId == request.auth.uid ||
+        resource.data.assignedLineLeaderId == request.auth.uid
       );
+      
+      // Admin full update access
+      allow update: if isAdmin();
       
       // Delete only by admin
       allow delete: if isAdmin();

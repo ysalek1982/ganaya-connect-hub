@@ -43,69 +43,88 @@ export const useFirebaseLeads = (options: {
   agentId?: string | null;
   lineLeaderId?: string | null;
   isAdmin?: boolean;
+  refCode?: string | null;
 }) => {
-  const { agentId, lineLeaderId, isAdmin } = options;
+  const { agentId, lineLeaderId, isAdmin, refCode } = options;
 
   return useQuery({
     queryKey: ['firebase-leads', agentId, lineLeaderId, isAdmin],
     queryFn: async (): Promise<FirebaseLead[]> => {
-      try {
-        const leadsRef = collection(db, 'leads');
-        const allLeads: FirebaseLead[] = [];
-        const seenIds = new Set<string>();
+      const leadsRef = collection(db, 'leads');
+      const allLeads: FirebaseLead[] = [];
+      const seenIds = new Set<string>();
 
-        if (isAdmin) {
-          // Admin sees all leads
+      const addDocs = (snapshot: { docs: Array<{ id: string; data: () => Record<string, unknown> }> }) => {
+        snapshot.docs.forEach(docSnap => {
+          if (!seenIds.has(docSnap.id)) {
+            seenIds.add(docSnap.id);
+            allLeads.push(parseLeadDoc(docSnap));
+          }
+        });
+      };
+
+      if (isAdmin) {
+        try {
           const q = query(leadsRef, limit(500));
           const snapshot = await getDocs(q);
-          snapshot.docs.forEach(docSnap => {
-            if (!seenIds.has(docSnap.id)) {
-              seenIds.add(docSnap.id);
-              allLeads.push(parseLeadDoc(docSnap));
-            }
-          });
-        } else if (agentId) {
-          // Agent/Line Leader sees leads where they are in the upline array
-          // This covers both direct assignments and multi-level network visibility
+          addDocs(snapshot);
+          console.log('[useFirebaseLeads] Admin query returned', snapshot.size, 'leads');
+        } catch (error) {
+          console.error('[useFirebaseLeads] Admin query error:', error);
+        }
+      } else if (agentId) {
+        // Query 1: leads where agent is in the upline array
+        try {
           const uplineQuery = query(
             leadsRef,
             where('upline', 'array-contains', agentId),
             limit(500)
           );
           const uplineSnapshot = await getDocs(uplineQuery);
-          uplineSnapshot.docs.forEach(docSnap => {
-            if (!seenIds.has(docSnap.id)) {
-              seenIds.add(docSnap.id);
-              allLeads.push(parseLeadDoc(docSnap));
-            }
-          });
+          addDocs(uplineSnapshot);
+          console.log('[useFirebaseLeads] Upline query returned', uplineSnapshot.size, 'leads for', agentId);
+        } catch (error) {
+          console.warn('[useFirebaseLeads] Upline query failed (trying fallbacks):', error);
+        }
 
-          // Also query by assignedAgentId as fallback for leads without upline
+        // Query 2: leads assigned directly to this agent
+        try {
           const agentQuery = query(
             leadsRef,
             where('assignedAgentId', '==', agentId),
             limit(200)
           );
           const agentSnapshot = await getDocs(agentQuery);
-          agentSnapshot.docs.forEach(docSnap => {
-            if (!seenIds.has(docSnap.id)) {
-              seenIds.add(docSnap.id);
-              allLeads.push(parseLeadDoc(docSnap));
-            }
-          });
-        } else {
-          return [];
+          addDocs(agentSnapshot);
+          console.log('[useFirebaseLeads] AssignedAgent query returned', agentSnapshot.size, 'leads for', agentId);
+        } catch (error) {
+          console.warn('[useFirebaseLeads] AssignedAgent query failed:', error);
         }
 
-        // Sort client-side by createdAt descending
-        allLeads.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-
-        return allLeads;
-      } catch (error) {
-        console.error('[useFirebaseLeads] Query error:', error);
-        toast.error('Error al cargar leads: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+        // Query 3: leads by refCode as additional fallback
+        if (refCode) {
+          try {
+            const refQuery = query(
+              leadsRef,
+              where('refCode', '==', refCode),
+              limit(200)
+            );
+            const refSnapshot = await getDocs(refQuery);
+            addDocs(refSnapshot);
+            console.log('[useFirebaseLeads] RefCode query returned', refSnapshot.size, 'leads for', refCode);
+          } catch (error) {
+            console.warn('[useFirebaseLeads] RefCode query failed:', error);
+          }
+        }
+      } else {
         return [];
       }
+
+      // Sort client-side by createdAt descending
+      allLeads.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      console.log('[useFirebaseLeads] Total unique leads:', allLeads.length);
+      return allLeads;
     },
     enabled: isAdmin || !!agentId,
   });
