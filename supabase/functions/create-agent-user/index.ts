@@ -26,32 +26,34 @@ const generateRefCode = (): string => {
   return `AGT-${suffix}`;
 };
 
-const PRODUCTION_SITE_FALLBACK = "https://ganaya.bet";
+/**
+ * Resolves the public site URL.
+ * Priority: siteUrl from request body > env vars > fallback
+ */
+const resolvePublicSiteUrl = (requestSiteUrl?: string): string => {
+  // 1. Use the siteUrl passed from the frontend (most reliable)
+  if (requestSiteUrl) {
+    try {
+      const parsed = new URL(requestSiteUrl);
+      return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, "");
+    } catch {
+      // Ignore malformed URL
+    }
+  }
 
-const isPreviewOrLocalHost = (hostname: string): boolean => {
-  const host = hostname.toLowerCase();
-  return (
-    host === "localhost" ||
-    host === "127.0.0.1" ||
-    host.endsWith(".lovableproject.com") ||
-    host.endsWith(".lovable.app")
-  );
-};
-
-const resolvePublicSiteUrl = (): string => {
+  // 2. Try env var
   const rawUrl = Deno.env.get("PUBLIC_SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || "";
   if (rawUrl) {
     try {
       const parsed = new URL(rawUrl);
-      if (!isPreviewOrLocalHost(parsed.hostname)) {
-        return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, "");
-      }
+      return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, "");
     } catch {
-      // Ignore malformed env URL and fallback
+      // Ignore malformed env URL
     }
   }
 
-  return PRODUCTION_SITE_FALLBACK;
+  // 3. Fallback
+  return "https://ganaya.bet";
 };
 
 // Firebase Admin SDK initialization using service account
@@ -447,6 +449,7 @@ serve(async (req) => {
       lineLeaderId, 
       canRecruitSubagents, 
       role,
+      siteUrl: requestSiteUrl,
       // For listing subagents
       callerUid,
     } = body;
@@ -560,8 +563,8 @@ serve(async (req) => {
     // Generate unique refCode
     const refCode = generateRefCode();
     
-    // Build referral URL
-    const siteUrl = resolvePublicSiteUrl();
+    // Build referral URL using frontend-provided siteUrl
+    const siteUrl = resolvePublicSiteUrl(requestSiteUrl);
     const referralUrl = `${siteUrl}/?ref=${refCode}`;
 
     // Create user document in Firestore

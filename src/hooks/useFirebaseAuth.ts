@@ -66,8 +66,9 @@ export const useFirebaseAuth = (): UseFirebaseAuth => {
   // Ensure user profile exists via Edge Function
   const ensureProfile = async (user: User): Promise<void> => {
     try {
+      const { getPublicSiteUrl } = await import('@/lib/siteUrl');
       const { data, error } = await supabase.functions.invoke('ensure-profile', {
-        body: { uid: user.uid, email: user.email },
+        body: { uid: user.uid, email: user.email, siteUrl: getPublicSiteUrl() },
       });
       
       if (error) {

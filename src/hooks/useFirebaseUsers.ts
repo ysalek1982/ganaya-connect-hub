@@ -1,3 +1,4 @@
+import { getPublicSiteUrl } from '@/lib/siteUrl';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   collection, 
@@ -149,7 +150,7 @@ export const useCreateAgentUser = () => {
       role?: UserRole;
     }): Promise<CreateAgentResult> => {
       const { data: response, error } = await supabase.functions.invoke('create-agent-user', {
-        body: data,
+        body: { ...data, siteUrl: getPublicSiteUrl() },
       });
 
       if (error) throw new Error(error.message);
@@ -215,7 +216,7 @@ export const useFirebaseUsers = () => {
           'Authorization': `Bearer ${supabaseKey}`,
           'apikey': supabaseKey,
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, siteUrl: getPublicSiteUrl() }),
       });
 
       const responseData = await response.json();
