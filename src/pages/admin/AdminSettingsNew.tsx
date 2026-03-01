@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { auth } from '@/lib/firebase';
-import { Save, TestTube, Eye, EyeOff, Globe, AlertTriangle, Trash2, MessageCircle } from 'lucide-react';
+import { Save, TestTube, Eye, EyeOff, Globe, AlertTriangle, Trash2, MessageCircle, RotateCcw, Loader2 } from 'lucide-react';
 import { WhatsAppTemplates } from '@/components/admin/WhatsAppTemplates';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,190 @@ const invokeBootstrapAdmin = async <T,>(payload: Record<string, unknown>): Promi
   if (error) throw new Error(error.message);
   if ((data as any)?.error) throw new Error((data as any).error);
   return data as T;
+};
+
+// Danger Zone component
+const DangerZone = ({ 
+  getIdToken, 
+  saveAiMutation, 
+  setAiForm 
+}: { 
+  getIdToken: () => Promise<string>;
+  saveAiMutation: { mutate: () => void; isPending: boolean };
+  setAiForm: (v: AISettings) => void;
+}) => {
+  const [resetConfirm, setResetConfirm] = useState('');
+  const [resetOpen, setResetOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<Record<string, number> | null>(null);
+
+  const handleFullReset = async () => {
+    if (resetConfirm !== 'BORRAR') return;
+    
+    setIsResetting(true);
+    setResetResult(null);
+    
+    try {
+      const idToken = await getIdToken();
+      const res = await invokeBootstrapAdmin<{ success: boolean; deleted: Record<string, number> }>({
+        action: 'full_reset',
+        idToken,
+      });
+      
+      setResetResult(res.deleted);
+      toast.success('Reset completo ejecutado');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error en el reset');
+    } finally {
+      setIsResetting(false);
+      setResetConfirm('');
+    }
+  };
+
+  return (
+    <div className="glass-card rounded-xl p-6 border-destructive/50">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
+          <AlertTriangle className="w-5 h-5 text-destructive" />
+        </div>
+        <div>
+          <h2 className="font-semibold text-lg text-destructive">Zona de Peligro</h2>
+          <p className="text-sm text-muted-foreground">Acciones irreversibles</p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {/* Clear API Key */}
+        <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20">
+          <h3 className="font-medium mb-2">Limpiar API Key</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            Elimina la API Key de Gemini guardada. El sistema usará Lovable AI Gateway automáticamente.
+          </p>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Eliminar API Key
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>¿Eliminar API Key?</DialogTitle>
+                <DialogDescription>
+                  El sistema usará Lovable AI Gateway como fallback automático.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Cancelar</Button>
+                </DialogClose>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setAiForm({ gemini_api_key: '' });
+                    saveAiMutation.mutate();
+                  }}
+                >
+                  Eliminar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {/* Full Reset */}
+        <div className="p-4 rounded-lg bg-destructive/10 border-2 border-destructive/40">
+          <h3 className="font-medium mb-2 text-destructive flex items-center gap-2">
+            <RotateCcw className="w-4 h-4" />
+            Reset Total — Empezar de Cero
+          </h3>
+          <p className="text-sm text-muted-foreground mb-2">
+            Esta acción <strong>elimina permanentemente</strong>:
+          </p>
+          <ul className="text-sm text-muted-foreground list-disc list-inside mb-4 space-y-1">
+            <li>Todos los <strong>leads</strong> y postulaciones</li>
+            <li>Todos los <strong>chat logs</strong> de conversaciones IA</li>
+            <li>Todos los <strong>códigos de referido</strong> (refCodes)</li>
+            <li>Todos los <strong>links de campaña</strong> (referralLinks)</li>
+            <li>Todos los <strong>agentes y subagentes</strong> (usuarios no-admin)</li>
+          </ul>
+          <p className="text-sm font-medium text-destructive mb-4">
+            ⚠️ Tu cuenta de administrador se mantiene intacta. Solo se eliminan los datos operativos.
+          </p>
+          
+          <Dialog open={resetOpen} onOpenChange={(open) => { setResetOpen(open); if (!open) { setResetConfirm(''); setResetResult(null); } }}>
+            <DialogTrigger asChild>
+              <Button variant="destructive" size="sm" className="gap-2">
+                <RotateCcw className="w-4 h-4" />
+                Resetear Todo
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="text-destructive">⚠️ Confirmar Reset Total</DialogTitle>
+                <DialogDescription>
+                  Esta acción es <strong>irreversible</strong>. Se eliminarán todos los leads, agentes, chat logs, códigos de referido y links de campaña.
+                </DialogDescription>
+              </DialogHeader>
+
+              {resetResult ? (
+                <div className="py-4 space-y-3">
+                  <p className="font-medium text-primary">✅ Reset completado:</p>
+                  <div className="space-y-1.5">
+                    {Object.entries(resetResult).map(([key, count]) => (
+                      <div key={key} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground capitalize">{key}</span>
+                        <span className="font-mono font-bold">{count} eliminados</span>
+                      </div>
+                    ))}
+                  </div>
+                  <DialogClose asChild>
+                    <Button className="w-full mt-4">Cerrar</Button>
+                  </DialogClose>
+                </div>
+              ) : (
+                <>
+                  <div className="py-4 space-y-3">
+                    <Label>Escribe <code className="text-destructive font-bold">BORRAR</code> para confirmar:</Label>
+                    <Input
+                      value={resetConfirm}
+                      onChange={(e) => setResetConfirm(e.target.value)}
+                      placeholder="Escribe BORRAR"
+                      className={resetConfirm === 'BORRAR' ? 'border-destructive' : ''}
+                      disabled={isResetting}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline" disabled={isResetting}>Cancelar</Button>
+                    </DialogClose>
+                    <Button
+                      variant="destructive"
+                      onClick={handleFullReset}
+                      disabled={resetConfirm !== 'BORRAR' || isResetting}
+                      className="gap-2"
+                    >
+                      {isResetting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Eliminando...
+                        </>
+                      ) : (
+                        <>
+                          <RotateCcw className="w-4 h-4" />
+                          Confirmar Reset Total
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const AdminSettingsNew = () => {
@@ -364,56 +548,11 @@ const AdminSettingsNew = () => {
 
         {/* Danger Zone */}
         <TabsContent value="danger" className="space-y-6">
-          <div className="glass-card rounded-xl p-6 border-destructive/50">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-destructive" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-lg text-destructive">Zona de Peligro</h2>
-                <p className="text-sm text-muted-foreground">Acciones irreversibles</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="p-4 rounded-lg bg-destructive/5 border border-destructive/20">
-                <h3 className="font-medium mb-2">Limpiar API Key</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Elimina la API Key de Gemini guardada. El sistema usará Lovable AI Gateway automáticamente.
-                </p>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive" size="sm">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Eliminar API Key
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>¿Eliminar API Key?</DialogTitle>
-                      <DialogDescription>
-                        El sistema usará Lovable AI Gateway como fallback automático.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <DialogClose asChild>
-                        <Button variant="outline">Cancelar</Button>
-                      </DialogClose>
-                      <Button
-                        variant="destructive"
-                        onClick={() => {
-                          setAiForm({ gemini_api_key: '' });
-                          saveAiMutation.mutate();
-                        }}
-                      >
-                        Eliminar
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </div>
-          </div>
+          <DangerZone 
+            getIdToken={getIdToken}
+            saveAiMutation={saveAiMutation}
+            setAiForm={setAiForm}
+          />
         </TabsContent>
       </Tabs>
     </div>
