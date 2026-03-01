@@ -4,8 +4,7 @@ import {
   query, 
   where, 
   getDocs, 
-  doc, 
-  getDoc,
+  doc,
   addDoc,
   updateDoc,
   Timestamp,
@@ -38,7 +37,7 @@ const parseLeadDoc = (docSnap: { id: string; data: () => Record<string, unknown>
   } as FirebaseLead;
 };
 
-// Fetch leads based on user role - uses upline array for multi-level visibility
+// Fetch leads based on user role - strict isolation per agent
 export const useFirebaseLeads = (options: {
   agentId?: string | null;
   lineLeaderId?: string | null;
@@ -115,6 +114,8 @@ export const useFirebaseLeads = (options: {
       return allLeads;
     },
     enabled: isAdmin || !!agentId,
+    refetchInterval: 30000, // Auto-refresh every 30s
+    staleTime: 15000,
   });
 };
 
@@ -148,38 +149,8 @@ export const useAddFirebaseLead = () => {
     mutationFn: async (lead: Omit<FirebaseLead, 'id' | 'createdAt'>) => {
       const leadsRef = collection(db, 'leads');
       
-      // Build upline array for multi-level visibility (up to 5 levels)
-      const upline: string[] = [];
-      
-      if (lead.assignedAgentId) {
-        upline.push(lead.assignedAgentId);
-        
-        // Traverse up the lineLeaderId chain
-        let currentUid = lead.assignedAgentId;
-        for (let i = 0; i < 4; i++) {
-          try {
-            const userDoc = await getDoc(doc(db, 'users', currentUid));
-            if (userDoc.exists()) {
-              const lineLeaderId = userDoc.data().lineLeaderId;
-              if (lineLeaderId) {
-                upline.push(lineLeaderId);
-                currentUid = lineLeaderId;
-              } else {
-                break;
-              }
-            } else {
-              break;
-            }
-          } catch (e) {
-            console.warn('[useAddFirebaseLead] Error building upline:', e);
-            break;
-          }
-        }
-      }
-      
       const docRef = await addDoc(leadsRef, {
         ...lead,
-        upline,
         createdAt: Timestamp.now(),
       });
       return docRef.id;

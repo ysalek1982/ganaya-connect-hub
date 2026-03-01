@@ -47,16 +47,19 @@ const AdminLayout = () => {
     navigate('/admin');
   };
 
-  const navItems = [
-    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/admin/leads', icon: Users, label: 'Postulaciones' },
-    { path: '/admin/agentes', icon: UserCheck, label: 'Agentes' },
-    { path: '/admin/red', icon: Network, label: 'Red' },
-    { path: '/admin/content', icon: FileText, label: 'Contenido' },
-    { path: '/admin/chat-config', icon: BotMessageSquare, label: 'Chat Config' },
-    { path: '/admin/tutoriales', icon: Video, label: 'Tutoriales' },
-    { path: '/admin/settings', icon: Settings, label: 'Configuración' },
+  const allNavItems = [
+    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', roles: ['ADMIN', 'LINE_LEADER', 'AGENT'] },
+    { path: '/admin/leads', icon: Users, label: 'Postulaciones', roles: ['ADMIN', 'LINE_LEADER', 'AGENT'] },
+    { path: '/admin/agentes', icon: UserCheck, label: 'Agentes', roles: ['ADMIN', 'LINE_LEADER'] },
+    { path: '/admin/red', icon: Network, label: 'Red', roles: ['ADMIN', 'LINE_LEADER'] },
+    { path: '/admin/content', icon: FileText, label: 'Contenido', roles: ['ADMIN'] },
+    { path: '/admin/chat-config', icon: BotMessageSquare, label: 'Chat Config', roles: ['ADMIN'] },
+    { path: '/admin/tutoriales', icon: Video, label: 'Tutoriales', roles: ['ADMIN', 'LINE_LEADER', 'AGENT'] },
+    { path: '/admin/settings', icon: Settings, label: 'Configuración', roles: ['ADMIN'] },
   ];
+
+  const userRole = userData?.role || '';
+  const navItems = allNavItems.filter(item => item.roles.includes(userRole));
 
   if (loading) {
     return (

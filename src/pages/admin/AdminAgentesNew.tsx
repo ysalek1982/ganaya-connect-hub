@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { COUNTRY_NAMES } from '@/lib/countries';
 import { format } from 'date-fns';
 import { Plus, Edit, Trash2, Search, Users, Link, QrCode } from 'lucide-react';
 import { getReferralUrl } from '@/lib/siteUrl';
@@ -230,9 +231,9 @@ const AdminAgentesNew = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos los países</SelectItem>
-            <SelectItem value="Paraguay">Paraguay</SelectItem>
-            <SelectItem value="Argentina">Argentina</SelectItem>
-            <SelectItem value="Colombia">Colombia</SelectItem>
+            {COUNTRY_NAMES.map(c => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={filterEstado} onValueChange={setFilterEstado}>
@@ -413,13 +414,9 @@ const AdminAgentesNew = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Paraguay">Paraguay</SelectItem>
-                    <SelectItem value="Argentina">Argentina</SelectItem>
-                    <SelectItem value="Colombia">Colombia</SelectItem>
-                    <SelectItem value="Ecuador">Ecuador</SelectItem>
-                    <SelectItem value="Chile">Chile</SelectItem>
-                    <SelectItem value="México">México</SelectItem>
-                    <SelectItem value="USA">USA</SelectItem>
+                    {COUNTRY_NAMES.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

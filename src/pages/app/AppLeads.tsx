@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { COUNTRY_NAMES } from '@/lib/countries';
 import { format } from 'date-fns';
 import { Search, Eye, Copy, Plus, Phone, MessageCircle, ChevronDown, Filter, X, StickyNote } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -299,7 +300,7 @@ const AppLeads = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {['Paraguay', 'Argentina', 'Chile', 'Colombia', 'Ecuador', 'México', 'USA'].map(p => (
+                  {COUNTRY_NAMES.map(p => (
                     <SelectItem key={p} value={p}>{p}</SelectItem>
                   ))}
                 </SelectContent>
