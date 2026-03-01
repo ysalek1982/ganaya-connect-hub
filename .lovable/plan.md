@@ -1,75 +1,70 @@
 
 
-# Análisis completo y mejoras propuestas para los paneles
+# Mejoras para Admin y Dashboard de Agentes
 
 ## Problemas detectados
 
-### 1. Inconsistencia en memoria vs código: `upline` eliminado pero sigue construyéndose
-El hook `useAddFirebaseLead` (líneas 151-178) todavía construye y guarda el array `upline` al crear leads manuales, pero la consulta en `useFirebaseLeads` ya no lo usa. Esto es código muerto que hace llamadas innecesarias a Firestore (`getDoc` en bucle hasta 5 niveles).
+### 1. AdminLeads: Line Leaders no ven leads por refCode de sus subagentes
+`AdminLeads.tsx` (línea 69) solo consulta `assignedLineLeaderId == agentId` con `onSnapshot`. Si un subagente genera leads vía su refCode y `assignedLineLeaderId` no fue seteado (depende del flujo de `save-chat-lead`), esos leads son invisibles para el Line Leader en el panel admin.
 
-### 2. Firestore rules permiten lectura por `upline` pero ya no se usa
-La regla en `firestore.rules` línea 75-77 permite lectura si `request.auth.uid in resource.data.upline`, pero el frontend ya no consulta por `upline`. Esto contradice el requisito de aislamiento total.
+### 2. AdminLeads usa `onSnapshot` pero AppLeads usa `useQuery` — inconsistencia
+AdminLeads (línea 78) suscribe en tiempo real con `onSnapshot`, mientras AppLeads usa `useFirebaseLeads` con `useQuery` + `refetchInterval`. Esto causa comportamiento dispar y duplicación de lógica de fetching.
 
-### 3. AdminLeads no filtra por `refCode` del agente para Line Leaders
-En `AdminLeads.tsx` línea 67-68, los Line Leaders solo ven leads con `assignedLineLeaderId == agentId`, pero si un sub-agente genera leads via refCode, el `assignedLineLeaderId` podría no estar seteado (depende del flujo de `save-chat-lead`).
+### 3. AdminDashboard descarga TODOS los leads sin límite real
+Línea 50: `getDocs(leadsRef)` sin `limit()`. Si hay 2000+ leads, consume lecturas innecesarias. El `limit(500)` solo se aplica en `useFirebaseLeads`, no aquí.
 
-### 4. Dashboard admin hace dos queries pesadas sin caché
-`AdminDashboard.tsx` descarga TODOS los leads y TODOS los usuarios en cada render sin paginación ni `staleTime`, causando lecturas excesivas a Firestore.
+### 4. AdminDashboard no tiene refetchInterval
+Tiene `staleTime: 60000` pero sin `refetchInterval`, así que los datos no se actualizan automáticamente sin navegación.
 
-### 5. Lista de países inconsistente entre componentes
-`AdminAgentesNew` solo tiene Paraguay/Argentina/Colombia. `AppLeads` tiene 7 países. `AdminLeads` tiene 9 países. `AdminSettingsNew` tiene 9. Debería usarse una lista centralizada.
+### 5. AppDashboard no muestra gráfico semanal
+El admin tiene un gráfico de barras con tendencia de 7 días, pero el portal del agente solo muestra números. Los agentes se beneficiarían de ver su tendencia visual.
 
-### 6. Sidebar admin accesible a roles no-admin
-`AdminLayout.tsx` línea 36 permite acceso a AGENT y LINE_LEADER al panel admin completo, incluyendo Settings, Chat Config y Content. Estos deberían estar restringidos por rol.
+### 6. STATUS_COLORS duplicado en 3 archivos
+`AdminDashboard.tsx`, `AppDashboard.tsx` y `AppLeads.tsx` cada uno define su propio mapa de colores por estado.
 
-### 7. Sin auto-refresh en el dashboard del agente
-`useFirebaseLeads` usa `useQuery` sin `refetchInterval`, así que los leads nuevos no aparecen hasta que el agente refresca manualmente.
+### 7. AdminLeads: Line Leader no puede ver leads de refCode de subagentes
+Regla de Firestore línea 82 (`assignedLineLeaderId == request.auth.uid`) es correcta, pero el frontend no consulta leads de los refCodes de los subagentes del Line Leader.
 
-### 8. SubagentCreatedModal no incluye link de login
-Similar al bug corregido en `AgentCreatedModal`, el modal de subagentes creados podría no incluir el link de login en el mensaje de WhatsApp.
-
----
-
-## Plan de mejoras
-
-### Paso 1: Limpiar código muerto de `upline`
-- Eliminar la construcción del array `upline` en `useAddFirebaseLead` (ahorra hasta 5 `getDoc` por lead manual)
-- Eliminar la regla de Firestore que permite lectura por `upline` (refuerza aislamiento)
-- Mantener las reglas de `assignedAgentId`, `assignedLineLeaderId` y `refCode`
-
-### Paso 2: Centralizar lista de países
-- Crear constante `COUNTRIES` en `src/lib/countries.ts` (ya existe el archivo)
-- Importar desde todos los componentes que usan listas de países
-
-### Paso 3: Restringir sidebar admin por rol
-- Filtrar `navItems` en `AdminLayout` según el rol del usuario
-- Agentes y Line Leaders solo ven Dashboard, Leads y Agentes
-- Solo ADMIN ve Settings, Chat Config, Content, Diagnósticos
-
-### Paso 4: Agregar auto-refresh al dashboard del agente
-- Añadir `refetchInterval: 30000` (30s) en `useFirebaseLeads` para el portal de agentes
-- Añadir `staleTime: 60000` en `AdminDashboard` para evitar queries duplicadas
-
-### Paso 5: Verificar SubagentCreatedModal incluya link de login
-- Revisar y agregar el link de login al mensaje de WhatsApp del modal de subagentes
-
-### Paso 6: Corregir flujo de Line Leader en AdminLeads
-- Agregar query adicional por `refCode` de subagentes del Line Leader para capturar leads que llegaron via referral pero sin `assignedLineLeaderId`
+### 8. No hay indicador de "última actualización" en dashboards
+Los agentes no saben cuándo se actualizaron los datos por última vez.
 
 ---
 
-## Detalle técnico
+## Plan de implementación
+
+### Paso 1: Extraer constantes compartidas a un archivo común
+- Crear `src/lib/lead-constants.ts` con `STATUS_COLORS`, `STATUS_OPTIONS`, `timeAgo()`
+- Importar en `AdminDashboard`, `AppDashboard`, `AppLeads`
+
+### Paso 2: Agregar gráfico semanal al AppDashboard del agente
+- Añadir mini bar chart de Recharts con tendencia de 7 días (mismo estilo que admin)
+- Reutilizar lógica de `eachDayOfInterval` + `startOfDay`
+
+### Paso 3: Optimizar AdminDashboard con limit y refetchInterval
+- Agregar `limit(2000)` al query de leads en AdminDashboard para evitar lecturas ilimitadas
+- Agregar `refetchInterval: 60000` para auto-refresh cada 60s
+- Agregar badge "última actualización" con timestamp
+
+### Paso 4: Unificar AdminLeads para que Line Leaders vean leads de subagentes
+- En `AdminLeads.tsx`, para Line Leaders, agregar una segunda suscripción `onSnapshot` que consulte leads cuyos `assignedAgentId` sea uno de sus subagentes directos
+- Combinar ambos snapshots con deduplicación por `id`
+
+### Paso 5: Agregar indicador "última actualización" en ambos dashboards
+- Mostrar "Actualizado hace Xm" debajo del título
+- Basado en `dataUpdatedAt` de React Query
+
+### Paso 6: Agregar refetchInterval a AdminDashboard
+- `refetchInterval: 60000` (cada 60s)
+
+---
+
+## Archivos a modificar
 
 ```text
-Archivos a modificar:
-├── src/hooks/useFirebaseLeads.ts      → eliminar upline build, añadir refetchInterval
-├── src/lib/countries.ts               → centralizar lista de países
-├── src/pages/admin/AdminLayout.tsx     → filtrar nav por rol
-├── src/pages/admin/AdminDashboard.tsx  → añadir staleTime
-├── src/pages/admin/AdminAgentesNew.tsx → usar countries centralizados
-├── src/pages/app/AppLeads.tsx          → usar countries centralizados
-├── src/pages/app/AppSubagents.tsx      → usar countries centralizados
-├── src/components/app/SubagentCreatedModal.tsx → verificar link login
-├── firestore.rules                     → eliminar regla upline
+├── src/lib/lead-constants.ts          → NUEVO: constantes compartidas
+├── src/pages/admin/AdminDashboard.tsx  → limit, refetchInterval, indicador de actualización
+├── src/pages/app/AppDashboard.tsx      → gráfico semanal, indicador de actualización
+├── src/pages/admin/AdminLeads.tsx      → Line Leader: query expandido para subagentes
+├── src/pages/app/AppLeads.tsx          → importar constantes compartidas
 ```
 
