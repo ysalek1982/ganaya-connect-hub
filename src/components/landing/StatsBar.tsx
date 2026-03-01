@@ -27,7 +27,7 @@ const AnimatedNumber = ({ value, suffix, prefix, inView }: { value: number; suff
 
   return (
     <span className="tabular-nums font-black">
-      {prefix}{count}{suffix}
+      {prefix}{count.toLocaleString()}{suffix}
     </span>
   );
 };
@@ -37,7 +37,7 @@ export const StatsBar = () => {
   const inView = useInView(ref, { once: true, margin: '-50px' });
 
   return (
-    <section ref={ref} className="py-6 relative overflow-hidden">
+    <section ref={ref} className="py-4 sm:py-6 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-gold/5 to-primary/5" />
       <motion.div
         className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-gold/10"
@@ -46,22 +46,22 @@ export const StatsBar = () => {
       />
       
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-0 md:divide-x md:divide-border/20">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 md:gap-0 md:divide-x md:divide-border/20">
           {stats.map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 20 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: i * 0.15, type: 'spring' }}
-              className="flex flex-col items-center justify-center py-3 group"
+              className="flex flex-col items-center justify-center py-2 sm:py-3 group"
             >
-              <div className="flex items-center gap-2 mb-1">
-                <stat.icon className="w-4 h-4 text-primary opacity-60 group-hover:opacity-100 transition-opacity" />
-                <span className="text-2xl md:text-3xl font-display text-primary">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                <stat.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary opacity-60 group-hover:opacity-100 transition-opacity" />
+                <span className="text-xl sm:text-2xl md:text-3xl font-display text-primary">
                   <AnimatedNumber value={stat.value} suffix={stat.suffix} prefix={stat.prefix} inView={inView} />
                 </span>
               </div>
-              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{stat.label}</span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider">{stat.label}</span>
             </motion.div>
           ))}
         </div>

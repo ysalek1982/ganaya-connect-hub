@@ -80,55 +80,55 @@ const TiltCard = ({ t, index }: { t: typeof testimonials[0]; index: number }) =>
       onMouseMove={handleMouse}
       onMouseLeave={handleLeave}
       style={{ rotateX, rotateY, transformStyle: 'preserve-3d', perspective: 800 }}
-      className="flex-[0_0_85%] sm:flex-[0_0_45%] lg:flex-[0_0_33%] min-w-0 px-2.5"
+      className="flex-[0_0_80%] sm:flex-[0_0_45%] lg:flex-[0_0_33%] min-w-0 px-1.5 sm:px-2.5"
     >
-      <div className="relative bg-card/60 backdrop-blur-sm rounded-2xl p-7 border border-border/50 hover:border-gold/30 transition-colors duration-500 h-full">
+      <div className="relative bg-card/60 backdrop-blur-sm rounded-xl sm:rounded-2xl p-5 sm:p-7 border border-border/50 hover:border-gold/30 transition-colors duration-500 h-full">
         {/* Glare overlay */}
         <motion.div
-          className="absolute inset-0 rounded-2xl pointer-events-none"
+          className="absolute inset-0 rounded-xl sm:rounded-2xl pointer-events-none"
           style={{
             opacity: glareOpacity,
             background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 60%)',
           }}
         />
         {/* Top accent */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-0.5 rounded-b-full bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 sm:w-16 h-0.5 rounded-b-full bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
 
-        <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center mb-5">
-          <Quote className="w-5 h-5 text-gold" />
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gold/10 flex items-center justify-center mb-3 sm:mb-5">
+          <Quote className="w-4 h-4 sm:w-5 sm:h-5 text-gold" />
         </div>
 
-        <div className="flex gap-0.5 mb-4">
+        <div className="flex gap-0.5 mb-3 sm:mb-4">
           {[...Array(5)].map((_, i) => (
-            <Star key={i} className="w-4 h-4 fill-gold text-gold" />
+            <Star key={i} className="w-3 h-3 sm:w-4 sm:h-4 fill-gold text-gold" />
           ))}
         </div>
 
-        <p className="text-sm text-foreground/90 leading-relaxed mb-5 italic">
+        <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed mb-4 sm:mb-5 italic">
           "{t.quote}"
         </p>
 
-        <div className="flex items-center gap-2 mb-5">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-4 sm:mb-5">
+          <span className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-primary/10 border border-primary/20 text-[10px] sm:text-xs font-semibold text-primary">
             ✨ {t.highlight}
           </span>
-          <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-gold/15 border border-gold/25 text-xs font-black text-gold">
-            <DollarSign className="w-3 h-3" />
+          <span className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full bg-gold/15 border border-gold/25 text-[10px] sm:text-xs font-black text-gold">
+            <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             {t.earnings}
           </span>
         </div>
 
-        <div className="flex items-center gap-3 pt-4 border-t border-border/50">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-lg">
+        <div className="flex items-center gap-2.5 sm:gap-3 pt-3 sm:pt-4 border-t border-border/50">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center text-base sm:text-lg">
             {t.flag}
           </div>
           <div>
-            <p className="text-sm font-semibold flex items-center gap-1">
+            <p className="text-xs sm:text-sm font-semibold flex items-center gap-1">
               {t.name}
-              <BadgeCheck className="w-3.5 h-3.5 text-primary" />
+              <BadgeCheck className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
             </p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
+            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+              <MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
               {t.country} · {t.role}
             </p>
           </div>
@@ -169,25 +169,25 @@ export const TestimonialsSection = () => {
   }, [emblaApi]);
 
   return (
-    <section className="py-28 relative overflow-hidden">
+    <section className="py-16 sm:py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-gold/[0.03] to-background" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gold/[0.04] rounded-full blur-[150px]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[700px] h-[300px] sm:h-[400px] bg-gold/[0.04] rounded-full blur-[150px]" />
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-sm font-semibold mb-6 uppercase tracking-wide">
+          <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs sm:text-sm font-semibold mb-4 sm:mb-6 uppercase tracking-wide">
             <Star className="w-4 h-4" />
             Historias reales
           </span>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-5">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-5">
             Lo que dicen nuestros <span className="text-gradient-primary">agentes</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-xl mx-auto leading-relaxed">
             Resultados reales de personas que ya operan con Ganaya.bet
           </p>
         </motion.div>
@@ -202,7 +202,7 @@ export const TestimonialsSection = () => {
         </div>
 
         {/* Dots */}
-        <div className="flex items-center justify-center gap-2 mt-8">
+        <div className="flex items-center justify-center gap-2 mt-6 sm:mt-8">
           {testimonials.map((_, i) => (
             <button
               key={i}
@@ -218,7 +218,7 @@ export const TestimonialsSection = () => {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center mt-8 text-xs text-muted-foreground/60"
+          className="text-center mt-6 sm:mt-8 text-[10px] sm:text-xs text-muted-foreground/60"
         >
           * Testimonios representativos. Resultados individuales pueden variar según dedicación y gestión.
         </motion.p>

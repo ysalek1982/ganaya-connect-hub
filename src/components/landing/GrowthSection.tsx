@@ -21,44 +21,44 @@ export const GrowthSection = () => {
   if (content?.sectionsEnabled?.growth === false) return null;
 
   return (
-    <section id="crecimiento" ref={sectionRef} className="py-28 relative overflow-hidden">
+    <section id="crecimiento" ref={sectionRef} className="py-16 sm:py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-gold/[0.04] to-background" />
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-gold/[0.04] rounded-full blur-[120px]" />
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[400px] sm:w-[700px] h-[200px] sm:h-[300px] bg-gold/[0.04] rounded-full blur-[120px]" />
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-sm font-semibold mb-6 uppercase tracking-wide">
+          <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs sm:text-sm font-semibold mb-4 sm:mb-6 uppercase tracking-wide">
             <TrendingUp className="w-4 h-4" />
             Tu progreso
           </span>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-5">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-5">
             Cronograma <span className="text-gradient-gold">realista</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-xl mx-auto leading-relaxed">
             Proyección de crecimiento basada en actividad constante
           </p>
         </motion.div>
 
         {/* Horizontal progress bar */}
-        <div className="max-w-5xl mx-auto mb-10">
-          <div className="relative h-2 rounded-full bg-border/30 overflow-hidden">
+        <div className="max-w-5xl mx-auto mb-8 sm:mb-10">
+          <div className="relative h-1.5 sm:h-2 rounded-full bg-border/30 overflow-hidden">
             <motion.div
               className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-gold via-gold to-primary"
               style={{ scaleX: scrollYProgress, transformOrigin: 'left' }}
             />
           </div>
-          <div className="flex justify-between mt-2">
+          <div className="flex justify-between mt-1.5 sm:mt-2">
             {timeline.map((phase, i) => {
               const pos = (i + 0.5) / timeline.length;
               return (
                 <motion.span
                   key={phase.period}
-                  className="text-[10px] text-muted-foreground/60 font-medium"
+                  className="text-[9px] sm:text-[10px] text-muted-foreground/60 font-medium"
                   style={{
                     opacity: useTransform(scrollYProgress, [pos - 0.1, pos], [0.4, 1]),
                   }}
@@ -70,7 +70,7 @@ export const GrowthSection = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 max-w-5xl mx-auto">
           {timeline.map((phase, index) => {
             const stepThreshold = (index + 0.3) / timeline.length;
 
@@ -81,11 +81,11 @@ export const GrowthSection = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.12, type: 'spring', stiffness: 100 }}
-                className="relative bg-card/60 backdrop-blur-sm rounded-2xl p-7 border border-border/50 hover:border-gold/30 transition-all duration-500 group hover:-translate-y-1"
+                className="relative bg-card/60 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-7 border border-border/50 hover:border-gold/30 transition-all duration-500 group hover:-translate-y-1"
               >
                 {/* Step badge */}
                 <motion.div
-                  className="absolute -top-3 -right-3 w-9 h-9 rounded-xl border flex items-center justify-center font-display font-black text-sm shadow-lg"
+                  className="absolute -top-2 sm:-top-3 -right-2 sm:-right-3 w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl border flex items-center justify-center font-display font-black text-xs sm:text-sm shadow-lg"
                   style={{
                     backgroundColor: useTransform(scrollYProgress, (v: number) =>
                       v > stepThreshold ? 'hsl(38, 92%, 55%, 0.3)' : 'hsl(38, 92%, 55%, 0.1)'
@@ -99,25 +99,25 @@ export const GrowthSection = () => {
                   {index + 1}
                 </motion.div>
 
-                <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
+                <div className="absolute top-0 left-4 sm:left-6 right-4 sm:right-6 h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
 
                 <motion.div
-                  className="w-14 h-14 mb-6 rounded-2xl bg-gold/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
+                  className="w-10 h-10 sm:w-14 sm:h-14 mb-3 sm:mb-6 rounded-xl sm:rounded-2xl bg-gold/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
                   style={{
                     boxShadow: useTransform(scrollYProgress, (v: number) =>
                       v > stepThreshold ? '0 0 20px hsl(38, 92%, 55%, 0.3)' : 'none'
                     ),
                   }}
                 >
-                  <phase.icon className="w-7 h-7 text-gold" />
+                  <phase.icon className="w-5 h-5 sm:w-7 sm:h-7 text-gold" />
                 </motion.div>
 
-                <h3 className="font-display text-xl font-black text-gold mb-4">{phase.period}</h3>
+                <h3 className="font-display text-base sm:text-xl font-black text-gold mb-2 sm:mb-4">{phase.period}</h3>
 
-                <div className="space-y-2.5 text-sm">
+                <div className="space-y-1 sm:space-y-2.5 text-xs sm:text-sm">
                   <p className="text-foreground/90 font-medium">{phase.clients}</p>
-                  <p className="font-bold text-primary text-lg">{phase.income}</p>
-                  <p className="text-muted-foreground">{phase.activity}</p>
+                  <p className="font-bold text-primary text-sm sm:text-lg">{phase.income}</p>
+                  <p className="text-muted-foreground text-[11px] sm:text-sm">{phase.activity}</p>
                 </div>
 
                 {index < timeline.length - 1 && (
@@ -134,7 +134,7 @@ export const GrowthSection = () => {
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
-          className="text-center mt-10 text-sm text-muted-foreground/60"
+          className="text-center mt-6 sm:mt-10 text-xs sm:text-sm text-muted-foreground/60"
         >
           * Ingresos referenciales. Dependen de tu actividad y tamaño de red.
         </motion.p>
