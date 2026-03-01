@@ -1,5 +1,5 @@
-import { motion, useMotionValue, useTransform } from 'framer-motion';
-import { Star, Quote, MapPin } from 'lucide-react';
+import { motion, useMotionValue } from 'framer-motion';
+import { Star, Quote, MapPin, DollarSign, BadgeCheck } from 'lucide-react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { useCallback, useEffect, useState, useRef } from 'react';
 
@@ -11,6 +11,7 @@ const testimonials = [
     role: 'Agente desde 2024',
     quote: 'En 3 meses armé mi cartera de jugadores y hoy genero ingresos constantes desde mi celular. El soporte del equipo fue clave.',
     highlight: 'Ingresos constantes en 3 meses',
+    earnings: '$280/mes',
   },
   {
     name: 'Valentina R.',
@@ -19,6 +20,7 @@ const testimonials = [
     role: 'Line Leader',
     quote: 'Empecé como agente y hoy lidero un equipo de 8 sub-agentes. Los bonos en cascada hacen una diferencia enorme.',
     highlight: '8 sub-agentes en su red',
+    earnings: '$520/mes',
   },
   {
     name: 'Diego L.',
@@ -27,6 +29,7 @@ const testimonials = [
     role: 'Agente desde 2024',
     quote: 'Lo mejor es la flexibilidad. Manejo todo desde WhatsApp, sin horarios fijos. El panel de gestión es muy intuitivo.',
     highlight: '100% desde WhatsApp',
+    earnings: '$190/mes',
   },
   {
     name: 'Ana P.',
@@ -35,6 +38,7 @@ const testimonials = [
     role: 'Agente desde 2024',
     quote: 'Nunca pensé que podía generar ingresos así desde mi casa. El equipo me capacitó y hoy mi red sigue creciendo.',
     highlight: 'Crecimiento desde casa',
+    earnings: '$340/mes',
   },
   {
     name: 'Marco T.',
@@ -43,6 +47,7 @@ const testimonials = [
     role: 'Agente desde 2025',
     quote: 'Las herramientas que te dan hacen todo más fácil. El dashboard es claro y siempre sé cuánto llevo ganado.',
     highlight: 'Herramientas intuitivas',
+    earnings: '$150/mes',
   },
 ];
 
@@ -103,8 +108,14 @@ const TiltCard = ({ t, index }: { t: typeof testimonials[0]; index: number }) =>
           "{t.quote}"
         </p>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary mb-5">
-          ✨ {t.highlight}
+        <div className="flex items-center gap-2 mb-5">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary">
+            ✨ {t.highlight}
+          </span>
+          <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-gold/15 border border-gold/25 text-xs font-black text-gold">
+            <DollarSign className="w-3 h-3" />
+            {t.earnings}
+          </span>
         </div>
 
         <div className="flex items-center gap-3 pt-4 border-t border-border/50">
@@ -112,7 +123,10 @@ const TiltCard = ({ t, index }: { t: typeof testimonials[0]; index: number }) =>
             {t.flag}
           </div>
           <div>
-            <p className="text-sm font-semibold">{t.name}</p>
+            <p className="text-sm font-semibold flex items-center gap-1">
+              {t.name}
+              <BadgeCheck className="w-3.5 h-3.5 text-primary" />
+            </p>
             <p className="text-xs text-muted-foreground flex items-center gap-1">
               <MapPin className="w-3 h-3" />
               {t.country} · {t.role}

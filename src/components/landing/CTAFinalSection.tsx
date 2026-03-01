@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { ArrowRight, MessageCircle, Shield, AlertTriangle, Sparkles, Clock, Users } from 'lucide-react';
+import { ArrowRight, MessageCircle, Shield, AlertTriangle, Sparkles, Clock, Users, Flame, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLandingContent } from '@/hooks/useLandingContent';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -92,11 +92,13 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
             Último paso
           </motion.div>
 
-          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-black mb-7 leading-[1.1]">
-            <span className="text-gradient-primary">¿Listo para empezar?</span>
+          <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-black mb-4 leading-[1.1]">
+            <span className="text-gradient-primary">¿Listo para empezar</span>
+            <br />
+            <span className="text-foreground">a generar ingresos?</span>
           </h2>
 
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-xl mx-auto leading-relaxed">
             Completá tu postulación en 2 minutos. Te contactamos por WhatsApp para coordinar los siguientes pasos.
           </p>
 
@@ -105,16 +107,23 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="inline-flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-10 px-5 py-3 rounded-xl bg-gold/10 border border-gold/20"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-8"
           >
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="w-4 h-4 text-gold" />
-              <span className="text-foreground font-medium">Cupos limitados por zona</span>
-            </div>
-            <div className="hidden sm:block w-px h-5 bg-gold/30" />
-            <div className="flex items-center gap-2 text-sm">
+            <motion.div
+              animate={{ scale: [1, 1.03, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive/10 border border-destructive/25 text-sm"
+            >
+              <Flame className="w-4 h-4 text-destructive" />
+              <span className="text-destructive font-bold">Solo 12 cupos en tu zona</span>
+            </motion.div>
+            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gold/10 border border-gold/20 text-sm">
               <Users className="w-4 h-4 text-gold" />
               <span className="text-foreground font-medium">+150 agentes ya activos</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/20 text-sm">
+              <Zap className="w-4 h-4 text-primary" />
+              <span className="text-foreground font-medium">Respuesta en &lt;1h</span>
             </div>
           </motion.div>
 
