@@ -1,11 +1,13 @@
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { MessageCircle, ArrowRight, Users, Zap, Shield, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FloatingParticles } from '@/components/home/FloatingParticles';
 import { HeroBackground } from '@/components/landing/HeroBackground';
 import { TrustBadges } from '@/components/landing/TrustBadges';
+import { EarningsTicker } from '@/components/landing/EarningsTicker';
+import { CountdownTimer } from '@/components/landing/CountdownTimer';
 import { useLandingContent } from '@/hooks/useLandingContent';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface HeroAgentsProps {
   onOpenChat: () => void;
@@ -44,6 +46,24 @@ const useTypewriter = (text: string, speed = 40) => {
 export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
   const { data: content } = useLandingContent();
   const [phraseIndex, setPhraseIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Mouse parallax
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const springX = useSpring(mouseX, { stiffness: 50, damping: 20 });
+  const springY = useSpring(mouseY, { stiffness: 50, damping: 20 });
+  const parallaxX = useTransform(springX, [-0.5, 0.5], [-15, 15]);
+  const parallaxY = useTransform(springY, [-0.5, 0.5], [-10, 10]);
+  const parallaxXSlow = useTransform(springX, [-0.5, 0.5], [-8, 8]);
+  const parallaxYSlow = useTransform(springY, [-0.5, 0.5], [-5, 5]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    mouseX.set((e.clientX - rect.left) / rect.width - 0.5);
+    mouseY.set((e.clientY - rect.top) / rect.height - 0.5);
+  }, [mouseX, mouseY]);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -93,12 +113,17 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
   };
 
   return (
-    <section id="inicio" className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-20 pb-24 md:pb-16">
+    <section
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      id="inicio"
+      className="relative min-h-[100svh] flex items-center justify-center overflow-hidden pt-20 pb-24 md:pb-16"
+    >
       <HeroBackground />
       <FloatingParticles count={10} />
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
+        <motion.div className="max-w-4xl mx-auto text-center" style={{ x: parallaxXSlow, y: parallaxYSlow }}>
           {/* Eyebrow badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -217,6 +242,26 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
             </Button>
           </motion.div>
 
+          {/* Earnings ticker */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-6"
+          >
+            <EarningsTicker />
+          </motion.div>
+
+          {/* Countdown timer */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55 }}
+            className="mt-6"
+          >
+            <CountdownTimer />
+          </motion.div>
+
           <TrustBadges />
 
           <motion.p
@@ -227,7 +272,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
           >
             {disclaimerText}
           </motion.p>
-        </div>
+        </motion.div>
       </div>
 
       {/* Scroll indicator */}
