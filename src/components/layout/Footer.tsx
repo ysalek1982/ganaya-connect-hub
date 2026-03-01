@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MessageCircle, Shield, FileText, AlertTriangle, Clock, ArrowUpRight, Zap, Trophy } from 'lucide-react';
+import { Shield, FileText, AlertTriangle, Clock, ArrowUpRight, Zap, Trophy, Globe, Users } from 'lucide-react';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 
@@ -18,6 +18,13 @@ const RevealItem = ({ children, delay = 0 }: { children: React.ReactNode; delay?
     </motion.div>
   );
 };
+
+const footerStats = [
+  { icon: Users, value: '1,500+', label: 'Agentes' },
+  { icon: Globe, value: '5', label: 'Países' },
+  { icon: Trophy, value: '40%', label: 'Comisión máx' },
+  { icon: Zap, value: '<1h', label: 'Respuesta' },
+];
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -56,11 +63,32 @@ export const Footer = () => {
         </div>
       </div>
 
+      {/* Stats strip */}
+      <div className="border-b border-border/20">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-border/20">
+            {footerStats.map((stat, i) => (
+              <motion.div
+                key={stat.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={inView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: i * 0.1 }}
+                className="flex items-center justify-center gap-2.5 py-5 group"
+              >
+                <stat.icon className="w-4 h-4 text-primary/60 group-hover:text-primary transition-colors" />
+                <span className="font-display font-black text-lg text-foreground">{stat.value}</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       <div className="container mx-auto px-4 py-14 md:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8">
           {/* Brand */}
           <RevealItem delay={0}>
-            <div className="md:col-span-2">
+            <div>
               <Link to="/" className="flex items-center gap-2.5 mb-6 group">
                 <motion.div 
                   className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-[hsl(140,75%,40%)] flex items-center justify-center shadow-lg shadow-primary/20"
@@ -82,28 +110,14 @@ export const Footer = () => {
                 Programa de agentes con comisiones hasta 40%. 
                 Opera desde tu móvil con soporte y capacitación continua.
               </p>
-              {/* Quick stats */}
-              <div className="flex items-center gap-4">
-                <motion.a
-                  href="https://wa.me/59176356972?text=Hola%2C%20quiero%20ser%20agente%20Ganaya.bet"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#25D366]/15 border border-[#25D366]/20 text-[#25D366] hover:bg-[#25D366]/25 transition-all text-sm font-semibold"
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  Contactar por WhatsApp
-                </motion.a>
-              </div>
-              <div className="flex items-center gap-3 mt-4">
+              <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
                   <Zap className="w-3 h-3" />
                   Registro en 2 min
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold/10 border border-gold/20 text-xs text-gold font-medium">
                   <Trophy className="w-3 h-3" />
-                  Hasta 40% comisión
+                  100% móvil
                 </div>
               </div>
             </div>
@@ -113,13 +127,14 @@ export const Footer = () => {
           <RevealItem delay={0.15}>
             <div>
               <h4 className="font-display font-semibold text-foreground mb-5 text-sm uppercase tracking-wide">
-                Enlaces
+                Navegación
               </h4>
               <ul className="space-y-3">
                 {[
                   { href: '#como-funciona', label: 'Cómo funciona' },
                   { href: '#beneficios', label: 'Beneficios' },
                   { href: '#comisiones', label: 'Comisiones' },
+                  { href: '#ventajas', label: 'Ventajas competitivas' },
                   { href: '#faq', label: 'Preguntas frecuentes' },
                 ].map((link, i) => (
                   <motion.li 
@@ -175,7 +190,7 @@ export const Footer = () => {
                   >
                     <Clock className="w-4 h-4 text-primary" />
                   </motion.div>
-                  Soporte disponible
+                  Soporte disponible 24/7
                 </div>
               </div>
             </div>
@@ -193,16 +208,23 @@ export const Footer = () => {
             © {currentYear} Ganaya.bet · Todos los derechos reservados
           </p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
-            {['Paraguay', 'Argentina', 'Colombia', 'Ecuador'].map((country, i) => (
+            {[
+              { flag: '🇵🇾', name: 'Paraguay' },
+              { flag: '🇦🇷', name: 'Argentina' },
+              { flag: '🇨🇴', name: 'Colombia' },
+              { flag: '🇪🇨', name: 'Ecuador' },
+              { flag: '🇺🇸', name: 'EE.UU.' },
+            ].map((country, i) => (
               <motion.span 
-                key={country} 
-                className="flex items-center gap-2"
+                key={country.name} 
+                className="flex items-center gap-1.5"
                 whileHover={{ scale: 1.05 }}
               >
-                <span className="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-default">
-                  {country}
+                <span className="px-2.5 py-1 rounded-md bg-white/5 hover:bg-white/10 transition-colors cursor-default flex items-center gap-1.5">
+                  <span>{country.flag}</span>
+                  <span className="hidden sm:inline">{country.name}</span>
                 </span>
-                {i < 3 && <span className="text-white/10">·</span>}
+                {i < 4 && <span className="text-white/10">·</span>}
               </motion.span>
             ))}
           </div>

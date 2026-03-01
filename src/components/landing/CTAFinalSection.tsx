@@ -61,7 +61,7 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
   }, []);
 
   return (
-    <section id="postular" className="py-32 relative overflow-hidden">
+    <section id="postular" className="py-32 relative overflow-hidden aurora-bg">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.06] to-background" />
 
       {/* Animated glow orb */}
@@ -94,7 +94,7 @@ export const CTAFinalSection = ({ onOpenChat }: CTAFinalSectionProps) => {
           </motion.div>
 
           <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-black mb-4 leading-[1.1]">
-            <span className="text-gradient-primary">¿Listo para empezar</span>
+            <span className="text-shimmer">¿Listo para empezar</span>
             <br />
             <span className="text-foreground">a generar ingresos?</span>
           </h2>

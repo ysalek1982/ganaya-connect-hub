@@ -105,9 +105,9 @@ export const ProblemSection = () => {
     : defaultProblems;
 
   return (
-    <section id="problema" className="py-28 relative overflow-hidden">
+    <section id="problema" className="py-28 relative overflow-hidden aurora-bg">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-destructive/[0.04] to-background" />
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-destructive/[0.06] rounded-full blur-[120px]" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-destructive/[0.06] rounded-full blur-[120px] morph-blob" />
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div

@@ -20,6 +20,7 @@ import { IncomeComparison } from '@/components/landing/IncomeComparison';
 import { AcquisitionSection } from '@/components/landing/AcquisitionSection';
 import { NextStepsSection } from '@/components/landing/NextStepsSection';
 import { FAQSection } from '@/components/landing/FAQSection';
+import { GuaranteesSection } from '@/components/landing/GuaranteesSection';
 import { CTAFinalSection } from '@/components/landing/CTAFinalSection';
 import { MobileStickyNavAgents } from '@/components/landing/MobileStickyNavAgents';
 import { SectionDivider } from '@/components/landing/SectionDivider';
@@ -97,6 +98,7 @@ const Index = () => {
         <NextStepsSection onOpenChat={handleOpenChat} />
         <SectionDivider variant="subtle" />
         <FAQSection />
+        <GuaranteesSection />
         <CTAFinalSection onOpenChat={handleOpenChat} />
       </main>
       

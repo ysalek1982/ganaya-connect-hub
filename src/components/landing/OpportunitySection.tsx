@@ -182,9 +182,9 @@ export const OpportunitySection = () => {
     : defaultStats.map(s => ({ value: s.value, label: s.label, sublabel: s.sublabel, detail: s.detail }));
 
   return (
-    <section id="oportunidad" className="py-28 relative overflow-hidden" ref={ref}>
+    <section id="oportunidad" className="py-28 relative overflow-hidden aurora-bg" ref={ref}>
       <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.04] to-background" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary/[0.05] rounded-full blur-[150px]" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary/[0.05] rounded-full blur-[150px] morph-blob" />
 
       <MapDots />
 
