@@ -1,71 +1,31 @@
 
 
-## Plan: Llevar la Landing Page al siguiente nivel de interactividad
+## Plan: Links de referido dinámicos según el dominio actual
 
-Tras analizar todas las secciones actuales, la landing tiene buen contenido pero las interacciones son repetitivas (fade-in + hover lift en todas las cards). Falta diferenciación visual entre secciones y elementos que enganchen al usuario activamente.
+### Problema
+El sistema tiene `https://ganaya.bet` hardcodeado como fallback en múltiples archivos. Además, el dominio publicado `ganaya-connect-hub.lovable.app` está en la lista de exclusión, por lo que nunca se usa como base para links.
 
-### Mejoras planificadas
+### Cambios
 
-**1. Hero: Typing effect + contador de agentes en vivo**
-- Agregar efecto de escritura animada en el título principal (typewriter con cursor parpadeante)
-- Reemplazar el subtítulo estático con una rotación de frases clave usando `AnimatePresence`
-- Agregar un mini-contador "live" de agentes conectados con pulso verde
+**1. `src/lib/siteUrl.ts` — Corregir lógica de detección**
+- Quitar `.lovable.app` de la lista de exclusión (es el dominio publicado válido)
+- Solo excluir `.lovableproject.com` (preview) y `localhost`
+- Eliminar el fallback hardcodeado a `ganaya.bet`; si estamos en producción, usar `window.location.origin` siempre
 
-**2. Comisiones: Calculadora interactiva**
-- Convertir los tiers estáticos en un slider interactivo donde el usuario arrastra para ver cuánto ganaría
-- Al mover el slider, se actualiza en tiempo real: monto invertido → tier → comisión estimada → ganancia con red
-- Animación de números que cambian con spring physics
+**2. `supabase/functions/create-agent-user/index.ts` — Recibir origen desde frontend**
+- Aceptar un campo `siteUrl` en el body del request para que el frontend pase su propio origen
+- Usar ese valor para construir `referralUrl` en vez del fallback hardcodeado
 
-**3. "Cómo funciona": Timeline animada con progreso al scroll**
-- Reemplazar las 3 cards estáticas por un stepper vertical con barra de progreso que se llena con el scroll
-- Cada paso se "activa" visualmente al llegar a él (border glow + icono animado)
-- Conectores animados entre pasos
+**3. `supabase/functions/ensure-profile/index.ts` — Mismo ajuste**
+- Aceptar `siteUrl` desde el request o usar el header `Origin`/`Referer`
+- Eliminar fallback hardcodeado
 
-**4. Testimonios: Carrusel con autoplay + parallax cards**
-- Reemplazar el grid estático de 3 cards por un carrusel infinito con embla-carousel
-- Cards con efecto 3D tilt al hover (mouse tracking)
-- Autoplay con pausa al hover
+**4. Archivos que invocan las edge functions**
+- Pasar `siteUrl: getPublicSiteUrl()` en el body cuando se llama a `create-agent-user` y `ensure-profile`
 
-**5. Social Proof Strip: Marquee infinito**
-- Convertir el strip estático en un ticker/marquee horizontal infinito con logos, métricas y micro-testimonios
-- Scroll automático continuo sin pausa
-
-**6. Sección "Para quién": Flip cards interactivas**
-- Las listas de "Sí es para vos" / "No es para vos" se convierten en cards que hacen flip 3D al click/tap
-- Frente: icono + título corto
-- Reverso: descripción completa
-
-**7. Growth Timeline: Barra de progreso animada**
-- La sección de cronograma realista tendrá una progress bar horizontal que avanza con scroll
-- Cada fase se ilumina secuencialmente con partículas doradas
-
-**8. CTA Final: Efecto de partículas + shake en botón**
-- Agregar burst de partículas detrás del botón CTA
-- Micro-animación de "shake" sutil periódica para llamar la atención
-- Efecto de ondas (ripple) al hacer click
-
-**9. Nuevos CSS utilities**
-- Agregar `perspective` y `transform-style: preserve-3d` para flip cards
-- Agregar keyframes para marquee infinito
-- Agregar keyframes para shake sutil
-
-### Archivos a modificar
-- `src/components/landing/HeroAgents.tsx` — typing effect + rotating phrases
-- `src/components/landing/CommissionsSection.tsx` — slider calculadora interactiva
-- `src/components/landing/HowItWorksSection.tsx` — stepper con scroll progress
-- `src/components/landing/TestimonialsSection.tsx` — carrusel 3D tilt
-- `src/components/landing/SocialProofStrip.tsx` — marquee infinito
-- `src/components/landing/ForWhoSection.tsx` — flip cards
-- `src/components/landing/GrowthSection.tsx` — progress bar animada
-- `src/components/landing/CTAFinalSection.tsx` — partículas + shake
-- `src/index.css` — nuevos keyframes y utilities
-
-### Dependencias existentes que se aprovechan
-- `framer-motion` — para todas las animaciones avanzadas y gestures
-- `embla-carousel-react` — para el carrusel de testimonios
-- `@radix-ui/react-slider` — para la calculadora de comisiones
-- CSS custom properties ya definidas (gold, primary, neon-green)
-
-### Secciones sin cambios
-- ProblemSection, OpportunitySection, VideoSection, BenefitsSection, CompetitiveSection, AcquisitionSection, NextStepsSection, FAQSection — se mantienen como están para no sobrecargar
+### Resultado
+- Si publican en `ganaya.bet` → links usan `ganaya.bet`
+- Si publican en `ganaya-connect-hub.lovable.app` → links usan ese dominio
+- Si cambian a otro dominio custom → se adapta automáticamente
+- En preview/localhost → usa el `VITE_PUBLIC_SITE_URL` del `.env` si existe, sino usa el dominio publicado de Lovable como último recurso
 
