@@ -61,36 +61,58 @@ const AdminLeads = () => {
   // Subscribe to leads from Firestore
   useEffect(() => {
     const leadsRef = collection(db, 'leads');
-    let q;
+    const unsubscribes: (() => void)[] = [];
+    const leadMap = new Map<string, FirebaseLead & { id: string }>();
+
+    const updateLeads = () => {
+      const all = Array.from(leadMap.values());
+      all.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      setLeads(all);
+      setIsLoading(false);
+    };
+
+    const parseDocs = (snapshot: { docs: Array<{ id: string; data: () => any }> }) => {
+      snapshot.docs.forEach(d => {
+        leadMap.set(d.id, {
+          id: d.id,
+          ...d.data(),
+          createdAt: d.data().createdAt?.toDate() || new Date(),
+        } as FirebaseLead & { id: string });
+      });
+    };
 
     if (isAdmin) {
-      q = query(leadsRef, orderBy('createdAt', 'desc'));
+      const q = query(leadsRef, orderBy('createdAt', 'desc'));
+      unsubscribes.push(onSnapshot(q, (snap) => { leadMap.clear(); parseDocs(snap); updateLeads(); }, (err) => { console.error('Admin leads error:', err); setIsLoading(false); }));
     } else if (isLineLeader && agentId) {
-      q = query(leadsRef, where('assignedLineLeaderId', '==', agentId), orderBy('createdAt', 'desc'));
+      // Query 1: leads assigned to this Line Leader
+      const q1 = query(leadsRef, where('assignedLineLeaderId', '==', agentId), orderBy('createdAt', 'desc'));
+      unsubscribes.push(onSnapshot(q1, (snap) => { parseDocs(snap); updateLeads(); }, (err) => console.warn('LL leads error:', err)));
+
+      // Query 2: leads assigned to subagents of this Line Leader
+      const subagentIds = agents?.filter(a => a.lineLeaderId === agentId).map(a => a.uid) || [];
+      if (subagentIds.length > 0) {
+        // Firestore 'in' supports max 30 items
+        const chunks = [];
+        for (let i = 0; i < subagentIds.length; i += 30) {
+          chunks.push(subagentIds.slice(i, i + 30));
+        }
+        chunks.forEach(chunk => {
+          const q2 = query(leadsRef, where('assignedAgentId', 'in', chunk));
+          unsubscribes.push(onSnapshot(q2, (snap) => { parseDocs(snap); updateLeads(); }, (err) => console.warn('Subagent leads error:', err)));
+        });
+      }
     } else if (agentId) {
-      q = query(leadsRef, where('assignedAgentId', '==', agentId), orderBy('createdAt', 'desc'));
+      const q = query(leadsRef, where('assignedAgentId', '==', agentId), orderBy('createdAt', 'desc'));
+      unsubscribes.push(onSnapshot(q, (snap) => { leadMap.clear(); parseDocs(snap); updateLeads(); }, (err) => { console.error('Agent leads error:', err); setIsLoading(false); }));
     } else {
       setLeads([]);
       setIsLoading(false);
       return;
     }
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const leadsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-      })) as (FirebaseLead & { id: string })[];
-      
-      setLeads(leadsData);
-      setIsLoading(false);
-    }, (error) => {
-      console.error('Error fetching leads:', error);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [isAdmin, isLineLeader, agentId]);
+    return () => unsubscribes.forEach(u => u());
+  }, [isAdmin, isLineLeader, agentId, agents]);
 
   // Filter agents visible to user
   const visibleAgents = agents?.filter(agent => {
