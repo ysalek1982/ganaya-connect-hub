@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { getReferralUrl, getPublicSiteUrl } from '@/lib/siteUrl';
+import { getReferralUrl, getPublicSiteUrl, getLoginUrl } from '@/lib/siteUrl';
 
 interface AgentCreatedModalProps {
   isOpen: boolean;
@@ -210,7 +210,8 @@ const AgentCreatedModal = ({ isOpen, onClose, agentData }: AgentCreatedModalProp
             variant="hero"
             className="w-full"
             onClick={() => {
-              const message = `🎉 ¡Bienvenido a Ganaya!\n\n📧 Email: ${email}\n🔑 Contraseña: ${tempPassword}\n\n⚠️ Deberás cambiar tu contraseña al iniciar sesión.\n\n🔗 Tu link de referido: ${referralUrl}`;
+              const loginUrl = getLoginUrl();
+              const message = `🎉 ¡Bienvenido a Ganaya!\n\n📧 Email: ${email}\n🔑 Contraseña: ${tempPassword}\n\n⚠️ Deberás cambiar tu contraseña al iniciar sesión.\n\n🔐 Inicia sesión aquí: ${loginUrl}\n\n🔗 Tu link de referido: ${referralUrl}`;
               window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
             }}
           >
