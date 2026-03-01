@@ -33,30 +33,30 @@ export const AcquisitionSection = () => {
   const icons = [Users, MessageCircle];
 
   return (
-    <section id="captacion" className="py-28 relative overflow-hidden">
+    <section id="captacion" className="py-16 sm:py-20 md:py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-gold/[0.03] to-background" />
-      <div className="absolute top-20 left-0 w-[300px] h-[300px] bg-gold/[0.04] rounded-full blur-[100px]" />
+      <div className="absolute top-20 left-0 w-[200px] sm:w-[300px] h-[200px] sm:h-[300px] bg-gold/[0.04] rounded-full blur-[100px]" />
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-sm font-semibold mb-6 uppercase tracking-wide">
-            <Target className="w-4 h-4" />
+          <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs sm:text-sm font-semibold mb-4 sm:mb-6 uppercase tracking-wide">
+            <Target className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             Estrategia
           </span>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-5">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-5">
             Métodos de <span className="text-gradient-primary">captación</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-xl mx-auto leading-relaxed">
             {subtitle}
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-4xl mx-auto">
           {methods.map((method, index) => {
             const Icon = icons[index % icons.length];
             const isExpanded = expandedCard === index;
@@ -71,37 +71,35 @@ export const AcquisitionSection = () => {
                 onClick={() => setExpandedCard(isExpanded ? null : index)}
                 whileHover={{ y: -4 }}
               >
-                {/* Top accent */}
                 <div className="absolute top-0 left-6 right-6 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
                 
-                <div className="p-7 lg:p-8">
-                  <div className="flex items-center gap-3 mb-4">
+                <div className="p-5 sm:p-7 lg:p-8">
+                  <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4">
                     <motion.div
-                      className="w-12 h-12 rounded-2xl bg-gold/10 flex items-center justify-center"
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gold/10 flex items-center justify-center shrink-0"
                       animate={isExpanded ? { rotate: [0, -5, 5, 0] } : {}}
                       transition={{ duration: 0.5 }}
                     >
-                      <Icon className="w-6 h-6 text-gold" />
+                      <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
                     </motion.div>
-                    <div className="flex-1">
-                      <h3 className="font-display text-lg font-bold text-foreground">{method.title}</h3>
-                      <p className="text-sm text-muted-foreground">{method.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display text-base sm:text-lg font-bold text-foreground truncate">{method.title}</h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{method.description}</p>
                     </div>
                     <motion.div
                       animate={{ rotate: isExpanded ? 90 : 0 }}
                       transition={{ type: 'spring', stiffness: 300 }}
                     >
-                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                      <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground shrink-0" />
                     </motion.div>
                   </div>
 
-                  {/* Always show first tip, animate the rest */}
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-2.5">
-                      <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                  <div className="space-y-2.5 sm:space-y-3">
+                    <div className="flex items-start gap-2 sm:gap-2.5">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                        <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
                       </div>
-                      <span className="text-sm text-muted-foreground leading-relaxed">{method.tips[0]}</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{method.tips[0]}</span>
                     </div>
 
                     <AnimatePresence>
@@ -112,12 +110,12 @@ export const AcquisitionSection = () => {
                           animate={{ opacity: 1, height: 'auto', y: 0 }}
                           exit={{ opacity: 0, height: 0, y: -10 }}
                           transition={{ delay: tipIndex * 0.08, duration: 0.3 }}
-                          className="flex items-start gap-2.5 overflow-hidden"
+                          className="flex items-start gap-2 sm:gap-2.5 overflow-hidden"
                         >
-                          <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+                            <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary" />
                           </div>
-                          <span className="text-sm text-muted-foreground leading-relaxed">{tip}</span>
+                          <span className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{tip}</span>
                         </motion.div>
                       ))}
                     </AnimatePresence>
@@ -125,7 +123,7 @@ export const AcquisitionSection = () => {
 
                   {!isExpanded && method.tips.length > 1 && (
                     <motion.p
-                      className="text-xs text-gold mt-3 font-medium"
+                      className="text-[10px] sm:text-xs text-gold mt-2.5 sm:mt-3 font-medium"
                       animate={{ opacity: [0.5, 1, 0.5] }}
                       transition={{ duration: 2, repeat: Infinity }}
                     >

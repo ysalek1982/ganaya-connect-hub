@@ -25,7 +25,7 @@ export const HowItWorksSection = ({ onOpenChat }: HowItWorksSectionProps) => {
   if (content?.sectionsEnabled?.howItWorks === false) return null;
 
   return (
-    <section id="como-funciona" ref={sectionRef} className="py-28 relative overflow-hidden">
+    <section id="como-funciona" ref={sectionRef} className="py-16 sm:py-20 md:py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-[hsl(var(--surface-1))] to-background" />
 
       <div className="container mx-auto px-4 relative z-10">
@@ -33,15 +33,15 @@ export const HowItWorksSection = ({ onOpenChat }: HowItWorksSectionProps) => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold mb-6 uppercase tracking-wide">
+          <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-semibold mb-4 sm:mb-6 uppercase tracking-wide">
             Simple y rápido
           </span>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-5">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-5">
             Cómo <span className="text-gradient-primary">funciona</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-xl mx-auto leading-relaxed">
             En 3 simples pasos comenzás a generar ingresos como agente
           </p>
         </motion.div>
@@ -49,14 +49,14 @@ export const HowItWorksSection = ({ onOpenChat }: HowItWorksSectionProps) => {
         {/* Vertical stepper */}
         <div className="max-w-2xl mx-auto relative">
           {/* Progress bar track */}
-          <div className="absolute left-7 md:left-8 top-0 bottom-0 w-0.5 bg-border/30" />
+          <div className="absolute left-5 sm:left-7 md:left-8 top-0 bottom-0 w-0.5 bg-border/30" />
           {/* Animated progress fill */}
           <motion.div
-            className="absolute left-7 md:left-8 top-0 w-0.5 bg-primary origin-top rounded-full"
+            className="absolute left-5 sm:left-7 md:left-8 top-0 w-0.5 bg-primary origin-top rounded-full"
             style={{ scaleY: scrollYProgress, height: '100%' }}
           />
 
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {steps.map((item, index) => {
               const stepStart = index / steps.length;
               const stepEnd = (index + 0.5) / steps.length;
@@ -80,7 +80,7 @@ export const HowItWorksSection = ({ onOpenChat }: HowItWorksSectionProps) => {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mt-14"
+            className="text-center mt-10 sm:mt-14"
           >
             <Button variant="hero" size="lg" onClick={onOpenChat}>
               Comenzar postulación
@@ -106,18 +106,17 @@ const StepItem = ({
   stepStart: number;
   stepEnd: number;
 }) => {
-  const isActive = useTransform(scrollProgress, (v: number) => v > stepStart);
   const opacity = useTransform(scrollProgress, [stepStart, stepEnd], [0.4, 1]);
   const scale = useTransform(scrollProgress, [stepStart, stepEnd], [0.95, 1]);
 
   return (
     <motion.div
       style={{ opacity, scale }}
-      className="relative flex items-start gap-6 pl-2"
+      className="relative flex items-start gap-4 sm:gap-6 pl-0 sm:pl-2"
     >
       {/* Step circle */}
       <motion.div
-        className="relative z-10 shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-colors duration-500"
+        className="relative z-10 shrink-0 w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center border-2 transition-colors duration-500"
         style={{
           backgroundColor: useTransform(scrollProgress, (v: number) =>
             v > stepStart ? 'hsl(160, 84%, 45%)' : 'hsl(220, 15%, 10%)'
@@ -127,10 +126,9 @@ const StepItem = ({
           ),
         }}
       >
-        <span className="font-display font-black text-lg text-primary-foreground">{item.step}</span>
-        {/* Glow ring when active */}
+        <span className="font-display font-black text-sm sm:text-lg text-primary-foreground">{item.step}</span>
         <motion.div
-          className="absolute inset-0 rounded-2xl blur-md -z-10"
+          className="absolute inset-0 rounded-xl sm:rounded-2xl blur-md -z-10"
           style={{
             backgroundColor: useTransform(scrollProgress, (v: number) =>
               v > stepStart ? 'hsl(160, 84%, 45%, 0.3)' : 'transparent'
@@ -140,14 +138,14 @@ const StepItem = ({
       </motion.div>
 
       {/* Content */}
-      <div className="pb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">
-            <item.icon className="w-4 h-4 text-primary" />
+      <div className="pb-4 sm:pb-8">
+        <div className="flex items-center gap-2.5 sm:gap-3 mb-1.5 sm:mb-2">
+          <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center">
+            <item.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
           </div>
-          <h3 className="font-display text-xl font-bold text-foreground">{item.title}</h3>
+          <h3 className="font-display text-base sm:text-xl font-bold text-foreground">{item.title}</h3>
         </div>
-        <p className="text-muted-foreground leading-relaxed ml-12">{item.description}</p>
+        <p className="text-muted-foreground leading-relaxed ml-9 sm:ml-12 text-sm sm:text-base">{item.description}</p>
       </div>
     </motion.div>
   );

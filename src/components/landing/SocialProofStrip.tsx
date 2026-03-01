@@ -27,7 +27,6 @@ const AnimatedNum = ({ target, inView, suffix }: { target: number; inView: boole
   return <span className="tabular-nums">{val}{suffix}</span>;
 };
 
-// Double the items for seamless infinite scroll
 const marqueeItems = [...metrics, ...metrics];
 
 export const SocialProofStrip = () => {
@@ -40,34 +39,32 @@ export const SocialProofStrip = () => {
       initial={{ opacity: 0, y: 30, scale: 0.95 }}
       animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
       transition={{ delay: 0.2, type: 'spring', stiffness: 80 }}
-      className="relative z-10 -mt-12 mb-8"
+      className="relative z-10 -mt-8 sm:-mt-12 mb-6 sm:mb-8"
     >
-      <div className="container mx-auto px-4">
-        <div className="relative max-w-4xl mx-auto overflow-hidden py-5 px-2 rounded-2xl bg-card/70 backdrop-blur-md border border-border/50 shadow-xl shadow-primary/5">
-          {/* Glow top edge */}
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="relative max-w-4xl mx-auto overflow-hidden py-3.5 sm:py-5 px-2 rounded-xl sm:rounded-2xl bg-card/70 backdrop-blur-md border border-border/50 shadow-xl shadow-primary/5">
           <div className="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-          {/* Fade edges */}
-          <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-card/90 to-transparent z-10 pointer-events-none rounded-l-2xl" />
-          <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-card/90 to-transparent z-10 pointer-events-none rounded-r-2xl" />
+          <div className="absolute left-0 top-0 bottom-0 w-10 sm:w-16 bg-gradient-to-r from-card/90 to-transparent z-10 pointer-events-none rounded-l-xl sm:rounded-l-2xl" />
+          <div className="absolute right-0 top-0 bottom-0 w-10 sm:w-16 bg-gradient-to-l from-card/90 to-transparent z-10 pointer-events-none rounded-r-xl sm:rounded-r-2xl" />
           
           <motion.div
-            className="flex gap-8 sm:gap-12 items-center"
+            className="flex gap-6 sm:gap-8 md:gap-12 items-center"
             animate={{ x: ['0%', '-50%'] }}
             transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
           >
             {marqueeItems.map((m, i) => (
-              <div key={`${m.label}-${i}`} className="flex items-center gap-2.5 shrink-0">
+              <div key={`${m.label}-${i}`} className="flex items-center gap-2 sm:gap-2.5 shrink-0">
                 <motion.div
                   whileHover={{ scale: 1.15, rotate: 5 }}
-                  className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center"
+                  className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center"
                 >
-                  <m.icon className="w-4 h-4 text-primary" />
+                  <m.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                 </motion.div>
                 <div className="text-left">
-                  <p className="font-display text-xl sm:text-2xl font-black text-primary leading-none">
+                  <p className="font-display text-lg sm:text-xl md:text-2xl font-black text-primary leading-none">
                     <AnimatedNum target={m.value} inView={inView} suffix={m.suffix} />
                   </p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground font-medium whitespace-nowrap">{m.label}</p>
+                  <p className="text-[9px] sm:text-[10px] md:text-xs text-muted-foreground font-medium whitespace-nowrap">{m.label}</p>
                 </div>
               </div>
             ))}

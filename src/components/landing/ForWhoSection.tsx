@@ -20,7 +20,6 @@ const notForWho = [
 const FlipCard = ({ item, positive }: { item: { title: string; desc: string; icon: any }; positive: boolean }) => {
   const [flipped, setFlipped] = useState(false);
   const Icon = item.icon;
-  const color = positive ? 'primary' : 'destructive';
 
   return (
     <motion.div
@@ -33,39 +32,43 @@ const FlipCard = ({ item, positive }: { item: { title: string; desc: string; ico
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.5, type: 'spring', stiffness: 200, damping: 25 }}
         style={{ transformStyle: 'preserve-3d' }}
-        className="relative h-28 sm:h-32"
+        className="relative h-24 sm:h-28 md:h-32"
       >
         {/* Front */}
         <div
-          className={`absolute inset-0 rounded-xl p-4 border flex items-center gap-3 ${
+          className={`absolute inset-0 rounded-xl p-3 sm:p-4 border flex items-center gap-2.5 sm:gap-3 ${
             positive
               ? 'bg-primary/5 border-primary/20 hover:border-primary/40'
               : 'bg-destructive/5 border-destructive/20 hover:border-destructive/40'
           } transition-colors`}
           style={{ backfaceVisibility: 'hidden' }}
         >
-          <div className={`w-10 h-10 rounded-xl bg-${color}/15 flex items-center justify-center shrink-0`}>
-            <Icon className={`w-5 h-5 text-${color}`} />
+          <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            positive ? 'bg-primary/15' : 'bg-destructive/15'
+          }`}>
+            <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${positive ? 'text-primary' : 'text-destructive'}`} />
           </div>
-          <div>
-            <p className="font-display font-bold text-foreground">{item.title}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Tocá para ver más</p>
+          <div className="min-w-0 flex-1">
+            <p className="font-display font-bold text-foreground text-sm sm:text-base truncate">{item.title}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">Tocá para ver más</p>
           </div>
-          <div className={`ml-auto w-6 h-6 rounded-full bg-${color}/15 flex items-center justify-center shrink-0`}>
-            {positive ? <Check className={`w-3.5 h-3.5 text-${color}`} /> : <X className={`w-3.5 h-3.5 text-${color}`} />}
+          <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center shrink-0 ${
+            positive ? 'bg-primary/15' : 'bg-destructive/15'
+          }`}>
+            {positive ? <Check className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary`} /> : <X className={`w-3 h-3 sm:w-3.5 sm:h-3.5 text-destructive`} />}
           </div>
         </div>
 
         {/* Back */}
         <div
-          className={`absolute inset-0 rounded-xl p-4 border flex items-center ${
+          className={`absolute inset-0 rounded-xl p-3 sm:p-4 border flex items-center ${
             positive
               ? 'bg-primary/10 border-primary/30'
               : 'bg-destructive/10 border-destructive/30'
           }`}
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
-          <p className="text-sm text-foreground/90 leading-relaxed">{item.desc}</p>
+          <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">{item.desc}</p>
         </div>
       </motion.div>
     </motion.div>
@@ -74,7 +77,7 @@ const FlipCard = ({ item, positive }: { item: { title: string; desc: string; ico
 
 export const ForWhoSection = () => {
   return (
-    <section id="para-quien" className="py-28 relative overflow-hidden">
+    <section id="para-quien" className="py-16 sm:py-20 md:py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-[hsl(var(--surface-1))] to-background" />
 
       <div className="container mx-auto px-4 relative z-10">
@@ -82,20 +85,20 @@ export const ForWhoSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-sm font-semibold mb-6 uppercase tracking-wide">
+          <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-gold/10 border border-gold/20 text-gold text-xs sm:text-sm font-semibold mb-4 sm:mb-6 uppercase tracking-wide">
             Antes de postular
           </span>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-5">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-5">
             ¿Es para <span className="text-gradient-gold">vos</span>?
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-xl mx-auto leading-relaxed">
             Tocá cada tarjeta para ver el detalle
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-6 lg:gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6 lg:gap-8 max-w-4xl mx-auto">
           {/* For who */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -104,13 +107,13 @@ export const ForWhoSection = () => {
             transition={{ type: 'spring', stiffness: 80 }}
             className="space-y-1"
           >
-            <h3 className="font-display text-xl font-bold text-foreground mb-5 flex items-center gap-3">
-              <span className="w-11 h-11 rounded-xl bg-primary/20 flex items-center justify-center">
-                <UserCheck className="w-5 h-5 text-primary" />
+            <h3 className="font-display text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-5 flex items-center gap-2.5 sm:gap-3">
+              <span className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-primary/20 flex items-center justify-center">
+                <UserCheck className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
               </span>
               Sí es para vos si...
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               {forWho.map((item, i) => (
                 <motion.div
                   key={item.title}
@@ -133,13 +136,13 @@ export const ForWhoSection = () => {
             transition={{ type: 'spring', stiffness: 80 }}
             className="space-y-1"
           >
-            <h3 className="font-display text-xl font-bold text-foreground mb-5 flex items-center gap-3">
-              <span className="w-11 h-11 rounded-xl bg-destructive/20 flex items-center justify-center">
-                <UserX className="w-5 h-5 text-destructive" />
+            <h3 className="font-display text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-5 flex items-center gap-2.5 sm:gap-3">
+              <span className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-destructive/20 flex items-center justify-center">
+                <UserX className="w-4 h-4 sm:w-5 sm:h-5 text-destructive" />
               </span>
               No es para vos si...
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-2.5 sm:space-y-3">
               {notForWho.map((item, i) => (
                 <motion.div
                   key={item.title}

@@ -28,7 +28,7 @@ const FAQItem = ({ faq, index }: { faq: typeof faqs[0]; index: number }) => {
     >
       <motion.button
         onClick={() => setOpen(!open)}
-        className={`w-full text-left rounded-xl border px-6 py-5 transition-all duration-300 group ${
+        className={`w-full text-left rounded-xl border px-4 sm:px-6 py-4 sm:py-5 transition-all duration-300 group ${
           open
             ? 'bg-card/80 border-primary/40 shadow-lg shadow-primary/5'
             : 'bg-card/40 border-border/50 hover:border-primary/20 hover:bg-card/60'
@@ -36,19 +36,18 @@ const FAQItem = ({ faq, index }: { faq: typeof faqs[0]; index: number }) => {
         whileHover={{ scale: 1.01 }}
         whileTap={{ scale: 0.995 }}
       >
-        <div className="flex items-center gap-4">
-          {/* Number badge */}
-          <span className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+        <div className="flex items-center gap-2.5 sm:gap-4">
+          <span className={`shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all duration-300 ${
             open ? 'bg-primary text-primary-foreground shadow-md shadow-primary/30' : 'bg-muted text-muted-foreground'
           }`}>
             {String(index + 1).padStart(2, '0')}
           </span>
-          <span className="flex-1 font-bold text-foreground text-left">{faq.question}</span>
+          <span className="flex-1 font-bold text-foreground text-left text-sm sm:text-base">{faq.question}</span>
           <motion.div
             animate={{ rotate: open ? 180 : 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
           >
-            <ChevronDown className={`w-5 h-5 transition-colors ${open ? 'text-primary' : 'text-muted-foreground'}`} />
+            <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${open ? 'text-primary' : 'text-muted-foreground'}`} />
           </motion.div>
         </div>
 
@@ -61,7 +60,7 @@ const FAQItem = ({ faq, index }: { faq: typeof faqs[0]; index: number }) => {
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
               className="overflow-hidden"
             >
-              <div className="pt-4 pl-12 text-muted-foreground leading-relaxed border-t border-border/30 mt-3">
+              <div className="pt-3 sm:pt-4 pl-9 sm:pl-12 text-muted-foreground leading-relaxed border-t border-border/30 mt-3 text-sm sm:text-base">
                 {faq.answer}
               </div>
             </motion.div>
@@ -77,7 +76,7 @@ export const FAQSection = () => {
   if (content?.sectionsEnabled?.faq === false) return null;
 
   return (
-    <section id="faq" className="py-28 relative overflow-hidden">
+    <section id="faq" className="py-16 sm:py-20 md:py-28 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--surface-1))] via-background to-background" />
       
       <div className="container mx-auto px-4 relative z-10">
@@ -85,21 +84,21 @@ export const FAQSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold mb-6 uppercase tracking-wide">
-            <HelpCircle className="w-4 h-4" />
+          <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-semibold mb-4 sm:mb-6 uppercase tracking-wide">
+            <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             Dudas comunes
           </span>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-5">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-5">
             Preguntas <span className="text-gradient-primary">frecuentes</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto leading-relaxed">
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-xl mx-auto leading-relaxed">
             Resolvemos tus dudas antes de postular
           </p>
         </motion.div>
 
-        <div className="max-w-3xl mx-auto space-y-3">
+        <div className="max-w-3xl mx-auto space-y-2.5 sm:space-y-3">
           {faqs.map((faq, index) => (
             <FAQItem key={index} faq={faq} index={index} />
           ))}
