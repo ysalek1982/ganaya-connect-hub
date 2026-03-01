@@ -256,13 +256,14 @@ const createRefCodeDoc = async (
   accessToken: string,
   projectId: string,
   refCode: string,
-  agentUid: string
+  agentUid: string,
+  lineLeaderId: string | null = null
 ): Promise<void> => {
   const now = new Date().toISOString();
   
   const fields: Record<string, unknown> = {
     agentUid: { stringValue: agentUid },
-    lineLeaderId: { nullValue: null },
+    lineLeaderId: lineLeaderId ? { stringValue: lineLeaderId } : { nullValue: null },
     active: { booleanValue: true },
     createdAt: { timestampValue: now },
   };
