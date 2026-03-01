@@ -79,11 +79,15 @@ const AdminDashboard = () => {
       const conversionRate = allLeads.length > 0 ? Math.round((onboarded / allLeads.length) * 100) : 0;
 
       const usersSnapshot = await getDocs(query(usersRef, where('isActive', '==', true)));
-      const totalAgentes = usersSnapshot.size;
+      const activeUsers = usersSnapshot.docs.filter(doc => {
+        const role = doc.data().role as string;
+        return role === 'AGENT' || role === 'LINE_LEADER';
+      });
+      const totalAgentes = activeUsers.length;
 
-      // Build agent map for leaderboard
+      // Build agent map for leaderboard (only agents/line leaders)
       const agentMap: Record<string, string> = {};
-      usersSnapshot.docs.forEach(doc => {
+      activeUsers.forEach(doc => {
         const data = doc.data();
         agentMap[doc.id] = (data.name as string) || (data.displayName as string) || doc.id;
       });
