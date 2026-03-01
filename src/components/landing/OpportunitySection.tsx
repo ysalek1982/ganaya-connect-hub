@@ -10,7 +10,6 @@ const defaultStats = [
   { value: '$8.5B', label: 'Mercado 2026', sublabel: 'Proyección USD', icon: DollarSign, detail: 'Se proyecta que el mercado alcance $8.5 mil millones USD para 2026 en la región.' },
 ];
 
-// Animated map dots representing LATAM presence
 const MapDots = () => {
   const dots = [
     { x: 35, y: 25, label: '🇨🇴', delay: 0 },
@@ -21,7 +20,7 @@ const MapDots = () => {
   ];
 
   return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-20">
+    <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-20 hidden sm:block">
       {dots.map((dot, i) => (
         <motion.div
           key={i}
@@ -32,7 +31,6 @@ const MapDots = () => {
           viewport={{ once: true }}
           transition={{ delay: dot.delay + 0.5, type: 'spring' }}
         >
-          {/* Pulse ring */}
           <motion.div
             className="absolute -inset-3 rounded-full border border-primary/40"
             animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }}
@@ -42,17 +40,14 @@ const MapDots = () => {
           <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-sm">{dot.label}</span>
         </motion.div>
       ))}
-      {/* Connection lines */}
       <svg className="absolute inset-0 w-full h-full">
         {dots.slice(0, -1).map((dot, i) => {
           const next = dots[i + 1];
           return (
             <motion.line
               key={i}
-              x1={`${dot.x}%`}
-              y1={`${dot.y}%`}
-              x2={`${next.x}%`}
-              y2={`${next.y}%`}
+              x1={`${dot.x}%`} y1={`${dot.y}%`}
+              x2={`${next.x}%`} y2={`${next.y}%`}
               stroke="hsl(160, 84%, 45%)"
               strokeWidth="0.5"
               strokeDasharray="4 4"
@@ -112,25 +107,24 @@ const ExpandableCard = ({ stat, index, inView }: { stat: any; index: number; inV
       onClick={() => setExpanded(!expanded)}
       className="relative bg-card/60 backdrop-blur-sm rounded-2xl border border-border/50 hover:border-primary/40 transition-all duration-500 text-center group cursor-pointer overflow-hidden"
     >
-      <motion.div layout className="p-7">
+      <motion.div layout className="p-5 sm:p-7">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-0.5 rounded-b-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
 
         <motion.div
           animate={expanded ? { scale: 0.9, y: -5 } : { scale: 1, y: 0 }}
-          className="w-12 h-12 mx-auto mb-5 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300"
+          className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-5 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300"
         >
-          <Icon className="w-6 h-6 text-primary" />
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
         </motion.div>
 
-        <p className="font-display text-4xl md:text-5xl font-black text-primary mb-3">
+        <p className="font-display text-3xl sm:text-4xl md:text-5xl font-black text-primary mb-2 sm:mb-3">
           <AnimatedCounter value={stat.value} inView={inView} />
         </p>
-        <h3 className="font-display text-sm font-bold text-foreground mb-1 uppercase tracking-wide">{stat.label}</h3>
-        <p className="text-xs text-muted-foreground">{stat.sublabel}</p>
+        <h3 className="font-display text-xs sm:text-sm font-bold text-foreground mb-1 uppercase tracking-wide">{stat.label}</h3>
+        <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.sublabel}</p>
 
-        {/* Expand indicator */}
         <motion.div
-          className="flex items-center justify-center gap-1 mt-3"
+          className="flex items-center justify-center gap-1 mt-2 sm:mt-3"
           animate={{ opacity: [0.4, 0.8, 0.4] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
@@ -138,7 +132,6 @@ const ExpandableCard = ({ stat, index, inView }: { stat: any; index: number; inV
           <span className="text-[10px] text-muted-foreground/50">Más info</span>
         </motion.div>
 
-        {/* Expanded detail */}
         <AnimatePresence>
           {expanded && (
             <motion.div
@@ -148,8 +141,8 @@ const ExpandableCard = ({ stat, index, inView }: { stat: any; index: number; inV
               transition={{ duration: 0.3 }}
               className="overflow-hidden"
             >
-              <div className="pt-4 mt-4 border-t border-border/30">
-                <p className="text-sm text-foreground/80 leading-relaxed">
+              <div className="pt-3 sm:pt-4 mt-3 sm:mt-4 border-t border-border/30">
+                <p className="text-xs sm:text-sm text-foreground/80 leading-relaxed">
                   {stat.detail || defaultStats[index]?.detail || ''}
                 </p>
               </div>
@@ -158,7 +151,6 @@ const ExpandableCard = ({ stat, index, inView }: { stat: any; index: number; inV
         </AnimatePresence>
       </motion.div>
 
-      {/* Hover glow */}
       <motion.div
         className="absolute inset-0 rounded-2xl pointer-events-none"
         animate={{ opacity: expanded ? 0.1 : 0 }}
@@ -182,9 +174,9 @@ export const OpportunitySection = () => {
     : defaultStats.map(s => ({ value: s.value, label: s.label, sublabel: s.sublabel, detail: s.detail }));
 
   return (
-    <section id="oportunidad" className="py-28 relative overflow-hidden aurora-bg" ref={ref}>
+    <section id="oportunidad" className="py-16 sm:py-20 md:py-28 relative overflow-hidden aurora-bg" ref={ref}>
       <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.04] to-background" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary/[0.05] rounded-full blur-[150px] morph-blob" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] sm:w-[800px] h-[250px] sm:h-[400px] bg-primary/[0.05] rounded-full blur-[150px] morph-blob" />
 
       <MapDots />
 
@@ -193,19 +185,19 @@ export const OpportunitySection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold mb-6 uppercase tracking-wide">
-            <TrendingUp className="w-4 h-4" />
+          <span className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-semibold mb-4 sm:mb-6 uppercase tracking-wide">
+            <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             Mercado en expansión
           </span>
-          <h2 className="font-display text-3xl md:text-4xl lg:text-5xl font-bold mb-5">
+          <h2 className="font-display text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-3 sm:mb-5">
             Oportunidad <span className="text-gradient-primary">LATAM</span>
           </h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto leading-relaxed">{subtitle}</p>
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-2xl mx-auto leading-relaxed">{subtitle}</p>
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 max-w-5xl mx-auto">
           {stats.map((stat: any, index: number) => (
             <ExpandableCard key={index} stat={stat} index={index} inView={inView} />
           ))}
