@@ -149,7 +149,7 @@ export const HeroAgents = ({ onOpenChat }: HeroAgentsProps) => {
                 <span className="animate-ping absolute h-full w-full rounded-full bg-primary opacity-75"></span>
                 <span className="relative rounded-full h-2 w-2 bg-primary"></span>
               </span>
-              23 agentes conectados ahora
+              +1,500 agentes activos en LATAM
             </span>
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-xs font-semibold text-destructive">
               🔥 Solo 12 cupos disponibles en tu zona
