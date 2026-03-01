@@ -1,36 +1,20 @@
-import { subDays, startOfDay } from 'date-fns';
-import { TrendingUp, Users, UserCheck, BarChart3, MessageCircle, Copy, ArrowUp, Zap } from 'lucide-react';
+import { subDays, startOfDay, eachDayOfInterval, format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { TrendingUp, Users, UserCheck, BarChart3, MessageCircle, Copy, ArrowUp, Zap, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseLeads } from '@/hooks/useFirebaseLeads';
 import { toast } from 'sonner';
 import { getReferralUrl } from '@/lib/siteUrl';
-
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  NUEVO: { bg: 'bg-primary/15', text: 'text-primary' },
-  CONTACTADO: { bg: 'bg-gold/15', text: 'text-gold' },
-  APROBADO: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
-  ONBOARDED: { bg: 'bg-primary/15', text: 'text-primary' },
-  RECHAZADO: { bg: 'bg-red-500/15', text: 'text-red-400' },
-  DESCARTADO: { bg: 'bg-muted', text: 'text-muted-foreground' },
-};
-
-const timeAgo = (date: Date): string => {
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (diff < 60) return 'hace un momento';
-  if (diff < 3600) return `hace ${Math.floor(diff / 60)}m`;
-  if (diff < 86400) return `hace ${Math.floor(diff / 3600)}h`;
-  if (diff < 604800) return `hace ${Math.floor(diff / 86400)}d`;
-  return `hace ${Math.floor(diff / 604800)}sem`;
-};
+import { STATUS_COLORS, timeAgo } from '@/lib/lead-constants';
 
 const AppDashboard = () => {
   const { userData, isAdmin, isLineLeader, agentId } = useFirebaseAuth();
 
-  const { data: leads, isLoading } = useFirebaseLeads({
+  const { data: leads, isLoading, dataUpdatedAt } = useFirebaseLeads({
     agentId,
     lineLeaderId: isLineLeader ? agentId : null,
     isAdmin,
@@ -67,6 +51,18 @@ const AppDashboard = () => {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
 
+    // Weekly chart data
+    const days = eachDayOfInterval({ start: sevenDaysAgo, end: today });
+    const weeklyChart = days.map(day => {
+      const dayStart = startOfDay(day);
+      const dayEnd = new Date(dayStart.getTime() + 86400000);
+      const count = leads.filter(l => {
+        const d = new Date(l.createdAt);
+        return d >= dayStart && d < dayEnd;
+      }).length;
+      return { day: format(day, 'EEE', { locale: es }), leads: count };
+    });
+
     return {
       todayLeads,
       yesterdayLeads,
@@ -74,6 +70,7 @@ const AppDashboard = () => {
       totalLeads: leads.length,
       statusCounts,
       topCountries,
+      weeklyChart,
     };
   })();
 
@@ -119,6 +116,12 @@ const AppDashboard = () => {
           <h1 className="font-display text-2xl md:text-3xl font-bold">
             {userData?.name?.split(' ')[0] || 'Agente'} 👋
           </h1>
+          {dataUpdatedAt > 0 && (
+            <Badge variant="outline" className="text-xs text-muted-foreground gap-1 mt-1">
+              <Clock className="w-3 h-3" />
+              Actualizado {timeAgo(new Date(dataUpdatedAt))}
+            </Badge>
+          )}
         </div>
         {userData?.refCode && (
           <Button onClick={copyLink} variant="outline" className="gap-2 md:self-start">
@@ -192,6 +195,39 @@ const AppDashboard = () => {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
+        {/* Weekly Trend Chart */}
+        <Card className="glass-card">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              Tendencia 7 días
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats?.weeklyChart && stats.weeklyChart.some(d => d.leads > 0) ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={stats.weeklyChart} barSize={24}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" width={25} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Bar dataKey="leads" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-12">Sin datos esta semana</p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Funnel */}
         <Card className="glass-card">
           <CardHeader className="pb-3">
@@ -222,41 +258,41 @@ const AppDashboard = () => {
             )}
           </CardContent>
         </Card>
+      </div>
 
-        {/* Top Countries */}
-        <Card className="glass-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Top países</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {stats?.topCountries && stats.topCountries.length > 0 ? (
-              <div className="space-y-2.5">
-                {stats.topCountries.map(([country, count], i) => (
-                  <div key={country} className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-4">#{i + 1}</span>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium">{country}</span>
-                        <Badge variant="outline" className="text-xs h-5">{count}</Badge>
-                      </div>
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary/60 rounded-full"
-                          style={{ width: `${(count / (stats.totalLeads || 1)) * 100}%` }}
-                        />
-                      </div>
+      {/* Top Countries */}
+      <Card className="glass-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Top países</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {stats?.topCountries && stats.topCountries.length > 0 ? (
+            <div className="space-y-2.5">
+              {stats.topCountries.map(([country, count], i) => (
+                <div key={country} className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground w-4">#{i + 1}</span>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">{country}</span>
+                      <Badge variant="outline" className="text-xs h-5">{count}</Badge>
+                    </div>
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary/60 rounded-full"
+                        style={{ width: `${(count / (stats.totalLeads || 1)) * 100}%` }}
+                      />
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-8 text-sm">
-                Sin datos aún
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-8 text-sm">
+              Sin datos aún
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Recent Activity */}
       <Card className="glass-card">

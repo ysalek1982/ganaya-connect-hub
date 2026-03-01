@@ -15,18 +15,7 @@ import { useFirebaseAuth } from '@/hooks/useFirebaseAuth';
 import { useFirebaseLeads, useAddFirebaseLead, useUpdateFirebaseLead } from '@/hooks/useFirebaseLeads';
 import { toast } from 'sonner';
 import type { FirebaseLead, LeadStatus } from '@/lib/firebase-types';
-
-const STATUS_OPTIONS: { value: LeadStatus; label: string; color: string }[] = [
-  { value: 'NUEVO', label: 'Nuevo', color: 'bg-primary/20 text-primary border-primary/30' },
-  { value: 'CONTACTADO', label: 'Contactado', color: 'bg-gold/20 text-gold border-gold/30' },
-  { value: 'APROBADO', label: 'Aprobado', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  { value: 'ONBOARDED', label: 'Onboarded', color: 'bg-primary/20 text-primary border-primary/30' },
-  { value: 'RECHAZADO', label: 'Rechazado', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
-  { value: 'DESCARTADO', label: 'Descartado', color: 'bg-muted text-muted-foreground' },
-];
-
-const getStatusConfig = (status: LeadStatus) =>
-  STATUS_OPTIONS.find(s => s.value === status) || STATUS_OPTIONS[0];
+import { STATUS_OPTIONS, getStatusConfig } from '@/lib/lead-constants';
 
 const AppLeads = () => {
   const { agentId, isAdmin, isLineLeader, userData } = useFirebaseAuth();

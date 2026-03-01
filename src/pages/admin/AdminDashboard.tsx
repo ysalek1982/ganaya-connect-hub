@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Users, UserCheck, TrendingUp, Globe, BarChart3, Zap, ArrowUp, Clock, Megaphone, Trophy } from 'lucide-react';
 import { startOfDay, subDays, format, eachDayOfInterval } from 'date-fns';
@@ -7,15 +7,7 @@ import { es } from 'date-fns/locale';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
-
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  NUEVO: { bg: 'bg-primary/15', text: 'text-primary' },
-  CONTACTADO: { bg: 'bg-gold/15', text: 'text-gold' },
-  APROBADO: { bg: 'bg-blue-500/15', text: 'text-blue-400' },
-  ONBOARDED: { bg: 'bg-primary/15', text: 'text-primary' },
-  RECHAZADO: { bg: 'bg-red-500/15', text: 'text-red-400' },
-  DESCARTADO: { bg: 'bg-muted', text: 'text-muted-foreground' },
-};
+import { STATUS_COLORS, STATUS_BAR_COLORS, timeAgo } from '@/lib/lead-constants';
 
 const UTM_COLORS = [
   'hsl(var(--primary))',
@@ -27,27 +19,20 @@ const UTM_COLORS = [
   'hsl(340 70% 55%)',
 ];
 
-const timeAgo = (date: Date): string => {
-  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (diff < 60) return 'ahora';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-  return `${Math.floor(diff / 86400)}d`;
-};
-
 const AdminDashboard = () => {
   const today = startOfDay(new Date());
   const weekAgo = subDays(today, 7);
   const twoWeeksAgo = subDays(today, 14);
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, dataUpdatedAt } = useQuery({
     queryKey: ['admin-dashboard-stats'],
-    staleTime: 60000, // Cache 60s to avoid redundant Firestore reads
+    staleTime: 60000,
+    refetchInterval: 60000,
     queryFn: async () => {
       const leadsRef = collection(db, 'leads');
       const usersRef = collection(db, 'users');
 
-      const leadsSnapshot = await getDocs(leadsRef);
+      const leadsSnapshot = await getDocs(query(leadsRef, limit(2000)));
       const allLeads = leadsSnapshot.docs.map(doc => {
         const data = doc.data();
         return {
@@ -198,9 +183,17 @@ const AdminDashboard = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-2xl md:text-3xl font-bold mb-1">Dashboard</h1>
-        <p className="text-muted-foreground text-sm">Resumen del reclutamiento Ganaya.bet</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+        <div>
+          <h1 className="font-display text-2xl md:text-3xl font-bold mb-1">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Resumen del reclutamiento Ganaya.bet</p>
+        </div>
+        {dataUpdatedAt > 0 && (
+          <Badge variant="outline" className="text-xs text-muted-foreground gap-1 self-start">
+            <Clock className="w-3 h-3" />
+            Actualizado {timeAgo(new Date(dataUpdatedAt))}
+          </Badge>
+        )}
       </div>
 
       {/* Stats Grid */}
@@ -283,12 +276,7 @@ const AdminDashboard = () => {
                       className="h-full rounded-full transition-all duration-700"
                       style={{
                         width: `${Math.max((count / total) * 100, count > 0 ? 4 : 0)}%`,
-                        backgroundColor: status === 'NUEVO' ? 'hsl(var(--primary))' :
-                          status === 'CONTACTADO' ? 'hsl(var(--gold))' :
-                          status === 'APROBADO' ? 'hsl(210 100% 60%)' :
-                          status === 'ONBOARDED' ? 'hsl(var(--primary))' :
-                          status === 'RECHAZADO' ? 'hsl(0 70% 55%)' :
-                          'hsl(var(--muted-foreground))',
+                        backgroundColor: STATUS_BAR_COLORS[status] || 'hsl(var(--muted-foreground))',
                       }}
                     />
                   </div>
