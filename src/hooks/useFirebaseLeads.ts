@@ -119,25 +119,34 @@ export const useFirebaseLeads = (options: {
   });
 };
 
-// Get lead count for agents
+// Get lead counts for the current user's subagents only (server-side, secure)
 export const useFirebaseLeadCounts = () => {
   return useQuery({
     queryKey: ['firebase-lead-counts'],
     queryFn: async (): Promise<Record<string, number>> => {
-      const leadsRef = collection(db, 'leads');
-      const q = query(leadsRef, where('assignedAgentId', '!=', null));
-      const snapshot = await getDocs(q);
-
-      const counts: Record<string, number> = {};
-      snapshot.docs.forEach(doc => {
-        const agentId = doc.data().assignedAgentId;
-        if (agentId) {
-          counts[agentId] = (counts[agentId] || 0) + 1;
-        }
+      const { auth } = await import('@/lib/firebase');
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      const user = auth.currentUser;
+      if (!user) return {};
+      
+      const idToken = await user.getIdToken(true);
+      
+      const { data, error } = await supabase.functions.invoke('create-agent-user', {
+        body: {
+          action: 'subagent-lead-counts',
+          idToken,
+        },
       });
-
-      return counts;
+      
+      if (error || data?.error) {
+        console.error('[useFirebaseLeadCounts] Error:', error || data?.error);
+        return {};
+      }
+      
+      return data?.counts || {};
     },
+    staleTime: 60000,
   });
 };
 

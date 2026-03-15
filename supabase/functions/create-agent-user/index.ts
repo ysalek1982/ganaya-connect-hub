@@ -506,6 +506,41 @@ serve(async (req) => {
       );
     }
 
+    // ACTION: Get lead counts for caller's subagents (server-side, secure)
+    if (action === 'subagent-lead-counts') {
+      if (!idToken) {
+        return new Response(
+          JSON.stringify({ error: "Token de autenticación requerido" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const caller = await verifyIdToken(accessToken, projectId, idToken);
+      console.log("[create-agent-user] subagent-lead-counts for:", caller.uid);
+      
+      // Get caller's subagents
+      const subagents = await queryFirestoreDocs(
+        accessToken, projectId, "users", "lineLeaderId", "EQUAL", caller.uid
+      );
+      
+      const counts: Record<string, number> = {};
+      
+      // For each subagent, count their assigned leads
+      for (const sa of subagents) {
+        const leads = await queryFirestoreDocs(
+          accessToken, projectId, "leads", "assignedAgentId", "EQUAL", sa.id
+        );
+        counts[sa.id] = leads.length;
+      }
+      
+      console.log(`[create-agent-user] Lead counts for ${subagents.length} subagents:`, counts);
+      
+      return new Response(
+        JSON.stringify({ success: true, counts }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // DEFAULT ACTION: Create subagent
     // Validate required fields
     if (!name || !email || !country) {
