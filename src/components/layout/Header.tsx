@@ -109,7 +109,7 @@ export const Header = () => {
                   {link.label}
                 </a>
               ))}
-              <Button variant="whatsapp" className="mt-3" onClick={handleWhatsApp}>
+              <Button variant="whatsapp" className="mt-3" onClick={() => openWhatsApp()}>
                 <MessageCircle className="w-5 h-5" />
                 WhatsApp 24/7
               </Button>
