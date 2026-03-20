@@ -70,7 +70,7 @@ export const Header = () => {
               <Button 
                 variant="whatsapp" 
                 size="default" 
-                onClick={handleWhatsApp}
+                onClick={() => openWhatsApp()}
                 className="shadow-lg shadow-[#25D366]/20"
               >
                 <MessageCircle className="w-4 h-4" />
