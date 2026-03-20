@@ -3,8 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAgentWhatsApp } from '@/hooks/useAgentWhatsApp';
 
-const WHATSAPP_NUMBER = '59176356972';
 const GANAYA_URL = 'https://ganaya.bet/es/sport';
 
 const navLinks = [
@@ -16,11 +16,7 @@ const navLinks = [
 export const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
-
-  const handleWhatsApp = () => {
-    const message = encodeURIComponent('Hola, quiero información sobre Ganaya.bet');
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${message}`, '_blank');
-  };
+  const { openWhatsApp } = useAgentWhatsApp();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -74,7 +70,7 @@ export const Header = () => {
               <Button 
                 variant="whatsapp" 
                 size="default" 
-                onClick={handleWhatsApp}
+                onClick={() => openWhatsApp()}
                 className="shadow-lg shadow-[#25D366]/20"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -113,7 +109,7 @@ export const Header = () => {
                   {link.label}
                 </a>
               ))}
-              <Button variant="whatsapp" className="mt-3" onClick={handleWhatsApp}>
+              <Button variant="whatsapp" className="mt-3" onClick={() => openWhatsApp()}>
                 <MessageCircle className="w-5 h-5" />
                 WhatsApp 24/7
               </Button>
